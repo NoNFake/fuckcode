@@ -1494,6 +1494,15 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
   })
 
   const speed = createMemo(() => {
+    const metadata = (props.message as any).providerMetadata
+    if (metadata?.timings?.predicted_per_second) {
+      return Number(metadata.timings.predicted_per_second).toFixed(1)
+    }
+    if (metadata?.timings?.predicted_ms && metadata.timings.predicted_ms > 0) {
+      const outputTokens = props.message.tokens.output + (props.message.tokens.reasoning ?? 0)
+      return (outputTokens / (metadata.timings.predicted_ms / 1000)).toFixed(1)
+    }
+
     const genSec = generationDuration()
     if (!genSec || genSec <= 0) return undefined
     const outputTokens = props.message.tokens.output + (props.message.tokens.reasoning ?? 0)

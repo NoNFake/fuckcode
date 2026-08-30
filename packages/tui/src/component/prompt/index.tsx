@@ -284,6 +284,8 @@ export function Prompt(props: PromptProps) {
 
   const [firstTokenTime, setFirstTokenTime] = createSignal<number | null>(null)
   const [streamTick, setStreamTick] = createSignal(0)
+  let lastProcessedLen = 0
+  let liveAccumulatedTokens = 0
 
   createEffect(() => {
     if (status().type !== "idle" && status().type !== "retry") {
@@ -291,9 +293,13 @@ export function Prompt(props: PromptProps) {
       onCleanup(() => {
         clearInterval(timer)
         setFirstTokenTime(null)
+        lastProcessedLen = 0
+        liveAccumulatedTokens = 0
       })
     } else {
       setFirstTokenTime(null)
+      lastProcessedLen = 0
+      liveAccumulatedTokens = 0
     }
   })
 
@@ -317,10 +323,15 @@ export function Prompt(props: PromptProps) {
       setFirstTokenTime(firstTime)
     }
 
+    if (totalText.length > lastProcessedLen) {
+      const newChunk = totalText.slice(lastProcessedLen)
+      liveAccumulatedTokens += Token.estimate(newChunk)
+      lastProcessedLen = totalText.length
+    }
+
     const elapsed = Math.max(0.2, (Date.now() - firstTime) / 1000)
-    const tokens = Token.estimate(totalText)
-    if (tokens < 3) return undefined
-    const tps = tokens / elapsed
+    if (liveAccumulatedTokens < 3) return undefined
+    const tps = liveAccumulatedTokens / elapsed
     return tps > 0 ? `${tps.toFixed(1)} tok/s` : undefined
   })
 
