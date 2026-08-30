@@ -15,18 +15,12 @@ type Summary = typeof Summary.Type
 
 const render = (skills: ReadonlyArray<Summary>) =>
   [
-    "Skills provide specialized instructions and workflows for specific tasks.",
-    "Use the skill tool to load a skill when a task matches its description.",
+    "Available skills (load on-demand via skill tool):",
     ...(skills.length === 0
       ? ["No skills are currently available."]
       : [
           "<available_skills>",
-          ...skills.flatMap((skill) => [
-            "  <skill>",
-            `    <name>${skill.name}</name>`,
-            `    <description>${skill.description}</description>`,
-            "  </skill>",
-          ]),
+          ...skills.map((skill) => `- ${skill.name}: ${skill.description}`),
           "</available_skills>",
         ]),
   ].join("\n")

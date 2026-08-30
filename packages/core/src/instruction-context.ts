@@ -48,14 +48,18 @@ const layer = Layer.effectDiscard(
           Flag.OPENCODE_DISABLE_PROJECT_CONFIG || !insideProject
             ? []
             : yield* fs.up({
-                targets: ["AGENTS.md"],
+                targets: ["INSTRUCTIONS.md", "AGENTS.md"],
                 start,
                 stop,
               }),
           fs.resolve,
         ),
       )
-      const paths = Array.dedupe([yield* fs.resolve(join(global.config, "AGENTS.md")), ...discovered])
+      const paths = Array.dedupe([
+        yield* fs.resolve(join(global.config, "INSTRUCTIONS.md")),
+        yield* fs.resolve(join(global.config, "AGENTS.md")),
+        ...discovered,
+      ])
       const files = yield* Effect.forEach(
         paths,
         (path) =>
