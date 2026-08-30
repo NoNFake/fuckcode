@@ -3,10 +3,10 @@ import { Schema } from "effect"
 import { logo as glyphs } from "./logo"
 
 const wordmark = [
-  `⠀                                ▄     `,
-  `█▀▀█ █▀▀█ █▀▀█ █▀▀▄ █▀▀▀ █▀▀█ █▀▀█ █▀▀█`,
-  `█  █ █  █ █▀▀▀ █  █ █    █  █ █  █ █▀▀▀`,
-  `▀▀▀▀ █▀▀▀ ▀▀▀▀ ▀  ▀ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀`,
+  `                                 ▄     `,
+  `█▀▀▀ █  █ █▀▀▀ █  █ █▀▀▀ █▀▀█ █▀▀█ █▀▀█`,
+  `█▀▀▀ █  █ █    █▀▀▄ █    █  █ █  █ █▀▀▀`,
+  `▀    ▀▀▀▀ ▀▀▀▀ ▀  ▀ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀`,
 ]
 
 export class CancelledError extends Schema.TaggedErrorClass<CancelledError>()("UICancelledError", {}) {}
@@ -59,9 +59,9 @@ export function logo(pad?: string) {
   const result: string[] = []
   const reset = "\x1b[0m"
   const left = {
-    fg: "\x1b[90m",
-    shadow: "\x1b[38;5;235m",
-    bg: "\x1b[48;5;235m",
+    fg: "\x1b[91m\x1b[1m",    
+    shadow: "\x1b[38;5;52m",  
+    bg: "\x1b[48;5;52m",      
   }
   const right = {
     fg: reset,

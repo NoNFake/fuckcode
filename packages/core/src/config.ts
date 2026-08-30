@@ -139,7 +139,7 @@ const layer = Layer.effect(
     const global = yield* Global.Service
     const location = yield* Location.Service
     const policy = yield* Policy.Service
-    const names = ["opencode.json", "opencode.jsonc"]
+    const names = ["fuckcode.json", "fuckcode.jsonc", "opencode.json", "opencode.jsonc"]
     const decodeOptions = { errors: "all", onExcessProperty: "ignore", propertyOrder: "original" } as const
     const decodeInfo = Schema.decodeUnknownOption(Info, decodeOptions)
     const decodeV1Info = Schema.decodeUnknownOption(ConfigV1.Info, decodeOptions)
@@ -178,7 +178,7 @@ const layer = Layer.effect(
       ? []
       : yield* fs
           .up({
-            targets: [".opencode", ...names.toReversed()],
+            targets: [".fuckcode", ".opencode", ...names.toReversed()],
             start: location.directory,
             stop: location.project.directory,
           })
@@ -186,7 +186,7 @@ const layer = Layer.effect(
     const directories = [
       globalDirectory,
       ...discovered
-        .filter((item) => path.basename(item) === ".opencode")
+        .filter((item) => path.basename(item) === ".opencode").filter((item) => path.basename(item) === ".opencode" || path.basename(item) === ".fuckcode")
         .toReversed()
         .map((directory) => AbsolutePath.make(directory)),
     ]

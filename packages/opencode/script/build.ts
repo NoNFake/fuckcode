@@ -175,8 +175,8 @@ for (const item of targets) {
       autoloadTsconfig: true,
       autoloadPackageJson: true,
       target: name.replace(pkg.name, "bun") as any,
-      outfile: `dist/${name}/bin/opencode`,
-      execArgv: [`--user-agent=opencode/${Script.version}`, "--use-system-ca", "--"],
+      outfile: `dist/${name}/bin/fuckcode`,
+      execArgv: [`--user-agent=fuckcode/${Script.version}`, "--use-system-ca", "--"],
       windows: {},
     },
     files: {
