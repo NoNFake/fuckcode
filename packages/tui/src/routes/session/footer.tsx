@@ -5,11 +5,15 @@ import { useDirectory } from "../../context/directory"
 import { useConnected } from "../../component/use-connected"
 import { createStore } from "solid-js/store"
 import { useRoute } from "../../context/route"
+import { useKV } from "../../context/kv"
 
 export function Footer() {
   const { theme } = useTheme()
   const sync = useSync()
   const route = useRoute()
+  const kv = useKV()
+  const tokenSavingEnabled = createMemo(() => kv.get("token_saving_enabled", true))
+  const tokensSaved = createMemo(() => kv.get("tokens_saved_total", 0))
   const mcp = createMemo(() => Object.values(sync.data.mcp).filter((x) => x.status === "connected").length)
   const mcpError = createMemo(() => Object.values(sync.data.mcp).some((x) => x.status === "failed"))
   const lsp = createMemo(() => Object.keys(sync.data.lsp))
@@ -80,6 +84,17 @@ export function Footer() {
                   </Match>
                 </Switch>
                 {mcp()} MCP
+              </text>
+            </Show>
+            <Show when={tokenSavingEnabled()}>
+              <text fg={theme.success}>
+                <span>⚡ eco</span>
+                <Show when={tokensSaved() > 0}>
+                  <span style={{ fg: theme.textMuted }}>
+                    {" "}
+                    (-{tokensSaved() >= 1000 ? `${(tokensSaved() / 1000).toFixed(1)}k` : tokensSaved()})
+                  </span>
+                </Show>
               </text>
             </Show>
             <text fg={theme.textMuted}>/status</text>

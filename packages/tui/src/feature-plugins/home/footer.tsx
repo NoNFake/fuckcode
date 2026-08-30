@@ -51,6 +51,28 @@ function Mcp(props: { api: TuiPluginApi }) {
   )
 }
 
+function TokenSaving(props: { api: TuiPluginApi }) {
+  const theme = () => props.api.theme.current
+  const enabled = createMemo(() => props.api.kv.get("token_saving_enabled", true))
+  const saved = createMemo(() => props.api.kv.get("tokens_saved_total", 0))
+
+  return (
+    <Show when={enabled()}>
+      <box gap={1} flexDirection="row" flexShrink={0}>
+        <text fg={theme().success}>
+          <span>⚡ eco</span>
+          <Show when={saved() > 0}>
+            <span style={{ fg: theme().textMuted }}>
+              {" "}
+              (-{saved() >= 1000 ? `${(saved() / 1000).toFixed(1)}k` : saved()})
+            </span>
+          </Show>
+        </text>
+      </box>
+    </Show>
+  )
+}
+
 function Version(props: { api: TuiPluginApi }) {
   const theme = () => props.api.theme.current
 
@@ -76,6 +98,7 @@ function View(props: { api: TuiPluginApi }) {
       <Directory api={props.api} />
       <Mcp api={props.api} />
       <box flexGrow={1} />
+      <TokenSaving api={props.api} />
       <Version api={props.api} />
     </box>
   )
