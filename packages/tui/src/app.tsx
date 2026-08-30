@@ -9,7 +9,15 @@ import { ClipboardProvider, useClipboard } from "./context/clipboard"
 import { ExitProvider, useExit } from "./context/exit"
 import { EpilogueProvider } from "./context/epilogue"
 import * as Selection from "./util/selection"
-import { createCliRenderer, MouseButton } from "@opentui/core"
+import {
+  createCliRenderer,
+  MouseButton,
+  CRTRollingBarEffect,
+  VignetteEffect,
+  applyScanlines,
+  applyChromaticAberration,
+  type OptimizedBuffer,
+} from "@opentui/core"
 import { RouteProvider, useRoute } from "./context/route"
 import {
   Switch,
@@ -188,6 +196,20 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
   const exit = { epilogue: undefined as string | undefined, reason: undefined as unknown }
   const result = yield* Effect.scoped(
     Effect.gen(function* () {
+      const crtEnabled = input.args?.crt || Boolean(process.env.FUCKCODE_CRT) || Boolean(process.env.OPENCODE_CRT)
+      const crtRollingBar = crtEnabled ? new CRTRollingBarEffect(0.12, 4, 0.2, 2) : undefined
+      const crtVignette = crtEnabled ? new VignetteEffect(0.3) : undefined
+      const postProcessFns = crtEnabled
+        ? [
+            (buffer: OptimizedBuffer, deltaTime: number) => {
+              applyScanlines(buffer, 0.25, 2)
+              crtVignette?.apply(buffer)
+              crtRollingBar?.apply(buffer, deltaTime)
+              applyChromaticAberration(buffer, 0.15)
+            },
+          ]
+        : undefined
+
       const renderer = yield* Effect.acquireRelease(
         Effect.tryPromise({
           try: () =>
@@ -199,6 +221,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
               useKittyKeyboard: {},
               autoFocus: false,
               openConsoleOnError: false,
+              postProcessFns,
               useMouse: !Flag.OPENCODE_DISABLE_MOUSE && input.config.mouse,
               consoleOptions: {
                 keyBindings: [{ name: "y", ctrl: true, action: "copy-selection" }],
