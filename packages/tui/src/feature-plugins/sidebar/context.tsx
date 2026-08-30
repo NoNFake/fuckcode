@@ -17,14 +17,25 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
   const cost = createMemo(() => session()?.cost ?? 0)
   const tokenSavingEnabled = createMemo(() => props.api.kv.get("token_saving_enabled", true))
   const tokensSaved = createMemo(() => {
-    const kvSaved = props.api.kv.get("tokens_saved_total", 0)
     const cacheSaved = msg().reduce(
       (sum, item) => sum + (item.role === "assistant" ? (item.tokens?.cache?.read ?? 0) : 0),
       0,
     )
-    const assistantTurns = msg().filter((item) => item.role === "assistant").length
-    const promptSavings = tokenSavingEnabled() ? assistantTurns * 3100 : 0
-    return kvSaved + cacheSaved + promptSavings
+    let toolTruncationSaved = 0
+    for (const item of msg()) {
+      if ("parts" in item && Array.isArray((item as any).parts)) {
+        for (const part of (item as any).parts) {
+          const text = part.content ?? part.text ?? ""
+          if (typeof text === "string" && text.includes("tokens saved")) {
+            const match = text.match(/~([0-9,]+)\s*tokens saved/)
+            if (match && match[1]) {
+              toolTruncationSaved += Number.parseInt(match[1].replace(/,/g, ""), 10) || 0
+            }
+          }
+        }
+      }
+    }
+    return cacheSaved + toolTruncationSaved
   })
 
   const state = createMemo(() => {

@@ -175,7 +175,14 @@ const layer = Layer.effect(
         }
 
       const outputPath = yield* write(contextual)
-      const marker = `... output truncated; full content saved to ${outputPath} ...`
+      const rawLines = lineCount(contextual)
+      const rawBytes = Buffer.byteLength(contextual, "utf-8")
+      const savedBytes = Math.max(0, rawBytes - outputLimits.maxBytes)
+      const savedTokens = Math.max(0, Math.round(savedBytes / 4))
+      const marker =
+        savedTokens > 0
+          ? `... output truncated (~${savedTokens.toLocaleString()} tokens saved); full content saved to ${outputPath} ...`
+          : `... output truncated; full content saved to ${outputPath} ...`
 
       return {
         output: {
