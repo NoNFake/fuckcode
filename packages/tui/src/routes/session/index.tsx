@@ -1487,6 +1487,25 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
     return props.message.time.completed - user.time.created
   })
 
+  const speed = createMemo(() => {
+    const d = duration()
+    if (!d || d <= 0) return undefined
+    const outputTokens = props.message.tokens.output + (props.message.tokens.reasoning ?? 0)
+    let tokens = outputTokens
+    if (tokens <= 0) {
+      let chars = 0
+      for (const part of props.parts) {
+        if (part.type === "text" && typeof (part as any).text === "string") {
+          chars += (part as any).text.length
+        }
+      }
+      tokens = Math.round(chars / 3.5)
+    }
+    if (tokens <= 0) return undefined
+    const tps = tokens / (d / 1000)
+    return tps > 0 ? tps.toFixed(1) : undefined
+  })
+
   const childShortcut = useCommandShortcut("session.child.first")
   const backgroundShortcut = useCommandShortcut("session.background")
 
@@ -1564,6 +1583,9 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
               <span style={{ fg: theme.textMuted }}> · {model()}</span>
               <Show when={duration()}>
                 <span style={{ fg: theme.textMuted }}> · {Locale.duration(duration())}</span>
+              </Show>
+              <Show when={speed()}>
+                <span style={{ fg: theme.textMuted }}> · {speed()} tok/s</span>
               </Show>
               <Show when={props.message.error?.name === "MessageAbortedError"}>
                 <span style={{ fg: theme.textMuted }}> · interrupted</span>
@@ -1688,13 +1710,13 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
   const ctx = use()
   const { theme, syntax } = useTheme()
   return (
-    <Show when={props.part.text.trim()}>
+    <Show when={props.part.text}>
       <box ref={(el: BoxRenderable) => alwaysSeparate.add(el)} paddingLeft={3} marginTop={1} flexShrink={0}>
         <markdown
           syntaxStyle={syntax()}
           streaming={true}
           internalBlockMode="top-level"
-          content={props.part.text.trim()}
+          content={props.part.text}
           tableOptions={{ style: "grid" }}
           conceal={ctx.conceal()}
           fg={theme.markdownText}
