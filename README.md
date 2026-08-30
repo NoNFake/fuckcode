@@ -1,68 +1,68 @@
 # FuckCode
 
-> **FuckCode** — это форк [OpenCode](https://github.com/anomalyco/opencode), специализированный для **аудита безопасности, проведения тестирования на проникновение (пентеста), реверс-инжиниринга и анализа защищенности инфраструктуры**.
+> **FuckCode** is a specialized fork of [OpenCode](https://github.com/anomalyco/opencode) engineered for **security auditing, penetration testing, reverse engineering, and infrastructure vulnerability assessment**.
 
 ---
 
-## Основные возможности и отличия форка
+## Key Features & Fork Highlights
 
-1. **Встроенная поддержка локального `llama.cpp`**:
-   - Нативное подключение к `llama-server` без необходимости настройки сложных конфигураций.
-   - Автоматическое обнаружение и загрузка активных моделей через `/v1/models`.
-   - Возможность задать URL сервера (`http://127.0.0.1:8080`) прямо из TUI-интерфейса выбора моделей (`Ctrl+P`).
+1. **Native `llama.cpp` Integration**:
+   - Out-of-the-box connection to local `llama-server` instances without complex boilerplate JSON.
+   - Dynamic model discovery from `/v1/models`.
+   - Interactive server URL configuration (`http://127.0.0.1:8080`) directly from the model picker dialog (`Ctrl+P`).
 
-2. **Оптимизация контекста и экономия токенов (Token Efficiency)**:
-   - Автоматическая очистка терминального вывода от ANSI-кодов, прогресс-баров и escape-последовательностей (`strip-ansi`).
-   - Детерминированное ограничение размера вывода утилит (сохранение полного лога в файл и передача краткой сводки в LLM).
-   - Прунинг устаревших результатов выполнения инструментов из ранних ходов диалога для предотвращения переполнения контекстного окна.
+2. **Context Window & Token Efficiency**:
+   - Automatic terminal output sanitization (stripping ANSI color codes, progress animations, and escape sequences).
+   - Deterministic tool output capping with full raw output logging to disk.
+   - Intelligent pruning of stale tool results from historical turns to maintain prompt cache locality and avoid context overflow.
 
-3. **Встроенный пакет скилов и методологий безопасности (31 Skill)**:
-   - **Фазы аудита (`phases/`)**: `recon-phase`, `enumeration-phase`, `vuln-assessment-phase`, `exploitation-phase`, `post-exploit-phase`, `reporting-phase`.
-   - **Сервисы и протоколы (`services/`)**: `svc-web-server`, `svc-database`, `svc-smb`, `svc-ssh`, `svc-docker-k8s`, `svc-cicd`, `svc-dns`, `svc-mail`, `svc-ftp`, `svc-pivoting`.
-   - **Плейбуки (`playbooks/`)**: `playbook-webapp`, `playbook-ad`, `playbook-cloud`, `playbook-infra`.
-   - **Веб-уязвимости (`web/`)**: `web-sqli`, `web-auth-bypass-idor`, `web-upload-rce`, `web-ssti`, `web-deserialization`, `web-ssrf`, `web-lfi-traversal`, `web-xxe`.
+3. **Built-in Security Skills & Methodology Catalog (31 Skills)**:
+   - **Engagement Phases (`phases/`)**: `recon-phase`, `enumeration-phase`, `vuln-assessment-phase`, `exploitation-phase`, `post-exploit-phase`, `reporting-phase`.
+   - **Services & Protocols (`services/`)**: `svc-web-server`, `svc-database`, `svc-smb`, `svc-ssh`, `svc-docker-k8s`, `svc-cicd`, `svc-dns`, `svc-mail`, `svc-ftp`, `svc-pivoting`.
+   - **Playbooks (`playbooks/`)**: `playbook-webapp`, `playbook-ad`, `playbook-cloud`, `playbook-infra`.
+   - **Web Vulnerabilities (`web/`)**: `web-sqli`, `web-auth-bypass-idor`, `web-upload-rce`, `web-ssti`, `web-deserialization`, `web-ssrf`, `web-lfi-traversal`, `web-xxe`.
 
-4. **Интерфейс**:
-   - Красно-черная визуальная тема (глубокий черный фон с красными акцентами и рамками).
-   - Поддержка конфигурационных файлов `fuckcode.json` и `fuckcode.jsonc` на уровне проекта и глобально в `~/.config/fuckcode/`.
+4. **Red & Black Theme & Configuration Discovery**:
+   - High-contrast visual theme (deep black background `#0a0a0a` with crimson/red accent colors and borders).
+   - Project-level and global configuration discovery for `fuckcode.json` and `fuckcode.jsonc` in `~/.config/fuckcode/`.
 
 ---
 
-## Быстрый старт
+## Quick Start
 
-### 1. Установка зависимостей и запуск
+### 1. Installation & Running
 
-Проект использует [Bun](https://bun.sh):
+FuckCode requires [Bun](https://bun.sh):
 
 ```bash
-# Установка зависимостей
+# Install dependencies
 bun install
 
-# Запуск в режиме разработки (TUI интерфейс)
+# Start the interactive TUI in development mode
 bun run dev
 ```
 
-### 2. Подключение к локальной модели (llama.cpp)
+### 2. Connecting to a Local Model (llama.cpp)
 
-1. Запустите ваш `llama-server` с нужной моделью:
+1. Launch your `llama-server` instance:
    ```bash
    ./llama-server -m /path/to/your/model.gguf --port 8080 -c 32768
    ```
 
-2. Запустите FuckCode:
+2. Start FuckCode:
    ```bash
    bun run dev
    ```
 
-3. Нажмите **`Ctrl+P`** (выбор моделей):
-   - Если сервер запущен на стандартном порту (`http://127.0.0.1:8080`), модель появится в списке автоматически как `llama.cpp: <название_модели>`.
-   - Если порт или хост другой, выберите пункт **`Set llama.cpp Server URL...`** и введите ваш адрес.
+3. Press **`Ctrl+P`** (Model Selection):
+   - When the server runs on the default port (`http://127.0.0.1:8080`), active models are automatically detected.
+   - To connect to a different host/port, select **`Set llama.cpp Server URL...`** and enter your endpoint.
 
 ---
 
-## Конфигурация (`fuckcode.json`)
+## Configuration (`fuckcode.json`)
 
-Вы можете настроить параметры в `fuckcode.json` в корне проекта или глобально в `~/.config/fuckcode/fuckcode.json`:
+Configure project-level or global settings in `fuckcode.json` or `~/.config/fuckcode/fuckcode.json`:
 
 ```json
 {
@@ -77,38 +77,38 @@ bun run dev
 
 ---
 
-## Руководство по использованию инструментов и скилов
+## Using Security Skills & CLI Tools
 
-FuckCode ориентирован на работу с неинтерактивными консольными утилитами. Агент автоматически считывает инструкции из `INSTRUCTIONS.md` и загружает нужные скилы в зависимости от задачи.
+FuckCode is designed to work with non-interactive command-line utilities. The agent automatically references instructions from `INSTRUCTIONS.md` and loads matching skills on demand based on task context.
 
-### Примеры сценариев:
+### Example Prompts:
 
-- **Сетевая разведка и поиск сервисов**:
-  > *"Выполни активную разведку и сканирование открытых портов на 192.168.1.50"*
-  - Агент применит `rustscan` / `nmap` с флагами версий и скриптов (`-sV -sC -Pn`), а затем проверит найденные HTTP-сервисы через `httpx`.
+- **Network Reconnaissance & Port Enumeration**:
+  > *"Perform active reconnaissance and port discovery on 192.168.1.50"*
+  - Executes `rustscan` / `nmap` with service version detection (`-sV -sC -Pn`), followed by HTTP service validation via `httpx`.
 
-- **Аудит веб-приложений (OWASP Top 10)**:
-  > *"Проверь эндпоинт http://target.local/api/item?id=1 на SQL-инъекции и XSS"*
-  - Агент загрузит чеклисты `web-sqli` и `web-owasp`, применит `ghauri`/`sqlmap` и `dalfox` в пакетном неинтерактивном режиме (`--batch`, `-silent`).
+- **Web Application Security Assessment (OWASP Top 10)**:
+  > *"Test http://target.local/api/item?id=1 for SQL injection and XSS vulnerabilities"*
+  - Activates `web-sqli` and `web-owasp` checklists, running `ghauri`/`sqlmap` and `dalfox` in non-interactive batch mode (`--batch`, `-silent`).
 
-- **Аудит Active Directory и сетевых ресурсов**:
-  > *"Собери информацию о доступных шарах и пользователях на 10.10.10.10"*
-  - Агент активирует `svc-smb` и `playbook-ad`, используя `nxc smb` и `enum4linux-ng`.
+- **Active Directory & SMB Auditing**:
+  > *"Enumerate network shares, users, and permissions on 10.10.10.10"*
+  - Loads `svc-smb` and `playbook-ad`, executing `nxc smb` and `enum4linux-ng`.
 
-- **Формирование отчета**:
-  > *"Сформируй отчет об обнаруженных проблемах по стандарту CVSS с шагами воспроизведения"*
-  - Агент применит `reporting-phase` для структурирования найденных уязвимостей, PoC и рекомендаций по их устранению.
+- **Audit Reporting & Remediation**:
+  > *"Generate a structured security assessment report with CVSS scoring and remediation steps"*
+  - Applies `reporting-phase` to document findings, reproduction steps, technical evidence, and actionable fixes.
 
 ---
 
-## Разработка и проверка кода
+## Development & Verification
 
 ```bash
-# Проверка типов во всех пакетах
+# Type check all packages
 bun run --cwd packages/opencode typecheck
 bun run --cwd packages/tui typecheck
 bun run --cwd packages/core typecheck
 
-# Запуск тестов
+# Run unit tests
 bun test
 ```
