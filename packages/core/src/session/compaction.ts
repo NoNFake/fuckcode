@@ -231,14 +231,17 @@ export const make = (dependencies: Dependencies) => {
   })
   const compactIfNeeded = Effect.fn("SessionCompaction.compactIfNeeded")(function* (input: Input) {
     if (!config.auto) return false
-    const context = input.model.route.defaults.limits?.context
-    if (context === undefined || context <= 0) return false
-    const output = input.request.generation?.maxTokens ?? input.model.route.defaults.limits?.output ?? 0
-    if (
-      estimate({ system: input.request.system, messages: input.request.messages, tools: input.request.tools }) <=
-      context - Math.max(output, config.buffer)
-    )
-      return false
+    const context = input.model.route.defaults.limits?.context ?? 16384
+    if (context <= 0) return false
+    const output = input.request.generation?.maxTokens ?? input.model.route.defaults.limits?.output ?? 4096
+    const buffer = Math.max(config.buffer ?? 2000, 1500)
+    const threshold = Math.max(2000, context - output - buffer)
+    const currentEstimated = estimate({
+      system: input.request.system,
+      messages: input.request.messages,
+      tools: input.request.tools,
+    })
+    if (currentEstimated <= threshold) return false
     return yield* compactAfterOverflow(input)
   })
   return {
