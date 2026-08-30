@@ -231,17 +231,24 @@ export const make = (dependencies: Dependencies) => {
   })
   const compactIfNeeded = Effect.fn("SessionCompaction.compactIfNeeded")(function* (input: Input) {
     if (!config.auto) return false
-    const context = input.model.route.defaults.limits?.context ?? 16384
-    if (context <= 0) return false
-    const output = input.request.generation?.maxTokens ?? input.model.route.defaults.limits?.output ?? 4096
-    const buffer = Math.max(config.buffer ?? 2000, 1500)
-    const threshold = Math.max(2000, context - output - buffer)
-    const currentEstimated = estimate({
-      system: input.request.system,
-      messages: input.request.messages,
-      tools: input.request.tools,
-    })
-    if (currentEstimated <= threshold) return false
+    const conversation = input.entries.filter((entry) => entry.message.type !== "compaction")
+    if (conversation.length <= 2) return false
+
+    const context = input.model.route.defaults.limits?.context
+    if (context === undefined || context <= 0) return false
+    const output = input.request.generation?.maxTokens ?? input.model.route.defaults.limits?.output ?? 0
+    const buffer = config.buffer ?? DEFAULT_BUFFER
+    const threshold = context - Math.max(output, buffer)
+
+    const systemTokens = input.request.system.reduce((sum, s) => sum + Token.estimate(s.text), 0)
+    const messageTokens = input.request.messages.reduce((sum, m) => {
+      const content = typeof m.content === "string" ? m.content : JSON.stringify(m.content)
+      return sum + Token.estimate(content)
+    }, 0)
+    const toolTokens = input.request.tools.length * 150
+    const totalPromptTokens = systemTokens + messageTokens + toolTokens
+
+    if (totalPromptTokens <= threshold) return false
     return yield* compactAfterOverflow(input)
   })
   return {
