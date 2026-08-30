@@ -9,12 +9,19 @@ import { Config } from "@/config/config"
 import { ToolID } from "./schema"
 import { TRUNCATION_DIR } from "./truncation-dir"
 
+import stripAnsi from "strip-ansi"
+
 const RETENTION = Duration.days(7)
 
-export const MAX_LINES = 2000
-export const MAX_BYTES = 50 * 1024
+export const MAX_LINES = 300
+export const MAX_BYTES = 16 * 1024
 export const DIR = TRUNCATION_DIR
 export const GLOB = path.join(TRUNCATION_DIR, "*")
+
+export function cleanOutput(text: string): string {
+  const stripped = stripAnsi(text)
+  return stripped.replace(/\r+/g, "\n").replace(/\n{3,}/g, "\n\n").trim()
+}
 
 export type Result = { content: string; truncated: false } | { content: string; truncated: true; outputPath: string }
 
@@ -66,9 +73,10 @@ const layer = Layer.effect(
     })
 
     const write = Effect.fn("Truncate.write")(function* (text: string) {
+      const cleaned = cleanOutput(text)
       const file = path.join(TRUNCATION_DIR, ToolID.ascending())
       yield* fs.ensureDir(TRUNCATION_DIR).pipe(Effect.orDie)
-      yield* fs.writeFileString(file, text).pipe(Effect.orDie)
+      yield* fs.writeFileString(file, cleaned).pipe(Effect.orDie)
       return file
     })
 
@@ -83,15 +91,16 @@ const layer = Layer.effect(
     })
 
     const output = Effect.fn("Truncate.output")(function* (text: string, options: Options = {}, agent?: Agent.Info) {
+      const cleaned = cleanOutput(text)
       const resolved = yield* limits()
       const maxLines = options.maxLines ?? resolved.maxLines
       const maxBytes = options.maxBytes ?? resolved.maxBytes
       const direction = options.direction ?? "head"
-      const lines = text.split("\n")
-      const totalBytes = Buffer.byteLength(text, "utf-8")
+      const lines = cleaned.split("\n")
+      const totalBytes = Buffer.byteLength(cleaned, "utf-8")
 
       if (lines.length <= maxLines && totalBytes <= maxBytes) {
-        return { content: text, truncated: false } as const
+        return { content: cleaned, truncated: false } as const
       }
 
       const out: string[] = []
