@@ -25,12 +25,12 @@ import { SessionCompactionEvent } from "@opencode-ai/schema/session-compaction-e
 
 export const Event = SessionCompactionEvent
 
-export const PRUNE_MINIMUM = 20_000
-export const PRUNE_PROTECT = 40_000
-const TOOL_OUTPUT_MAX_CHARS = 2_000
+export const PRUNE_MINIMUM = 4_000
+export const PRUNE_PROTECT = 8_000
+const TOOL_OUTPUT_MAX_CHARS = 1_000
 const PRUNE_PROTECTED_TOOLS = ["skill"]
-const MIN_PRESERVE_RECENT_TOKENS = 2_000
-const MAX_PRESERVE_RECENT_TOKENS = 15_000
+const MIN_PRESERVE_RECENT_TOKENS = 1_000
+const MAX_PRESERVE_RECENT_TOKENS = 4_000
 type Turn = {
   start: number
   end: number
