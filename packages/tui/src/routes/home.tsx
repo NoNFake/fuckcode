@@ -15,8 +15,24 @@ import { HomeSessionDestinationProvider } from "./home/session-destination"
 
 let once = false
 const placeholder = {
-  normal: ["Fix a TODO in the codebase", "What is the tech stack of this project?", "Fix broken tests"],
-  shell: ["ls -la", "git status", "pwd"],
+  normal: [
+    "Scan codebase for SQL injection and auth bypasses",
+    "Audit API endpoints for IDOR, SSRF and broken ACL",
+    "Find hardcoded credentials, JWT secrets and API keys",
+    "Analyze attack surface and expose CVE vectors",
+    "Review crypto implementation and token generation",
+    "Write an exploit PoC for this vulnerability",
+    "Audit memory safety and buffer overflow vectors",
+    "Reverse engineer API logic and parameter pollution",
+  ],
+  shell: [
+    "nmap -sV -sC -Pn target.local",
+    "sqlmap -u 'http://target/api' --batch --dbs",
+    "ffuf -u http://target/FUZZ -w wordlist.txt",
+    "gobuster dir -u http://target -w /usr/share/wordlists/dirb/common.txt",
+    "subfinder -d target.com | httpx -title",
+    "nikto -h http://target.local",
+  ],
 }
 
 export function Home() {
