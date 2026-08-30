@@ -37,6 +37,7 @@ import { createLLMEventPublisher } from "./publish-llm-event"
 import { toLLMMessages } from "./to-llm-message"
 import { MAX_STEPS_PROMPT } from "./max-steps"
 import { Snapshot } from "../../snapshot"
+import { Token } from "../../util/token"
 import { makeLocationNode } from "../../effect/app-node"
 import { llmClient } from "../../effect/app-node-platform"
 
@@ -202,6 +203,21 @@ const layer = Layer.effect(
       const isLastStep = agent.info?.steps !== undefined && currentStep >= agent.info.steps
       const toolMaterialization = isLastStep ? undefined : yield* tools.materialize(agent.info?.permissions)
       const promptCacheKey = /^ses_[0-9a-f]{64}$/.test(session.id) ? session.id.slice(4) : session.id
+      const contextLimit = model.route.defaults.limits?.context ?? 16384
+      const defaultOutput = model.route.defaults.limits?.output ?? 4096
+      const systemParts = [agent.info?.system, system.baseline]
+        .filter((part): part is string => part !== undefined && part.length > 0)
+        .map(SystemPart.make)
+      const llmMessages = [...toLLMMessages(context, model), ...(isLastStep ? [Message.assistant(MAX_STEPS_PROMPT)] : [])]
+      const toolsDefinitions = toolMaterialization?.definitions ?? []
+
+      const estimatedPrompt =
+        systemParts.reduce((acc, s) => acc + Token.estimate(s.text), 0) +
+        llmMessages.reduce((acc, m) => acc + (typeof m.content === "string" ? Token.estimate(m.content) : 100), 0) +
+        toolsDefinitions.length * 150
+      const remainingContext = Math.max(512, contextLimit - estimatedPrompt - 64)
+      const maxTokens = Math.min(defaultOutput, remainingContext)
+
       const request = LLM.request({
         model,
         http: {
@@ -211,12 +227,11 @@ const layer = Layer.effect(
             ...(session.parentID ? { "x-parent-session-id": session.parentID } : {}),
           },
         },
+        generation: { maxTokens },
         providerOptions: { openai: { promptCacheKey } },
-        system: [agent.info?.system, system.baseline]
-          .filter((part): part is string => part !== undefined && part.length > 0)
-          .map(SystemPart.make),
-        messages: [...toLLMMessages(context, model), ...(isLastStep ? [Message.assistant(MAX_STEPS_PROMPT)] : [])],
-        tools: toolMaterialization?.definitions ?? [],
+        system: systemParts,
+        messages: llmMessages,
+        tools: toolsDefinitions,
         toolChoice: isLastStep ? "none" : undefined,
       })
       if (yield* compaction.compactIfNeeded({ sessionID: session.id, entries, model, request }))
