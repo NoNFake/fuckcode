@@ -53,17 +53,21 @@ export function DialogEco(props: { sessionID?: string }) {
       }
     }
 
-    const totalSaved = cacheRead + toolTruncationSaved
+    const cacheWriteCost = Math.round(cacheWrite * 1.25)
+    const netCacheBenefit = cacheRead - cacheWriteCost
+    const totalNetSaved = toolTruncationSaved + Math.max(0, netCacheBenefit)
 
     return {
       cacheRead,
       cacheWrite,
+      cacheWriteCost,
+      netCacheBenefit,
       toolTruncationSaved,
       truncatedCount,
       compactionCount,
       totalPromptTokens,
       totalCompletionTokens,
-      totalSaved,
+      totalNetSaved,
     }
   })
 
@@ -97,16 +101,15 @@ export function DialogEco(props: { sessionID?: string }) {
         <box flexDirection="row" justifyContent="space-between">
           <text fg={theme.textMuted}>Prompt cache read hits (reused without recomputing):</text>
           <text fg={theme.text}>
-            <b>{stats().cacheRead.toLocaleString()}</b> tokens
+            <b>+{stats().cacheRead.toLocaleString()}</b> tokens
           </text>
         </box>
 
         <Show when={stats().cacheWrite > 0}>
           <box flexDirection="row" justifyContent="space-between">
-            <text fg={theme.textMuted}>Prompt cache write creation (initial cache write):</text>
-            <text fg={theme.text}>
-              <b>{stats().cacheWrite.toLocaleString()}</b> tokens{" "}
-              <span style={{ fg: theme.textMuted }}>(1.25x rate)</span>
+            <text fg={theme.textMuted}>Prompt cache write expense (1.25x creation rate):</text>
+            <text fg={theme.error}>
+              -{stats().cacheWriteCost.toLocaleString()} tokens equivalent
             </text>
           </box>
         </Show>
@@ -123,10 +126,10 @@ export function DialogEco(props: { sessionID?: string }) {
 
         <box flexDirection="row" justifyContent="space-between">
           <text fg={theme.text} attributes={TextAttributes.BOLD}>
-            Total Verified Saved (Truncation + Cache Read):
+            Net Verified Tokens Saved (Truncation + Net Cache):
           </text>
           <text fg={theme.success} attributes={TextAttributes.BOLD}>
-            -{stats().totalSaved.toLocaleString()} tokens
+            -{stats().totalNetSaved.toLocaleString()} tokens
           </text>
         </box>
       </box>

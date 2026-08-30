@@ -52,9 +52,11 @@ export class Tracker {
         return saved
       }
 
-      const sample = original.slice(0, 4096)
-      const sampleTokens = encoder.encode(sample).length
-      const tokenPerChar = sampleTokens / sample.length
+      const head = original.slice(0, 2048)
+      const tail = original.slice(original.length - 2048)
+      const sampleTokens = encoder.encode(head).length + encoder.encode(tail).length
+      const sampleLength = head.length + tail.length
+      const tokenPerChar = sampleTokens / sampleLength
       const prevTokens = encoder.encode(preview).length
       const origEstimated = Math.round(original.length * tokenPerChar)
       const saved = Math.max(0, origEstimated - prevTokens)
