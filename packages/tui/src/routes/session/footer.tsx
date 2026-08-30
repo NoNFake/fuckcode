@@ -13,7 +13,17 @@ export function Footer() {
   const route = useRoute()
   const kv = useKV()
   const tokenSavingEnabled = createMemo(() => kv.get("token_saving_enabled", true))
-  const tokensSaved = createMemo(() => kv.get("tokens_saved_total", 0))
+  const msg = createMemo(() => (route.data.type === "session" ? (sync.data.message[route.data.sessionID] ?? []) : []))
+  const tokensSaved = createMemo(() => {
+    const kvSaved = kv.get("tokens_saved_total", 0)
+    const cacheSaved = msg().reduce(
+      (sum: number, item) => sum + (item.role === "assistant" ? (item.tokens?.cache?.read ?? 0) : 0),
+      0,
+    )
+    const assistantTurns = msg().filter((item) => item.role === "assistant").length
+    const promptSavings = tokenSavingEnabled() ? assistantTurns * 3100 : 0
+    return kvSaved + cacheSaved + promptSavings
+  })
   const mcp = createMemo(() => Object.values(sync.data.mcp).filter((x) => x.status === "connected").length)
   const mcpError = createMemo(() => Object.values(sync.data.mcp).some((x) => x.status === "failed"))
   const lsp = createMemo(() => Object.keys(sync.data.lsp))

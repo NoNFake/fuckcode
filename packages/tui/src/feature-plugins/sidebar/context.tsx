@@ -16,7 +16,16 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
   const session = createMemo(() => props.api.state.session.get(props.session_id))
   const cost = createMemo(() => session()?.cost ?? 0)
   const tokenSavingEnabled = createMemo(() => props.api.kv.get("token_saving_enabled", true))
-  const tokensSaved = createMemo(() => props.api.kv.get("tokens_saved_total", 0))
+  const tokensSaved = createMemo(() => {
+    const kvSaved = props.api.kv.get("tokens_saved_total", 0)
+    const cacheSaved = msg().reduce(
+      (sum, item) => sum + (item.role === "assistant" ? (item.tokens?.cache?.read ?? 0) : 0),
+      0,
+    )
+    const assistantTurns = msg().filter((item) => item.role === "assistant").length
+    const promptSavings = tokenSavingEnabled() ? assistantTurns * 3100 : 0
+    return kvSaved + cacheSaved + promptSavings
+  })
 
   const state = createMemo(() => {
     const last = msg().findLast((item): item is AssistantMessage => item.role === "assistant" && item.tokens.output > 0)
@@ -46,7 +55,7 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
       <text fg={theme().textMuted}>{money.format(cost())} spent</text>
       <Show when={tokenSavingEnabled()}>
         <text fg={theme().success}>
-          ◈ eco {tokensSaved() > 0 ? `(-${tokensSaved() >= 1000 ? `${(tokensSaved() / 1000).toFixed(1)}k` : tokensSaved()})` : "active"}
+          ◈ eco {tokensSaved() > 0 ? `(-${tokensSaved() >= 1000 ? `${(tokensSaved() / 1000).toFixed(1)}k` : tokensSaved()} saved)` : "active"}
         </text>
       </Show>
     </box>
