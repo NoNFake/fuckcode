@@ -4,7 +4,7 @@ import { useDialog } from "../ui/dialog"
 import { useSync } from "../context/sync"
 import { useRoute } from "../context/route"
 import { useKV } from "../context/kv"
-import { createMemo, For, Show } from "solid-js"
+import { createMemo, For, onMount, Show } from "solid-js"
 
 export function DialogEco(props: { sessionID?: string }) {
   const sync = useSync()
@@ -12,6 +12,10 @@ export function DialogEco(props: { sessionID?: string }) {
   const dialog = useDialog()
   const route = useRoute()
   const kv = useKV()
+
+  onMount(() => {
+    dialog.setSize("large")
+  })
 
   const sessionID = () => props.sessionID ?? (route.data.type === "session" ? route.data.sessionID : undefined)
   const enabled = createMemo(() => kv.get("token_saving_enabled", true))
@@ -61,7 +65,7 @@ export function DialogEco(props: { sessionID?: string }) {
   })
 
   return (
-    <box paddingLeft={2} paddingRight={2} gap={1} paddingBottom={1} width={64}>
+    <box paddingLeft={2} paddingRight={2} gap={1} paddingBottom={1}>
       <box flexDirection="row" justifyContent="space-between">
         <text fg={theme.text} attributes={TextAttributes.BOLD}>
           ◈ Eco Mode Breakdown & Token Savings
@@ -101,7 +105,7 @@ export function DialogEco(props: { sessionID?: string }) {
           </text>
         </box>
 
-        <text fg={theme.borderSubtle}>{"─".repeat(56)}</text>
+        <text fg={theme.borderSubtle}>{"─".repeat(78)}</text>
 
         <box flexDirection="row" justifyContent="space-between">
           <text fg={theme.text} attributes={TextAttributes.BOLD}>
@@ -115,7 +119,7 @@ export function DialogEco(props: { sessionID?: string }) {
 
       <box paddingTop={1} flexDirection="row" justifyContent="space-between">
         <text fg={theme.textMuted}>
-          Press <span style={{ fg: theme.primary }}>space</span> to toggle mode
+          Click or select to toggle mode
         </text>
         <text
           fg={theme.primary}
@@ -123,7 +127,7 @@ export function DialogEco(props: { sessionID?: string }) {
             kv.set("token_saving_enabled", !enabled())
           }}
         >
-          [{enabled() ? "Disable" : "Enable"}]
+          [{enabled() ? "Disable Eco Mode" : "Enable Eco Mode"}]
         </text>
       </box>
     </box>
