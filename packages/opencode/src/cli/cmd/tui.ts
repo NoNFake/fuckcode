@@ -140,6 +140,11 @@ export const TuiThreadCommand = cmd({
       .option("demo", {
         type: "boolean",
         hidden: true,
+      })
+      .option("token-saving", {
+        alias: ["eco"],
+        type: "boolean",
+        describe: "enable token saving optimizations for tool outputs and context",
       }),
   handler: async (args) => {
     if (args.replay === true) {
@@ -207,6 +212,9 @@ export const TuiThreadCommand = cmd({
       }
       const cwd = Filesystem.resolve(process.cwd())
 
+      if (args["token-saving"] !== undefined) {
+        process.env.FUCKCODE_TOKEN_SAVING = args["token-saving"] ? "1" : "0"
+      }
       const worker = new Worker(file, {
         env: Object.fromEntries(
           Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined),

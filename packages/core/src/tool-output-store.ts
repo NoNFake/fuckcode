@@ -123,7 +123,26 @@ const layer = Layer.effect(
         {},
         ...entries.flatMap((entry) => (entry.type === "document" ? [entry.info.tool_output ?? {}] : [])),
       )
-      return { maxLines: configured.max_lines ?? MAX_LINES, maxBytes: configured.max_bytes ?? MAX_BYTES }
+      const tokenSaving = Object.assign(
+        {},
+        ...entries.flatMap((entry) => (entry.type === "document" ? [entry.info.token_saving ?? {}] : [])),
+      )
+      const isSavingEnabled =
+        process.env.FUCKCODE_TOKEN_SAVING === "1" ||
+        (process.env.FUCKCODE_TOKEN_SAVING !== "0" &&
+          (tokenSaving.enabled === true ||
+            tokenSaving.mode === "aggressive" ||
+            tokenSaving.mode === "moderate"))
+      const savingMaxLines = tokenSaving.mode === "aggressive" ? 40 : 80
+      const savingMaxBytes = tokenSaving.mode === "aggressive" ? 8 * 1024 : 16 * 1024
+
+      const defaultMaxLines = isSavingEnabled ? (tokenSaving.max_tool_lines ?? savingMaxLines) : MAX_LINES
+      const defaultMaxBytes = isSavingEnabled ? savingMaxBytes : MAX_BYTES
+
+      return {
+        maxLines: configured.max_lines ?? defaultMaxLines,
+        maxBytes: configured.max_bytes ?? defaultMaxBytes,
+      }
     })
 
     const write = Effect.fn("ToolOutputStore.write")(function* (content: string) {

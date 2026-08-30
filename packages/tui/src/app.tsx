@@ -953,6 +953,22 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
           dialog.clear()
         },
       },
+      {
+        name: "app.toggle.token_saving",
+        title: kv.get("token_saving_enabled", true)
+          ? "Disable token saving mode"
+          : "Enable token saving mode",
+        category: "System",
+        run: () => {
+          const next = !kv.get("token_saving_enabled", true)
+          kv.set("token_saving_enabled", next)
+          toast.show({
+            message: next ? "Token saving mode enabled" : "Token saving mode disabled",
+            variant: "info",
+          })
+          dialog.clear()
+        },
+      },
     ].map((command) => ({
       namespace: "palette",
       ...command,
