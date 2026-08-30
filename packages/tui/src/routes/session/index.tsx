@@ -1506,6 +1506,30 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
     return tps > 0 ? tps.toFixed(1) : undefined
   })
 
+  const ecoSuffix = createMemo(() => {
+    const parts: string[] = []
+    let truncationSaved = 0
+    for (const part of props.parts) {
+      const text = (part as any).content ?? (part as any).text ?? ""
+      if (typeof text === "string" && text.includes("tokens saved")) {
+        const match = text.match(/([0-9,]+)\s*tokens saved/)
+        if (match && match[1]) {
+          truncationSaved += Number.parseInt(match[1].replace(/,/g, ""), 10) || 0
+        }
+      }
+    }
+    if (truncationSaved > 0) {
+      const k = truncationSaved >= 1000 ? `${(truncationSaved / 1000).toFixed(1)}k` : `${truncationSaved}`
+      parts.push(`◈ cut -${k}`)
+    }
+    const cached = props.message.tokens?.cache?.read ?? 0
+    if (cached > 0) {
+      const val = cached >= 1000 ? `${(cached / 1000).toFixed(1)}k` : `${cached}`
+      parts.push(`◈ cached ${val}`)
+    }
+    return parts.length > 0 ? ` · ${parts.join(" · ")}` : ""
+  })
+
   const childShortcut = useCommandShortcut("session.child.first")
   const backgroundShortcut = useCommandShortcut("session.background")
 
@@ -1586,6 +1610,9 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
               </Show>
               <Show when={speed()}>
                 <span style={{ fg: theme.textMuted }}> · {speed()} tok/s</span>
+              </Show>
+              <Show when={ecoSuffix()}>
+                <span style={{ fg: theme.success }}>{ecoSuffix()}</span>
               </Show>
               <Show when={props.message.error?.name === "MessageAbortedError"}>
                 <span style={{ fg: theme.textMuted }}> · interrupted</span>

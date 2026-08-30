@@ -9,6 +9,7 @@ import { makeGlobalNode, makeLocationNode } from "./effect/app-node"
 import { SessionSchema } from "./session/schema"
 import { Identifier } from "./util/identifier"
 import { Token } from "./util/token"
+import { EcoMetrics } from "./util/eco-metrics"
 import type { ToolOutput } from "@opencode-ai/llm"
 
 export const MAX_LINES = 2_000
@@ -176,10 +177,8 @@ const layer = Layer.effect(
         }
 
       const outputPath = yield* write(contextual)
-      const rawTokens = Token.estimate(contextual)
       const previewOnly = boundedPreview(contextual, "", outputLimits.maxLines, outputLimits.maxBytes)
-      const previewTokens = Token.estimate(previewOnly)
-      const savedTokens = Math.max(0, rawTokens - previewTokens)
+      const savedTokens = EcoMetrics.globalTracker.recordTruncation(contextual, previewOnly)
       const marker =
         savedTokens > 0
           ? `... output truncated (${savedTokens.toLocaleString()} tokens saved); full content saved to ${outputPath} ...`
