@@ -1401,6 +1401,48 @@ const layer = Layer.effect(
         const catalog = mapValues(modelsDev, fromModelsDevProvider)
         const database = mapValues(catalog, toPublicInfo)
 
+        const llamacppID = ProviderV2.ID.make("llamacpp")
+        if (!database[llamacppID]) {
+          database[llamacppID] = {
+            id: llamacppID,
+            name: "llama.cpp Local",
+            env: [],
+            source: "custom",
+            options: {
+              baseURL: "http://127.0.0.1:8080/v1",
+            },
+            models: {
+              default: {
+                id: ModelV2.ID.make("default"),
+                name: "llama.cpp (Active Model)",
+                providerID: llamacppID,
+                status: "active",
+                api: {
+                  id: "default",
+                  npm: "@ai-sdk/openai-compatible",
+                  url: "openai-compatible",
+                },
+                capabilities: {
+                  temperature: true,
+                  reasoning: false,
+                  attachment: false,
+                  toolcall: true,
+                  input: { text: true, audio: false, image: false, video: false, pdf: false },
+                  output: { text: true, audio: false, image: false, video: false, pdf: false },
+                  interleaved: false,
+                },
+                cost: { input: 0, output: 0, cache: { read: 0, write: 0 } },
+                options: {},
+                limit: { context: 32768, output: 4096 },
+                headers: {},
+                family: "",
+                release_date: "",
+                variants: {},
+              },
+            },
+          }
+        }
+
         const providers: Record<ProviderV2.ID, Info> = {} as Record<ProviderV2.ID, Info>
         const languages = new Map<string, LanguageModelV3>()
         const modelLoaders: {
@@ -1477,11 +1519,18 @@ const layer = Layer.effect(
         // extend database from config
         for (const [providerID, provider] of configProviders) {
           const existing = database[providerID]
+          const rawOptions = (provider.options ?? {}) as Record<string, any>
+          const rawProvider = provider as Record<string, any>
+          const baseURL = rawProvider.baseURL || rawProvider.url || rawOptions.baseURL
+          const parsedOptions = {
+            ...rawOptions,
+            ...(baseURL ? { baseURL } : {}),
+          }
           const parsed: Info = {
             id: ProviderV2.ID.make(providerID),
             name: provider.name ?? existing?.name ?? providerID,
             env: provider.env ?? existing?.env ?? [],
-            options: mergeDeep(existing?.options ?? {}, provider.options ?? {}),
+            options: mergeDeep(existing?.options ?? {}, parsedOptions),
             source: "config",
             models: existing?.models ?? {},
           }
@@ -1648,6 +1697,56 @@ const layer = Layer.effect(
           if (provider.name) partial.name = provider.name
           if (provider.options) partial.options = provider.options
           mergeProvider(providerID, partial)
+        }
+
+        if (database[llamacppID] && isProviderAllowed(llamacppID)) {
+          mergeProvider(llamacppID, {})
+          if (providers[llamacppID]) {
+            yield* Effect.promise(async () => {
+              try {
+                const url = (providers[llamacppID].options?.baseURL as string) || "http://127.0.0.1:8080/v1"
+                const cleanUrl = url.replace(/\/+$/, "")
+                const endpoint = cleanUrl.endsWith("/v1") ? `${cleanUrl}/models` : `${cleanUrl}/v1/models`
+                const res = await fetch(endpoint, { signal: AbortSignal.timeout(1000) })
+                if (res.ok) {
+                  const data = (await res.json()) as { data?: Array<{ id: string }> }
+                  if (Array.isArray(data.data) && data.data.length > 0) {
+                    for (const item of data.data) {
+                      if (item.id && !providers[llamacppID].models[item.id]) {
+                        providers[llamacppID].models[item.id] = {
+                          id: ModelV2.ID.make(item.id),
+                          name: `llama.cpp: ${item.id}`,
+                          providerID: llamacppID,
+                          status: "active",
+                          api: {
+                            id: item.id,
+                            npm: "@ai-sdk/openai-compatible",
+                            url: "openai-compatible",
+                          },
+                          capabilities: {
+                            temperature: true,
+                            reasoning: false,
+                            attachment: false,
+                            toolcall: true,
+                            input: { text: true, audio: false, image: false, video: false, pdf: false },
+                            output: { text: true, audio: false, image: false, video: false, pdf: false },
+                            interleaved: false,
+                          },
+                          cost: { input: 0, output: 0, cache: { read: 0, write: 0 } },
+                          options: {},
+                          limit: { context: 32768, output: 4096 },
+                          headers: {},
+                          family: "",
+                          release_date: "",
+                          variants: {},
+                        }
+                      }
+                    }
+                  }
+                }
+              } catch {}
+            })
+          }
         }
 
         const gitlab = ProviderV2.ID.make("gitlab")
