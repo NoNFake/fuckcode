@@ -1,34 +1,65 @@
-.DS_Store
-node_modules
-.worktrees
-.sst
-.env
-.env.local
-.idea
-.vscode
-.codex
-*~
-playground
-tmp
-dist
-ts-dist
-.turbo
-**/.serena
-.serena/
-**/.omo
-.omo/
-/result
-refs
-Session.vim
-/opencode.json
-a.out
-target
-.scripts
+# Dependencies & Package Managers
+node_modules/
+.turbo/
 .direnv/
+.worktrees/
+.sst/
 
-# Local dev files
-opencode-dev
-UPCOMING_CHANGELOG.md
-logs/
+# Build & TypeScript Outputs
+dist/
+ts-dist/
+build/
+target/
 *.bun-build
 tsconfig.tsbuildinfo
+a.out
+
+# Logs, Cache & Temporary Files
+tmp/
+logs/
+*.log
+*.tmp
+playground/
+/result
+refs
+
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+*.env
+auth.json
+
+# Local User Configurations & State
+/fuckcode.json
+/fuckcode.jsonc
+/opencode.json
+/opencode.jsonc
+opencode-dev
+UPCOMING_CHANGELOG.md
+
+# Application Data & Session Transcripts
+.opencode/data/
+.opencode/logs/
+.opencode/plans/
+.opencode/storage/
+.fuckcode/data/
+.fuckcode/logs/
+.fuckcode/plans/
+.fuckcode/storage/
+
+# IDE & Editor Files
+.idea/
+.vscode/
+.codex/
+.serena/
+**/.serena/
+.omo/
+**/.omo/
+Session.vim
+*~
+*.swp
+
+# OS Artifacts
+.DS_Store
+Thumbs.db
