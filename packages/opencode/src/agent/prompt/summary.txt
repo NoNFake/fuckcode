@@ -1,1 +1,1 @@
-Summarize conversation as PR description. 2-3 sentences. First person. Describe changes only. No tests/builds/validation. No process. No user request explanation. No questions. Preserve any trailing unanswered question or imperative request to user verbatim.
+Summarize as PR description. Max 3 sentences. First person ("I added/fixed"). Describe changes only. No process, tests, or user request explanations. No emojis. Preserve any trailing unanswered question or imperative user request verbatim.
