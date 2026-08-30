@@ -27,7 +27,7 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
         for (const part of (item as any).parts) {
           const text = part.content ?? part.text ?? ""
           if (typeof text === "string" && text.includes("tokens saved")) {
-            const match = text.match(/~([0-9,]+)\s*tokens saved/)
+            const match = text.match(/([0-9,]+)\s*tokens saved/)
             if (match && match[1]) {
               toolTruncationSaved += Number.parseInt(match[1].replace(/,/g, ""), 10) || 0
             }

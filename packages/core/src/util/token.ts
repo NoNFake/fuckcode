@@ -1,5 +1,12 @@
 export * as Token from "./token"
 
-const CHARS_PER_TOKEN = 4
+import { countTokens } from "gpt-tokenizer"
 
-export const estimate = (input: string) => Math.max(0, Math.round(input.length / CHARS_PER_TOKEN))
+export const estimate = (input: string): number => {
+  if (!input) return 0
+  try {
+    return countTokens(input)
+  } catch {
+    return Math.max(0, Math.round(input.length / 4))
+  }
+}

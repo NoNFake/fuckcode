@@ -8,6 +8,7 @@ import { Global } from "./global"
 import { makeGlobalNode, makeLocationNode } from "./effect/app-node"
 import { SessionSchema } from "./session/schema"
 import { Identifier } from "./util/identifier"
+import { Token } from "./util/token"
 import type { ToolOutput } from "@opencode-ai/llm"
 
 export const MAX_LINES = 2_000
@@ -175,13 +176,13 @@ const layer = Layer.effect(
         }
 
       const outputPath = yield* write(contextual)
-      const rawLines = lineCount(contextual)
-      const rawBytes = Buffer.byteLength(contextual, "utf-8")
-      const savedBytes = Math.max(0, rawBytes - outputLimits.maxBytes)
-      const savedTokens = Math.max(0, Math.round(savedBytes / 4))
+      const rawTokens = Token.estimate(contextual)
+      const previewOnly = boundedPreview(contextual, "", outputLimits.maxLines, outputLimits.maxBytes)
+      const previewTokens = Token.estimate(previewOnly)
+      const savedTokens = Math.max(0, rawTokens - previewTokens)
       const marker =
         savedTokens > 0
-          ? `... output truncated (~${savedTokens.toLocaleString()} tokens saved); full content saved to ${outputPath} ...`
+          ? `... output truncated (${savedTokens.toLocaleString()} tokens saved); full content saved to ${outputPath} ...`
           : `... output truncated; full content saved to ${outputPath} ...`
 
       return {
