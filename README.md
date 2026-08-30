@@ -4,6 +4,11 @@
 
 ---
 
+
+<p align="center">
+  <img src="https://github.com/NoNFake/fuckcode/dev/.github/logo.png" alt="fuckcode" width="480" />
+</p>
+
 ## Key Features & Fork Highlights
 
 1. **Native `llama.cpp` Integration**:
