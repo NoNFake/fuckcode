@@ -2,6 +2,8 @@ import type { AssistantMessage } from "@opencode-ai/sdk/v2"
 import type { TuiPlugin, TuiPluginApi } from "@opencode-ai/plugin/tui"
 import type { BuiltinTuiPlugin } from "../builtins"
 import { createMemo, Show } from "solid-js"
+import { DialogEco } from "../../component/dialog-eco"
+import { useDialog } from "../../ui/dialog"
 
 const id = "internal:sidebar-context"
 
@@ -11,6 +13,7 @@ const money = new Intl.NumberFormat("en-US", {
 })
 
 function View(props: { api: TuiPluginApi; session_id: string }) {
+  const dialog = useDialog()
   const theme = () => props.api.theme.current
   const msg = createMemo(() => props.api.state.session.messages(props.session_id))
   const session = createMemo(() => props.api.state.session.get(props.session_id))
@@ -65,7 +68,10 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
       <text fg={theme().textMuted}>{state().percent ?? 0}% used</text>
       <text fg={theme().textMuted}>{money.format(cost())} spent</text>
       <Show when={tokenSavingEnabled()}>
-        <text fg={theme().success}>
+        <text
+          fg={theme().success}
+          onMouseUp={() => dialog.replace(() => <DialogEco sessionID={props.session_id} />)}
+        >
           ◈ eco {tokensSaved() > 0 ? `(-${tokensSaved() >= 1000 ? `${(tokensSaved() / 1000).toFixed(1)}k` : tokensSaved()} saved)` : "active"}
         </text>
       </Show>

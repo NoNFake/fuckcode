@@ -6,11 +6,14 @@ import { useConnected } from "../../component/use-connected"
 import { createStore } from "solid-js/store"
 import { useRoute } from "../../context/route"
 import { useKV } from "../../context/kv"
+import { useDialog } from "../../ui/dialog"
+import { DialogEco } from "../../component/dialog-eco"
 
 export function Footer() {
   const { theme } = useTheme()
   const sync = useSync()
   const route = useRoute()
+  const dialog = useDialog()
   const kv = useKV()
   const tokenSavingEnabled = createMemo(() => kv.get("token_saving_enabled", true))
   const msg = createMemo(() => (route.data.type === "session" ? (sync.data.message[route.data.sessionID] ?? []) : []))
@@ -108,7 +111,7 @@ export function Footer() {
               </text>
             </Show>
             <Show when={tokenSavingEnabled()}>
-              <text fg={theme.success}>
+              <text fg={theme.success} onMouseUp={() => dialog.replace(() => <DialogEco />)}>
                 <span>◈ eco</span>
                 <Show when={tokensSaved() > 0}>
                   <span style={{ fg: theme.textMuted }}>
