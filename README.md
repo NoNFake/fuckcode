@@ -1,129 +1,114 @@
-<p align="center">
-  <a href="https://opencode.ai">
-    <picture>
-      <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
-      <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
-      <img src="packages/console/app/src/asset/logo-ornate-light.svg" alt="OpenCode logo">
-    </picture>
-  </a>
-</p>
-<p align="center">The open source AI coding agent.</p>
-<p align="center">
-  <a href="https://opencode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
-  <a href="https://www.npmjs.com/package/opencode-ai"><img alt="npm" src="https://img.shields.io/npm/v/opencode-ai?style=flat-square" /></a>
-  <a href="https://github.com/anomalyco/opencode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/anomalyco/opencode/publish.yml?style=flat-square&branch=dev" /></a>
-</p>
+# FuckCode
 
-<p align="center">
-  <a href="README.md">English</a> |
-  <a href="README.zh.md">简体中文</a> |
-  <a href="README.zht.md">繁體中文</a> |
-  <a href="README.ko.md">한국어</a> |
-  <a href="README.de.md">Deutsch</a> |
-  <a href="README.es.md">Español</a> |
-  <a href="README.fr.md">Français</a> |
-  <a href="README.it.md">Italiano</a> |
-  <a href="README.da.md">Dansk</a> |
-  <a href="README.ja.md">日本語</a> |
-  <a href="README.pl.md">Polski</a> |
-  <a href="README.ru.md">Русский</a> |
-  <a href="README.bs.md">Bosanski</a> |
-  <a href="README.ar.md">العربية</a> |
-  <a href="README.no.md">Norsk</a> |
-  <a href="README.br.md">Português (Brasil)</a> |
-  <a href="README.th.md">ไทย</a> |
-  <a href="README.tr.md">Türkçe</a> |
-  <a href="README.uk.md">Українська</a> |
-  <a href="README.bn.md">বাংলা</a> |
-  <a href="README.gr.md">Ελληνικά</a> |
-  <a href="README.vi.md">Tiếng Việt</a>
-</p>
-
-[![OpenCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://opencode.ai)
+> **FuckCode** — это форк [OpenCode](https://github.com/anomalyco/opencode), специализированный для **аудита безопасности, проведения тестирования на проникновение (пентеста), реверс-инжиниринга и анализа защищенности инфраструктуры**.
 
 ---
 
-### Installation
+## Основные возможности и отличия форка
 
-```bash
-# YOLO
-curl -fsSL https://opencode.ai/install | bash
+1. **Встроенная поддержка локального `llama.cpp`**:
+   - Нативное подключение к `llama-server` без необходимости настройки сложных конфигураций.
+   - Автоматическое обнаружение и загрузка активных моделей через `/v1/models`.
+   - Возможность задать URL сервера (`http://127.0.0.1:8080`) прямо из TUI-интерфейса выбора моделей (`Ctrl+P`).
 
-# Package managers
-npm i -g opencode-ai@latest        # or bun/pnpm/yarn
-scoop install opencode             # Windows
-choco install opencode             # Windows
-brew install anomalyco/tap/opencode # macOS and Linux (recommended, always up to date)
-brew install opencode              # macOS and Linux (official brew formula, updated less)
-sudo pacman -S opencode            # Arch Linux (Stable)
-paru -S opencode-bin               # Arch Linux (Latest from AUR)
-mise use -g opencode               # Any OS
-nix run nixpkgs#opencode           # or github:anomalyco/opencode for latest dev branch
-```
+2. **Оптимизация контекста и экономия токенов (Token Efficiency)**:
+   - Автоматическая очистка терминального вывода от ANSI-кодов, прогресс-баров и escape-последовательностей (`strip-ansi`).
+   - Детерминированное ограничение размера вывода утилит (сохранение полного лога в файл и передача краткой сводки в LLM).
+   - Прунинг устаревших результатов выполнения инструментов из ранних ходов диалога для предотвращения переполнения контекстного окна.
 
-> [!TIP]
-> Remove versions older than 0.1.x before installing.
+3. **Встроенный пакет скилов и методологий безопасности (31 Skill)**:
+   - **Фазы аудита (`phases/`)**: `recon-phase`, `enumeration-phase`, `vuln-assessment-phase`, `exploitation-phase`, `post-exploit-phase`, `reporting-phase`.
+   - **Сервисы и протоколы (`services/`)**: `svc-web-server`, `svc-database`, `svc-smb`, `svc-ssh`, `svc-docker-k8s`, `svc-cicd`, `svc-dns`, `svc-mail`, `svc-ftp`, `svc-pivoting`.
+   - **Плейбуки (`playbooks/`)**: `playbook-webapp`, `playbook-ad`, `playbook-cloud`, `playbook-infra`.
+   - **Веб-уязвимости (`web/`)**: `web-sqli`, `web-auth-bypass-idor`, `web-upload-rce`, `web-ssti`, `web-deserialization`, `web-ssrf`, `web-lfi-traversal`, `web-xxe`.
 
-### Desktop App (BETA)
-
-OpenCode is also available as a desktop application. Download directly from the [releases page](https://github.com/anomalyco/opencode/releases) or [opencode.ai/download](https://opencode.ai/download).
-
-| Platform              | Download                           |
-| --------------------- | ---------------------------------- |
-| macOS (Apple Silicon) | `opencode-desktop-mac-arm64.dmg`   |
-| macOS (Intel)         | `opencode-desktop-mac-x64.dmg`     |
-| Windows               | `opencode-desktop-windows-x64.exe` |
-| Linux                 | `.deb`, `.rpm`, or `.AppImage`     |
-
-```bash
-# macOS (Homebrew)
-brew install --cask opencode-desktop
-# Windows (Scoop)
-scoop bucket add extras; scoop install extras/opencode-desktop
-```
-
-#### Installation Directory
-
-The install script respects the following priority order for the installation path:
-
-1. `$OPENCODE_INSTALL_DIR` - Custom installation directory
-2. `$XDG_BIN_DIR` - XDG Base Directory Specification compliant path
-3. `$HOME/bin` - Standard user binary directory (if it exists or can be created)
-4. `$HOME/.opencode/bin` - Default fallback
-
-```bash
-# Examples
-OPENCODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://opencode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://opencode.ai/install | bash
-```
-
-### Agents
-
-OpenCode includes two built-in agents you can switch between with the `Tab` key.
-
-- **build** - Default, full-access agent for development work
-- **plan** - Read-only agent for analysis and code exploration
-  - Denies file edits by default
-  - Asks permission before running bash commands
-  - Ideal for exploring unfamiliar codebases or planning changes
-
-Also included is a **general** subagent for complex searches and multistep tasks.
-This is used internally and can be invoked using `@general` in messages.
-
-Learn more about [agents](https://opencode.ai/docs/agents).
-
-### Documentation
-
-For more info on how to configure OpenCode, [**head over to our docs**](https://opencode.ai/docs).
-
-### Contributing
-
-If you're interested in contributing to OpenCode, please read our [contributing docs](./CONTRIBUTING.md) before submitting a pull request.
-
-### Building on OpenCode
-
-If you are working on a project that's related to OpenCode and is using "opencode" as part of its name, for example "opencode-dashboard" or "opencode-mobile", please add a note to your README to clarify that it is not built by the OpenCode team and is not affiliated with us in any way.
+4. **Интерфейс**:
+   - Красно-черная визуальная тема (глубокий черный фон с красными акцентами и рамками).
+   - Поддержка конфигурационных файлов `fuckcode.json` и `fuckcode.jsonc` на уровне проекта и глобально в `~/.config/fuckcode/`.
 
 ---
 
-**Join our community** [Discord](https://discord.gg/opencode) | [X.com](https://x.com/opencode)
+## Быстрый старт
+
+### 1. Установка зависимостей и запуск
+
+Проект использует [Bun](https://bun.sh):
+
+```bash
+# Установка зависимостей
+bun install
+
+# Запуск в режиме разработки (TUI интерфейс)
+bun run dev
+```
+
+### 2. Подключение к локальной модели (llama.cpp)
+
+1. Запустите ваш `llama-server` с нужной моделью:
+   ```bash
+   ./llama-server -m /path/to/your/model.gguf --port 8080 -c 32768
+   ```
+
+2. Запустите FuckCode:
+   ```bash
+   bun run dev
+   ```
+
+3. Нажмите **`Ctrl+P`** (выбор моделей):
+   - Если сервер запущен на стандартном порту (`http://127.0.0.1:8080`), модель появится в списке автоматически как `llama.cpp: <название_модели>`.
+   - Если порт или хост другой, выберите пункт **`Set llama.cpp Server URL...`** и введите ваш адрес.
+
+---
+
+## Конфигурация (`fuckcode.json`)
+
+Вы можете настроить параметры в `fuckcode.json` в корне проекта или глобально в `~/.config/fuckcode/fuckcode.json`:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "llamacpp": {
+      "baseURL": "http://127.0.0.1:8080/v1"
+    }
+  }
+}
+```
+
+---
+
+## Руководство по использованию инструментов и скилов
+
+FuckCode ориентирован на работу с неинтерактивными консольными утилитами. Агент автоматически считывает инструкции из `INSTRUCTIONS.md` и загружает нужные скилы в зависимости от задачи.
+
+### Примеры сценариев:
+
+- **Сетевая разведка и поиск сервисов**:
+  > *"Выполни активную разведку и сканирование открытых портов на 192.168.1.50"*
+  - Агент применит `rustscan` / `nmap` с флагами версий и скриптов (`-sV -sC -Pn`), а затем проверит найденные HTTP-сервисы через `httpx`.
+
+- **Аудит веб-приложений (OWASP Top 10)**:
+  > *"Проверь эндпоинт http://target.local/api/item?id=1 на SQL-инъекции и XSS"*
+  - Агент загрузит чеклисты `web-sqli` и `web-owasp`, применит `ghauri`/`sqlmap` и `dalfox` в пакетном неинтерактивном режиме (`--batch`, `-silent`).
+
+- **Аудит Active Directory и сетевых ресурсов**:
+  > *"Собери информацию о доступных шарах и пользователях на 10.10.10.10"*
+  - Агент активирует `svc-smb` и `playbook-ad`, используя `nxc smb` и `enum4linux-ng`.
+
+- **Формирование отчета**:
+  > *"Сформируй отчет об обнаруженных проблемах по стандарту CVSS с шагами воспроизведения"*
+  - Агент применит `reporting-phase` для структурирования найденных уязвимостей, PoC и рекомендаций по их устранению.
+
+---
+
+## Разработка и проверка кода
+
+```bash
+# Проверка типов во всех пакетах
+bun run --cwd packages/opencode typecheck
+bun run --cwd packages/tui typecheck
+bun run --cwd packages/core typecheck
+
+# Запуск тестов
+bun test
+```
