@@ -60,7 +60,7 @@ function TokenSaving(props: { api: TuiPluginApi }) {
     <Show when={enabled()}>
       <box gap={1} flexDirection="row" flexShrink={0}>
         <text fg={theme().success}>
-          <span>⚡ eco</span>
+          <span>◈ eco</span>
           <Show when={saved() > 0}>
             <span style={{ fg: theme().textMuted }}>
               {" "}

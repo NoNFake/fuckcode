@@ -88,7 +88,7 @@ export function Footer() {
             </Show>
             <Show when={tokenSavingEnabled()}>
               <text fg={theme.success}>
-                <span>⚡ eco</span>
+                <span>◈ eco</span>
                 <Show when={tokensSaved() > 0}>
                   <span style={{ fg: theme.textMuted }}>
                     {" "}
