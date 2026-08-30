@@ -6,9 +6,9 @@ const logo = {
 const reset = "\x1b[0m"
 const bold = "\x1b[1m"
 const dim = "\x1b[90m"
-const red = "\x1b[91;1m"
-const redShadow = "\x1b[38;5;52m"
-const redBg = "\x1b[48;5;52m"
+const pinkRed = "\x1b[38;2;255;51;68;1m"
+const pinkRedShadow = "\x1b[38;2;120;20;35m"
+const pinkRedBg = "\x1b[48;2;60;10;18m"
 
 function wordmark(pad = "") {
   const draw = (line: string, fg: string, shadow: string, bg: string) =>
@@ -23,7 +23,7 @@ function wordmark(pad = "") {
       .join("")
 
   return logo.left.map((line, index) => {
-    const left = draw(line, red, redShadow, redBg)
+    const left = draw(line, pinkRed, pinkRedShadow, pinkRedBg)
     const right = draw(logo.right[index] ?? "", reset, "\x1b[38;5;238m", "\x1b[48;5;238m")
     return `${pad}${left} ${right}`
   })
