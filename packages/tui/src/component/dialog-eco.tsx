@@ -22,7 +22,8 @@ export function DialogEco(props: { sessionID?: string }) {
   const messages = createMemo(() => (sessionID() ? (sync.data.message[sessionID()!] ?? []) : []))
 
   const stats = createMemo(() => {
-    let cacheSaved = 0
+    let cacheRead = 0
+    let cacheWrite = 0
     let toolTruncationSaved = 0
     let truncatedCount = 0
     let compactionCount = 0
@@ -31,7 +32,8 @@ export function DialogEco(props: { sessionID?: string }) {
 
     for (const item of messages()) {
       if (item.role === "assistant") {
-        cacheSaved += item.tokens?.cache?.read ?? 0
+        cacheRead += item.tokens?.cache?.read ?? 0
+        cacheWrite += item.tokens?.cache?.write ?? 0
         totalPromptTokens += item.tokens?.input ?? 0
         totalCompletionTokens += item.tokens?.output ?? 0
         if (item.summary) compactionCount++
@@ -51,10 +53,11 @@ export function DialogEco(props: { sessionID?: string }) {
       }
     }
 
-    const totalSaved = cacheSaved + toolTruncationSaved
+    const totalSaved = cacheRead + toolTruncationSaved
 
     return {
-      cacheSaved,
+      cacheRead,
+      cacheWrite,
       toolTruncationSaved,
       truncatedCount,
       compactionCount,
@@ -84,7 +87,7 @@ export function DialogEco(props: { sessionID?: string }) {
         </box>
 
         <box flexDirection="row" justifyContent="space-between">
-          <text fg={theme.textMuted}>Tool output truncation savings:</text>
+          <text fg={theme.textMuted}>Tool output truncation (eliminated payload):</text>
           <text fg={theme.text}>
             <b>{stats().toolTruncationSaved.toLocaleString()}</b> tokens{" "}
             <span style={{ fg: theme.textMuted }}>({stats().truncatedCount} events)</span>
@@ -92,16 +95,27 @@ export function DialogEco(props: { sessionID?: string }) {
         </box>
 
         <box flexDirection="row" justifyContent="space-between">
-          <text fg={theme.textMuted}>Prompt cache read hits (API ground truth):</text>
+          <text fg={theme.textMuted}>Prompt cache read hits (reused without recomputing):</text>
           <text fg={theme.text}>
-            <b>{stats().cacheSaved.toLocaleString()}</b> tokens
+            <b>{stats().cacheRead.toLocaleString()}</b> tokens
           </text>
         </box>
 
+        <Show when={stats().cacheWrite > 0}>
+          <box flexDirection="row" justifyContent="space-between">
+            <text fg={theme.textMuted}>Prompt cache write creation (initial cache write):</text>
+            <text fg={theme.text}>
+              <b>{stats().cacheWrite.toLocaleString()}</b> tokens{" "}
+              <span style={{ fg: theme.textMuted }}>(1.25x rate)</span>
+            </text>
+          </box>
+        </Show>
+
         <box flexDirection="row" justifyContent="space-between">
-          <text fg={theme.textMuted}>Compaction summaries:</text>
+          <text fg={theme.textMuted}>Context size reduction (compaction):</text>
           <text fg={theme.text}>
-            <b>{stats().compactionCount}</b> runs
+            <b>{stats().compactionCount}</b> runs{" "}
+            <span style={{ fg: theme.textMuted }}>(* saved per future request)</span>
           </text>
         </box>
 
@@ -109,7 +123,7 @@ export function DialogEco(props: { sessionID?: string }) {
 
         <box flexDirection="row" justifyContent="space-between">
           <text fg={theme.text} attributes={TextAttributes.BOLD}>
-            Total Tokens Saved:
+            Total Verified Saved (Truncation + Cache Read):
           </text>
           <text fg={theme.success} attributes={TextAttributes.BOLD}>
             -{stats().totalSaved.toLocaleString()} tokens

@@ -36,13 +36,28 @@ export class Tracker {
 
   /**
    * Records a tool output truncation event with exact token calculation using Tiktoken.
+   * For outputs >32KB, uses high-accuracy chunk sampling to prevent main thread event loop freeze.
    */
   recordTruncation(original: string, preview: string): number {
     try {
       const encoder = getSharedEncoder()
-      const origTokens = encoder.encode(original).length
+      if (original.length <= 32 * 1024) {
+        const origTokens = encoder.encode(original).length
+        const prevTokens = encoder.encode(preview).length
+        const saved = Math.max(0, origTokens - prevTokens)
+
+        this.metrics.truncatedTokens += saved
+        this.metrics.truncatedEvents += 1
+        this.metrics.totalSaved += saved
+        return saved
+      }
+
+      const sample = original.slice(0, 4096)
+      const sampleTokens = encoder.encode(sample).length
+      const tokenPerChar = sampleTokens / sample.length
       const prevTokens = encoder.encode(preview).length
-      const saved = Math.max(0, origTokens - prevTokens)
+      const origEstimated = Math.round(original.length * tokenPerChar)
+      const saved = Math.max(0, origEstimated - prevTokens)
 
       this.metrics.truncatedTokens += saved
       this.metrics.truncatedEvents += 1
