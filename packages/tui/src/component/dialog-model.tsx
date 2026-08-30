@@ -3,16 +3,21 @@ import { useLocal } from "../context/local"
 import { map, pipe, flatMap, entries, filter, sortBy, take } from "remeda"
 import { DialogSelect } from "../ui/dialog-select"
 import { useDialog } from "../ui/dialog"
+import { DialogPrompt } from "../ui/dialog-prompt"
 import { createDialogProviderOptions, DialogProvider } from "./dialog-provider"
 import { DialogVariant } from "./dialog-variant"
 import * as fuzzysort from "fuzzysort"
 import { useConnected } from "./use-connected"
 import { useSync } from "../context/sync"
+import { useSDK } from "../context/sdk"
+import { useTheme } from "../context/theme"
 
 export function DialogModel(props: { providerID?: string }) {
   const local = useLocal()
   const sync = useSync()
   const dialog = useDialog()
+  const sdk = useSDK()
+  const { theme } = useTheme()
   const [query, setQuery] = createSignal("")
 
   const connected = useConnected()
@@ -84,6 +89,52 @@ export function DialogModel(props: { providerID?: string }) {
               onSelect(provider.id, model)
             },
           })),
+          (items) => [
+            ...items,
+            ...(provider.id === "llamacpp" && (!props.providerID || props.providerID === "llamacpp")
+              ? [
+                  {
+                    value: { providerID: provider.id, modelID: "__configure_url__" },
+                    title: "Set llama.cpp Server URL...",
+                    releaseDate: "9999",
+                    description: `(current: ${provider.options?.baseURL || "http://127.0.0.1:8080/v1"})`,
+                    category: connected() ? provider.name : undefined,
+                    onSelect() {
+                      dialog.replace(() => (
+                        <DialogPrompt
+                          title="llama.cpp Server URL"
+                          placeholder="http://127.0.0.1:8080"
+                          description={() => (
+                            <box gap={1}>
+                              <text fg={theme.textMuted}>
+                                Enter the URL of your local llama.cpp / llama-server instance (e.g. http://127.0.0.1:8080)
+                              </text>
+                            </box>
+                          )}
+                          onConfirm={async (value) => {
+                            const finalValue = value
+                              ? value.startsWith("http")
+                                ? value
+                                : `http://${value}`
+                              : "http://127.0.0.1:8080"
+                            await sdk.client.auth.set({
+                              providerID: "llamacpp",
+                              auth: {
+                                type: "api",
+                                key: finalValue,
+                              },
+                            })
+                            await sdk.client.instance.dispose()
+                            await sync.bootstrap()
+                            dialog.replace(() => <DialogModel providerID="llamacpp" />)
+                          }}
+                        />
+                      ))
+                    },
+                  },
+                ]
+              : []),
+          ],
           filter((option) => {
             if (!showSections) return true
             if (
