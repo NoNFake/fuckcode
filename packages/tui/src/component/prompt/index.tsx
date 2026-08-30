@@ -1664,9 +1664,14 @@ export function Prompt(props: PromptProps) {
                   <Switch>
                     <Match when={usage()}>
                       {(item) => (
-                        <text fg={theme.textMuted} wrapMode="none">
-                          {[item().context, item().cost].filter(Boolean).join(" · ")}
-                        </text>
+                        <box flexDirection="row" gap={1}>
+                          <text fg={theme.textMuted} wrapMode="none">
+                            {[item().context, item().cost].filter(Boolean).join(" · ")}
+                          </text>
+                          <Show when={kv.get("token_saving_enabled", true)}>
+                            <text fg={theme.success}>◈ eco</text>
+                          </Show>
+                        </box>
                       )}
                     </Match>
                     <Match when={true}>

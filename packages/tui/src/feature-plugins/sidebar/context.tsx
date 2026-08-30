@@ -1,7 +1,7 @@
 import type { AssistantMessage } from "@opencode-ai/sdk/v2"
 import type { TuiPlugin, TuiPluginApi } from "@opencode-ai/plugin/tui"
 import type { BuiltinTuiPlugin } from "../builtins"
-import { createMemo } from "solid-js"
+import { createMemo, Show } from "solid-js"
 
 const id = "internal:sidebar-context"
 
@@ -15,6 +15,8 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
   const msg = createMemo(() => props.api.state.session.messages(props.session_id))
   const session = createMemo(() => props.api.state.session.get(props.session_id))
   const cost = createMemo(() => session()?.cost ?? 0)
+  const tokenSavingEnabled = createMemo(() => props.api.kv.get("token_saving_enabled", true))
+  const tokensSaved = createMemo(() => props.api.kv.get("tokens_saved_total", 0))
 
   const state = createMemo(() => {
     const last = msg().findLast((item): item is AssistantMessage => item.role === "assistant" && item.tokens.output > 0)
@@ -42,6 +44,11 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
       <text fg={theme().textMuted}>{state().tokens.toLocaleString()} tokens</text>
       <text fg={theme().textMuted}>{state().percent ?? 0}% used</text>
       <text fg={theme().textMuted}>{money.format(cost())} spent</text>
+      <Show when={tokenSavingEnabled()}>
+        <text fg={theme().success}>
+          ◈ eco {tokensSaved() > 0 ? `(-${tokensSaved() >= 1000 ? `${(tokensSaved() / 1000).toFixed(1)}k` : tokensSaved()})` : "active"}
+        </text>
+      </Show>
     </box>
   )
 }
