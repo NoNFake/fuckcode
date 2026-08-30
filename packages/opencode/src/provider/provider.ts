@@ -1433,7 +1433,7 @@ const layer = Layer.effect(
                 },
                 cost: { input: 0, output: 0, cache: { read: 0, write: 0 } },
                 options: {},
-                limit: { context: 16384, output: 4096 },
+                limit: { context: 32768, output: 4096 },
                 headers: {},
                 family: "",
                 release_date: "",
@@ -1716,20 +1716,6 @@ const layer = Layer.effect(
                 const url = (providers[llamacppID].options?.baseURL as string) || "http://127.0.0.1:8080/v1"
                 const cleanUrl = url.replace(/\/+$/, "")
                 const endpoint = cleanUrl.endsWith("/v1") ? `${cleanUrl}/models` : `${cleanUrl}/v1/models`
-                const rootUrl = cleanUrl.replace(/\/v1\/?$/, "")
-
-                let detectedContext = 16384
-                try {
-                  const propsRes = await fetch(`${rootUrl}/props`, { signal: AbortSignal.timeout(800) })
-                  if (propsRes.ok) {
-                    const propsData = (await propsRes.json()) as any
-                    const nCtx = propsData?.default_generation_settings?.n_ctx
-                    if (typeof nCtx === "number" && nCtx > 0) {
-                      detectedContext = nCtx
-                    }
-                  }
-                } catch {}
-
                 const res = await fetch(endpoint, { signal: AbortSignal.timeout(1000) })
                 if (res.ok) {
                   const data = (await res.json()) as { data?: Array<{ id: string }> }
@@ -1757,7 +1743,7 @@ const layer = Layer.effect(
                           },
                           cost: { input: 0, output: 0, cache: { read: 0, write: 0 } },
                           options: {},
-                          limit: { context: detectedContext, output: 4096 },
+                          limit: { context: 32768, output: 4096 },
                           headers: {},
                           family: "",
                           release_date: "",
