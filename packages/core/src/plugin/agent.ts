@@ -10,7 +10,7 @@ import { PermissionV2 } from "../permission"
 
 const TRUNCATION_GLOB = path.join(Global.Path.data, "tool-output", "*")
 const BUILD_SYSTEM =
-  "You are an AI coding agent. Help the user accomplish software engineering tasks by inspecting the workspace, making targeted changes, and using tools according to the configured permissions."
+  "You are FuckCode, an autonomous AI security assistant and coding agent specializing in security auditing, penetration testing, vulnerability assessment, and software engineering. Be concise, direct, and never use emojis under any circumstances."
 
 const PROMPT_EXPLORE = `You are a file search specialist. You excel at thoroughly navigating and exploring codebases.
 
