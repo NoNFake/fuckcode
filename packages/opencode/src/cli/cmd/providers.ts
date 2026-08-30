@@ -477,11 +477,22 @@ export const ProvidersLoginCommand = effectCmd({
       )
     }
 
-    const key = yield* Prompt.password({
-      message: "Enter your API key",
-      validate: (x) => (x && x.length > 0 ? undefined : "Required"),
-    })
-    const apiKey = yield* promptValue(key)
+    let apiKey: string
+    if (provider === "llamacpp") {
+      const url = yield* Prompt.text({
+        message: "Enter llama.cpp server URL",
+        placeholder: "http://127.0.0.1:8080",
+        defaultValue: "http://127.0.0.1:8080",
+      })
+      apiKey = yield* promptValue(url)
+      if (!apiKey.startsWith("http")) apiKey = `http://${apiKey}`
+    } else {
+      const key = yield* Prompt.password({
+        message: "Enter your API key",
+        validate: (x) => (x && x.length > 0 ? undefined : "Required"),
+      })
+      apiKey = yield* promptValue(key)
+    }
     yield* Effect.orDie(authSvc.set(provider, { type: "api", key: apiKey }))
 
     yield* Prompt.outro("Done")

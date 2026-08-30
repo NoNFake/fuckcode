@@ -60,6 +60,7 @@ export function providerOptions(list: { id: string; name: string }[]): ProviderO
         providerID: provider.id,
         description: {
           opencode: "(Recommended)",
+          llamacpp: "Local model server (e.g. http://127.0.0.1:8080)",
           anthropic: "(API key)",
           openai: "(ChatGPT Plus/Pro or API key)",
           "opencode-go": "Low cost subscription for everyone",
@@ -362,12 +363,21 @@ function ApiMethod(props: ApiMethodProps) {
   const toast = useToast()
   const { theme } = useTheme()
 
+  const isLlama = props.providerID === "llamacpp"
+
   return (
     <DialogPrompt
-      title={props.title}
-      placeholder="API key"
+      title={isLlama ? "llama.cpp Server URL" : props.title}
+      placeholder={isLlama ? "http://127.0.0.1:8080" : "API key"}
       description={() =>
         ({
+          llamacpp: (
+            <box gap={1}>
+              <text fg={theme.textMuted}>
+                Enter the URL of your local llama.cpp / llama-server instance (default: http://127.0.0.1:8080)
+              </text>
+            </box>
+          ),
           opencode: (
             <box gap={1}>
               <text fg={theme.textMuted}>
@@ -393,12 +403,15 @@ function ApiMethod(props: ApiMethodProps) {
         })[props.providerID] ?? undefined
       }
       onConfirm={async (value) => {
-        if (!value) return
+        if (!value && !isLlama) return
+        const finalValue = isLlama
+          ? (value ? (value.startsWith("http") ? value : `http://${value}`) : "http://127.0.0.1:8080")
+          : value!
         await sdk.client.auth.set({
           providerID: props.providerID,
           auth: {
             type: "api",
-            key: value,
+            key: finalValue,
             ...(props.metadata ? { metadata: props.metadata } : {}),
           },
         })

@@ -1701,6 +1701,15 @@ const layer = Layer.effect(
 
         if (database[llamacppID] && isProviderAllowed(llamacppID)) {
           mergeProvider(llamacppID, {})
+          const llamacppStored = yield* auth.get(llamacppID).pipe(Effect.orDie)
+          if (llamacppStored && llamacppStored.type === "api" && llamacppStored.key) {
+            const rawUrl = (llamacppStored as any).metadata?.baseURL || llamacppStored.key
+            if (typeof rawUrl === "string" && rawUrl !== "none") {
+              const cleanUrl = rawUrl.replace(/\/+$/, "")
+              const fullUrl = cleanUrl.endsWith("/v1") ? cleanUrl : `${cleanUrl}/v1`
+              mergeProvider(llamacppID, { options: { baseURL: fullUrl } })
+            }
+          }
           if (providers[llamacppID]) {
             yield* Effect.promise(async () => {
               try {
