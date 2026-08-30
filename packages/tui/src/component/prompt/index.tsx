@@ -281,6 +281,39 @@ export function Prompt(props: PromptProps) {
     }
   })
 
+  const [streamStartTime, setStreamStartTime] = createSignal<number | null>(null)
+  const [streamTick, setStreamTick] = createSignal(0)
+
+  createEffect(() => {
+    if (status().type !== "idle" && status().type !== "retry") {
+      if (!streamStartTime()) setStreamStartTime(Date.now())
+      const timer = setInterval(() => setStreamTick((t) => t + 1), 200)
+      onCleanup(() => clearInterval(timer))
+    } else {
+      setStreamStartTime(null)
+    }
+  })
+
+  const liveSpeed = createMemo(() => {
+    streamTick()
+    const start = streamStartTime()
+    if (!start || status().type === "idle" || status().type === "retry") return undefined
+    if (!props.sessionID) return undefined
+    const list = sync.data.message[props.sessionID] ?? []
+    const last = list.findLast((item) => item.role === "assistant")
+    if (!last) return undefined
+    const parts = sync.data.part[last.id] ?? []
+    let chars = 0
+    for (const part of parts) {
+      if (typeof (part as any).text === "string") chars += (part as any).text.length
+    }
+    const elapsed = Math.max(0.3, (Date.now() - start) / 1000)
+    const tokens = Math.round(chars / 3.5)
+    if (tokens <= 2) return undefined
+    const tps = tokens / elapsed
+    return tps > 0 ? `${tps.toFixed(1)} tok/s` : undefined
+  })
+
   const [store, setStore] = createStore<{
     prompt: PromptInfo
     mode: "normal" | "shell"
@@ -1584,12 +1617,19 @@ export function Prompt(props: PromptProps) {
                     })()}
                   </box>
                 </box>
-                <text fg={store.interrupt > 0 ? theme.primary : theme.text}>
-                  esc{" "}
-                  <span style={{ fg: store.interrupt > 0 ? theme.primary : theme.textMuted }}>
-                    {store.interrupt > 0 ? "again to interrupt" : "interrupt"}
-                  </span>
-                </text>
+                <box flexDirection="row" gap={2}>
+                  <Show when={liveSpeed()}>
+                    <text fg={theme.success}>
+                      {liveSpeed()}
+                    </text>
+                  </Show>
+                  <text fg={store.interrupt > 0 ? theme.primary : theme.text}>
+                    esc{" "}
+                    <span style={{ fg: store.interrupt > 0 ? theme.primary : theme.textMuted }}>
+                      {store.interrupt > 0 ? "again to interrupt" : "interrupt"}
+                    </span>
+                  </text>
+                </box>
               </box>
             </Match>
             <Match when={workspace.notice()}>
