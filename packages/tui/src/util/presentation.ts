@@ -6,8 +6,8 @@ const logo = {
 const reset = "\x1b[0m"
 const bold = "\x1b[1m"
 const dim = "\x1b[90m"
-const red = "\x1b[38;5;196;1m"
-const redShadow = "\x1b[38;5;88m"
+const red = "\x1b[91;1m"
+const redShadow = "\x1b[38;5;52m"
 const redBg = "\x1b[48;5;52m"
 
 function wordmark(pad = "") {
