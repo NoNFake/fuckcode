@@ -140,11 +140,6 @@ export const TuiThreadCommand = cmd({
       .option("demo", {
         type: "boolean",
         hidden: true,
-      })
-      .option("crt", {
-        type: "boolean",
-        describe: "enable retro CRT monitor scanline and curvature shader effect",
-        default: false,
       }),
   handler: async (args) => {
     if (args.replay === true) {
@@ -297,7 +292,6 @@ export const TuiThreadCommand = cmd({
               prompt,
               fork: args.fork,
               auto: args.auto || args.yolo || args["dangerously-skip-permissions"],
-              crt: args.crt,
             },
           }),
         )
