@@ -47,6 +47,7 @@ import { DialogProvider as DialogProviderConnect } from "../dialog-provider"
 import { DialogAlert } from "../../ui/dialog-alert"
 import { useToast } from "../../ui/toast"
 import { useKV } from "../../context/kv"
+import { Token } from "@opencode-ai/core/util/token"
 import { createFadeIn } from "../../util/signal"
 import { DialogSkill } from "../dialog-skill"
 import { DialogWorkspaceUnavailable } from "../dialog-workspace-unavailable"
@@ -281,35 +282,44 @@ export function Prompt(props: PromptProps) {
     }
   })
 
-  const [streamStartTime, setStreamStartTime] = createSignal<number | null>(null)
+  const [firstTokenTime, setFirstTokenTime] = createSignal<number | null>(null)
   const [streamTick, setStreamTick] = createSignal(0)
 
   createEffect(() => {
     if (status().type !== "idle" && status().type !== "retry") {
-      if (!streamStartTime()) setStreamStartTime(Date.now())
       const timer = setInterval(() => setStreamTick((t) => t + 1), 200)
-      onCleanup(() => clearInterval(timer))
+      onCleanup(() => {
+        clearInterval(timer)
+        setFirstTokenTime(null)
+      })
     } else {
-      setStreamStartTime(null)
+      setFirstTokenTime(null)
     }
   })
 
   const liveSpeed = createMemo(() => {
     streamTick()
-    const start = streamStartTime()
-    if (!start || status().type === "idle" || status().type === "retry") return undefined
+    if (status().type === "idle" || status().type === "retry") return undefined
     if (!props.sessionID) return undefined
     const list = sync.data.message[props.sessionID] ?? []
     const last = list.findLast((item) => item.role === "assistant")
     if (!last) return undefined
     const parts = sync.data.part[last.id] ?? []
-    let chars = 0
+    let totalText = ""
     for (const part of parts) {
-      if (typeof (part as any).text === "string") chars += (part as any).text.length
+      if (typeof (part as any).text === "string") totalText += (part as any).text
     }
-    const elapsed = Math.max(0.3, (Date.now() - start) / 1000)
-    const tokens = Math.round(chars / 3.5)
-    if (tokens <= 2) return undefined
+    if (!totalText) return undefined
+
+    let firstTime = firstTokenTime()
+    if (!firstTime) {
+      firstTime = last.time?.created ?? Date.now()
+      setFirstTokenTime(firstTime)
+    }
+
+    const elapsed = Math.max(0.2, (Date.now() - firstTime) / 1000)
+    const tokens = Token.estimate(totalText)
+    if (tokens < 3) return undefined
     const tps = tokens / elapsed
     return tps > 0 ? `${tps.toFixed(1)} tok/s` : undefined
   })
