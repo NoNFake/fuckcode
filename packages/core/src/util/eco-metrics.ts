@@ -1,6 +1,6 @@
 export * as EcoMetrics from "./eco-metrics"
 
-import { getEncoding } from "js-tiktoken"
+import { Token } from "./token"
 
 export interface Metrics {
   truncatedTokens: number
@@ -9,19 +9,6 @@ export interface Metrics {
   prunedContextTokens: number
   compactionRuns: number
   totalSaved: number
-}
-
-let sharedEncoder: ReturnType<typeof getEncoding> | undefined
-
-function getSharedEncoder() {
-  if (!sharedEncoder) {
-    try {
-      sharedEncoder = getEncoding("o200k_base")
-    } catch {
-      sharedEncoder = getEncoding("cl100k_base")
-    }
-  }
-  return sharedEncoder
 }
 
 export class Tracker {
@@ -35,31 +22,13 @@ export class Tracker {
   }
 
   /**
-   * Records a tool output truncation event with exact token calculation using Tiktoken.
-   * For outputs >32KB, uses high-accuracy chunk sampling to prevent main thread event loop freeze.
+   * Records a tool output truncation event with accurate token calculation.
    */
   recordTruncation(original: string, preview: string): number {
     try {
-      const encoder = getSharedEncoder()
-      if (original.length <= 32 * 1024) {
-        const origTokens = encoder.encode(original).length
-        const prevTokens = encoder.encode(preview).length
-        const saved = Math.max(0, origTokens - prevTokens)
-
-        this.metrics.truncatedTokens += saved
-        this.metrics.truncatedEvents += 1
-        this.metrics.totalSaved += saved
-        return saved
-      }
-
-      const head = original.slice(0, 2048)
-      const tail = original.slice(original.length - 2048)
-      const sampleTokens = encoder.encode(head).length + encoder.encode(tail).length
-      const sampleLength = head.length + tail.length
-      const tokenPerChar = sampleTokens / sampleLength
-      const prevTokens = encoder.encode(preview).length
-      const origEstimated = Math.round(original.length * tokenPerChar)
-      const saved = Math.max(0, origEstimated - prevTokens)
+      const origTokens = Token.estimate(original)
+      const prevTokens = Token.estimate(preview)
+      const saved = Math.max(0, origTokens - prevTokens)
 
       this.metrics.truncatedTokens += saved
       this.metrics.truncatedEvents += 1
@@ -112,6 +81,27 @@ export class Tracker {
 
 export const globalTracker = new Tracker()
 
+export function extractTruncationSaved(part: unknown): number {
+  if (!part || typeof part !== "object") return 0
+  const anyPart = part as Record<string, any>
+  
+  if (typeof anyPart.state?.structured?.tokensSaved === "number") return anyPart.state.structured.tokensSaved
+  if (typeof anyPart.state?.structured?.truncatedTokens === "number") return anyPart.state.structured.truncatedTokens
+  if (typeof anyPart.state?.metadata?.tokensSaved === "number") return anyPart.state.metadata.tokensSaved
+  if (typeof anyPart.state?.metadata?.truncatedTokens === "number") return anyPart.state.metadata.truncatedTokens
+  if (typeof anyPart.metadata?.tokensSaved === "number") return anyPart.metadata.tokensSaved
+  if (typeof anyPart.metadata?.truncatedTokens === "number") return anyPart.metadata.truncatedTokens
+
+  const text = anyPart.content ?? anyPart.text ?? anyPart.state?.output ?? ""
+  if (typeof text === "string" && text.includes("tokens saved")) {
+    const match = text.match(/([0-9,]+)\s*tokens saved/)
+    if (match && match[1]) {
+      return Number.parseInt(match[1].replace(/,/g, ""), 10) || 0
+    }
+  }
+  return 0
+}
+
 export function formatEcoSuffix(metrics: Metrics): string {
   const parts: string[] = []
 
@@ -131,3 +121,4 @@ export function formatEcoSuffix(metrics: Metrics): string {
 
   return parts.length > 0 ? ` · ${parts.join(" · ")}` : ""
 }
+

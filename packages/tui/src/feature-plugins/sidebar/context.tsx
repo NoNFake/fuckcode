@@ -4,6 +4,7 @@ import type { BuiltinTuiPlugin } from "../builtins"
 import { createMemo, Show } from "solid-js"
 import { DialogEco } from "../../component/dialog-eco"
 import { useDialog } from "../../ui/dialog"
+import { EcoMetrics } from "@opencode-ai/core/util/eco-metrics"
 
 const id = "internal:sidebar-context"
 
@@ -19,26 +20,20 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
   const session = createMemo(() => props.api.state.session.get(props.session_id))
   const cost = createMemo(() => session()?.cost ?? 0)
   const tokenSavingEnabled = createMemo(() => props.api.kv.get("token_saving_enabled", true))
-  const tokensSaved = createMemo(() => {
-    const cacheSaved = msg().reduce(
-      (sum, item) => sum + (item.role === "assistant" ? (item.tokens?.cache?.read ?? 0) : 0),
-      0,
-    )
-    let toolTruncationSaved = 0
+  const metrics = createMemo(() => {
+    let cacheRead = 0
+    let contextCut = 0
     for (const item of msg()) {
+      if (item.role === "assistant") {
+        cacheRead += item.tokens?.cache?.read ?? 0
+      }
       if ("parts" in item && Array.isArray((item as any).parts)) {
         for (const part of (item as any).parts) {
-          const text = part.content ?? part.text ?? ""
-          if (typeof text === "string" && text.includes("tokens saved")) {
-            const match = text.match(/([0-9,]+)\s*tokens saved/)
-            if (match && match[1]) {
-              toolTruncationSaved += Number.parseInt(match[1].replace(/,/g, ""), 10) || 0
-            }
-          }
+          contextCut += EcoMetrics.extractTruncationSaved(part)
         }
       }
     }
-    return cacheSaved + toolTruncationSaved
+    return { cacheRead, contextCut }
   })
 
   const state = createMemo(() => {
@@ -72,7 +67,18 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
           fg={theme().success}
           onMouseUp={() => dialog.replace(() => <DialogEco sessionID={props.session_id} />)}
         >
-          ◈ eco {tokensSaved() > 0 ? `(-${tokensSaved() >= 1000 ? `${(tokensSaved() / 1000).toFixed(1)}k` : tokensSaved()} saved)` : "active"}
+          ◈ eco{" "}
+          <Show
+            when={metrics().contextCut > 0 || metrics().cacheRead > 0}
+            fallback={<span>active</span>}
+          >
+            <span style={{ fg: theme().textMuted }}>
+              ({[
+                metrics().contextCut > 0 ? `cut -${metrics().contextCut >= 1000 ? `${(metrics().contextCut / 1000).toFixed(1)}k` : metrics().contextCut}` : "",
+                metrics().cacheRead > 0 ? `cache ${metrics().cacheRead >= 1000 ? `${(metrics().cacheRead / 1000).toFixed(1)}k` : metrics().cacheRead}` : "",
+              ].filter(Boolean).join(" · ")})
+            </span>
+          </Show>
         </text>
       </Show>
     </box>

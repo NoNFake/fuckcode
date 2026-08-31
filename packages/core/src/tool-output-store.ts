@@ -27,6 +27,7 @@ export interface BoundInput {
 export interface BoundResult {
   readonly output: ToolOutput
   readonly outputPaths: ReadonlyArray<string>
+  readonly truncatedTokens?: number
 }
 
 export class StorageError extends Schema.TaggedErrorClass<StorageError>()("ToolOutputStore.StorageError", {
@@ -196,6 +197,7 @@ const layer = Layer.effect(
           ],
         },
         outputPaths: [outputPath],
+        truncatedTokens: savedTokens,
       }
     })
 

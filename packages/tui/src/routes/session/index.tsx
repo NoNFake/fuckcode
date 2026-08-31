@@ -63,6 +63,7 @@ import { useKV } from "../../context/kv.tsx"
 import stripAnsi from "strip-ansi"
 import { usePromptRef } from "../../context/prompt"
 import { useEpilogue } from "../../context/epilogue"
+import { EcoMetrics } from "@opencode-ai/core/util/eco-metrics"
 import { normalizePath } from "../../util/path"
 import { PermissionPrompt } from "./permission"
 import { QuestionPrompt } from "./question"
@@ -1515,13 +1516,7 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
     const parts: string[] = []
     let truncationSaved = 0
     for (const part of props.parts) {
-      const text = (part as any).content ?? (part as any).text ?? ""
-      if (typeof text === "string" && text.includes("tokens saved")) {
-        const match = text.match(/([0-9,]+)\s*tokens saved/)
-        if (match && match[1]) {
-          truncationSaved += Number.parseInt(match[1].replace(/,/g, ""), 10) || 0
-        }
-      }
+      truncationSaved += EcoMetrics.extractTruncationSaved(part)
     }
     if (truncationSaved > 0) {
       const k = truncationSaved >= 1000 ? `${(truncationSaved / 1000).toFixed(1)}k` : `${truncationSaved}`

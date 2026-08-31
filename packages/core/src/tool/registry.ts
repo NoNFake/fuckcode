@@ -35,6 +35,7 @@ export interface Settlement {
   readonly result: ToolResultValue
   readonly output?: ToolOutput
   readonly outputPaths?: ReadonlyArray<string>
+  readonly truncatedTokens?: number
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/v2/ToolRegistry") {}
@@ -75,10 +76,12 @@ const registryLayer = Layer.effect(
       const bounded = yield* resources.bound({ sessionID: input.sessionID, toolCallID: input.call.id, output })
       const result = ToolOutput.toResultValue(bounded.output)
       if (result.type === "error")
-        return bounded.outputPaths.length > 0 ? { result, outputPaths: bounded.outputPaths } : { result }
+        return bounded.outputPaths.length > 0
+          ? { result, outputPaths: bounded.outputPaths, truncatedTokens: bounded.truncatedTokens }
+          : { result, truncatedTokens: bounded.truncatedTokens }
       return bounded.outputPaths.length > 0
-        ? { result, output: bounded.output, outputPaths: bounded.outputPaths }
-        : { result, output: bounded.output }
+        ? { result, output: bounded.output, outputPaths: bounded.outputPaths, truncatedTokens: bounded.truncatedTokens }
+        : { result, output: bounded.output, truncatedTokens: bounded.truncatedTokens }
     })
 
     return Service.of({

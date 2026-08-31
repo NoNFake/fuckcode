@@ -8,6 +8,7 @@ import { useRoute } from "../../context/route"
 import { useKV } from "../../context/kv"
 import { useDialog } from "../../ui/dialog"
 import { DialogEco } from "../../component/dialog-eco"
+import { EcoMetrics } from "@opencode-ai/core/util/eco-metrics"
 
 export function Footer() {
   const { theme } = useTheme()
@@ -17,26 +18,20 @@ export function Footer() {
   const kv = useKV()
   const tokenSavingEnabled = createMemo(() => kv.get("token_saving_enabled", true))
   const msg = createMemo(() => (route.data.type === "session" ? (sync.data.message[route.data.sessionID] ?? []) : []))
-  const tokensSaved = createMemo(() => {
-    const cacheSaved = msg().reduce(
-      (sum: number, item) => sum + (item.role === "assistant" ? (item.tokens?.cache?.read ?? 0) : 0),
-      0,
-    )
-    let toolTruncationSaved = 0
+  const metrics = createMemo(() => {
+    let cacheRead = 0
+    let contextCut = 0
     for (const item of msg()) {
+      if (item.role === "assistant") {
+        cacheRead += item.tokens?.cache?.read ?? 0
+      }
       if ("parts" in item && Array.isArray((item as any).parts)) {
         for (const part of (item as any).parts) {
-          const text = part.content ?? part.text ?? ""
-          if (typeof text === "string" && text.includes("tokens saved")) {
-            const match = text.match(/([0-9,]+)\s*tokens saved/)
-            if (match && match[1]) {
-              toolTruncationSaved += Number.parseInt(match[1].replace(/,/g, ""), 10) || 0
-            }
-          }
+          contextCut += EcoMetrics.extractTruncationSaved(part)
         }
       }
     }
-    return cacheSaved + toolTruncationSaved
+    return { cacheRead, contextCut }
   })
   const mcp = createMemo(() => Object.values(sync.data.mcp).filter((x) => x.status === "connected").length)
   const mcpError = createMemo(() => Object.values(sync.data.mcp).some((x) => x.status === "failed"))
@@ -113,10 +108,14 @@ export function Footer() {
             <Show when={tokenSavingEnabled()}>
               <text fg={theme.success} onMouseUp={() => dialog.replace(() => <DialogEco />)}>
                 <span>◈ eco</span>
-                <Show when={tokensSaved() > 0}>
+                <Show when={metrics().contextCut > 0 || metrics().cacheRead > 0}>
                   <span style={{ fg: theme.textMuted }}>
-                    {" "}
-                    (-{tokensSaved() >= 1000 ? `${(tokensSaved() / 1000).toFixed(1)}k` : tokensSaved()})
+                    {metrics().contextCut > 0
+                      ? ` (cut -${metrics().contextCut >= 1000 ? `${(metrics().contextCut / 1000).toFixed(1)}k` : metrics().contextCut})`
+                      : ""}
+                    {metrics().cacheRead > 0
+                      ? ` (cache ${metrics().cacheRead >= 1000 ? `${(metrics().cacheRead / 1000).toFixed(1)}k` : metrics().cacheRead})`
+                      : ""}
                   </span>
                 </Show>
               </text>

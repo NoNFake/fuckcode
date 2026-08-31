@@ -62,6 +62,7 @@ describe("ToolOutputStore", () => {
           },
         })
         expect(result.output.structured).toEqual({ kind: "report" })
+        expect(result.truncatedTokens).toBeGreaterThan(0)
         expect(result.outputPaths).toHaveLength(1)
         expect(yield* fs.readFileString(result.outputPaths[0])).toBe(first + second)
         if (result.output.content[0]?.type !== "text") throw new Error("expected text preview")
@@ -76,6 +77,7 @@ describe("ToolOutputStore", () => {
         const structured = { text: "x".repeat(ToolOutputStore.MAX_BYTES) }
         const result = yield* store.bound({ sessionID, toolCallID: "call-json", output: { structured, content: [] } })
         expect(result.output.structured).toEqual(structured)
+        expect(result.truncatedTokens).toBeDefined()
         expect(result.outputPaths).toHaveLength(1)
         expect(JSON.parse(yield* fs.readFileString(result.outputPaths[0]))).toEqual(structured)
         expect(result.output.content).toHaveLength(1)
@@ -125,6 +127,7 @@ describe("ToolOutputStore", () => {
         })
 
         expect(result.output.structured).toEqual({ caption: "pixel" })
+        expect(result.truncatedTokens).toBeDefined()
         expect(result.output.content[1]).toEqual(media)
         expect(yield* fs.readFileString(result.outputPaths[0])).toBe(text)
       }),
