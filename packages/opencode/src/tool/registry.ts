@@ -54,6 +54,11 @@ import { ModelV2 } from "@opencode-ai/core/model"
 import { MCP } from "@/mcp"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { McpCatalog } from "@/mcp/catalog"
+import { ReadEvidenceTool } from "../pentest/read-evidence"
+import { PentestShellTool } from "../pentest/shell-tool"
+import { PentestConfig } from "../pentest/config"
+import { Sandbox } from "../pentest/sandbox"
+import { Observability } from "../pentest/observability"
 
 export function webSearchEnabled(providerID: ProviderV2.ID, flags = { exa: false, parallel: false }) {
   return (
@@ -117,6 +122,19 @@ const layer = Layer.effect(
     const agent = yield* Agent.Service
     const codeMode = flags.experimentalCodeMode ? yield* Effect.promise(() => import("./code-mode")) : undefined
     const codeModeTool = codeMode ? yield* codeMode.CodeModeTool : undefined
+
+    const pentestEnabled = process.env.FUCKCODE_PENTEST === "1" || process.env.FUCKCODE_PENTEST === "true"
+    const pentestSandboxNoDeps = Sandbox.layer.pipe(Layer.provide(PentestConfig.layer))
+    const pentestReadEvidenceInfo = pentestEnabled
+      ? yield* ReadEvidenceTool.pipe(Effect.provide(PentestConfig.layer))
+      : undefined
+    const pentestShellInfo = pentestEnabled
+      ? yield* PentestShellTool.pipe(
+          Effect.provide(PentestConfig.layer),
+          Effect.provide(Observability.layer),
+          Effect.provide(pentestSandboxNoDeps),
+        )
+      : undefined
 
     const state = yield* InstanceState.make<State>(
       Effect.fn("ToolRegistry.state")(function* (ctx) {
@@ -224,6 +242,8 @@ const layer = Layer.effect(
           lsp: Tool.init(lsptool),
           plan: Tool.init(plan),
           ...(codeModeTool ? { execute: Tool.init(codeModeTool) } : {}),
+          ...(pentestReadEvidenceInfo ? { pentestReadEvidence: Tool.init(pentestReadEvidenceInfo) } : {}),
+          ...(pentestShellInfo ? { pentestShell: Tool.init(pentestShellInfo) } : {}),
         })
 
         return {
@@ -246,6 +266,8 @@ const layer = Layer.effect(
             ...(tool.execute ? [tool.execute] : []),
             ...(flags.experimentalLspTool ? [tool.lsp] : []),
             ...(flags.experimentalPlanMode && flags.client === "cli" ? [tool.plan] : []),
+            ...(tool.pentestReadEvidence ? [tool.pentestReadEvidence] : []),
+            ...(tool.pentestShell ? [tool.pentestShell] : []),
           ],
           task: tool.task,
           read: tool.read,

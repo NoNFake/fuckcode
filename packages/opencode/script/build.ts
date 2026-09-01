@@ -137,6 +137,9 @@ const targets = singleFlag
 await $`rm -rf dist`
 
 const binaries: Record<string, string> = {}
+const binaryName = process.env.BINARY_NAME || "fuckcode"
+const archiveFlag = process.argv.includes("--archive") || Script.release || !singleFlag
+
 if (!skipInstall) {
   await $`bun install --os="*" --cpu="*" @opentui/core@${pkg.dependencies["@opentui/core"]}`
   await $`bun install --os="*" --cpu="*" @parcel/watcher@${pkg.dependencies["@parcel/watcher"]}`
@@ -144,8 +147,7 @@ if (!skipInstall) {
 }
 for (const item of targets) {
   const name = [
-    pkg.name,
-    // changing to win32 flags npm for some reason
+    binaryName,
     item.os === "win32" ? "windows" : item.os,
     item.arch,
     item.avx2 === false ? "baseline" : undefined,
@@ -153,12 +155,23 @@ for (const item of targets) {
   ]
     .filter(Boolean)
     .join("-")
-  console.log(`building ${name}`)
+  const bunTarget = [
+    "bun",
+    item.os === "win32" ? "windows" : item.os,
+    item.arch,
+    item.avx2 === false ? "baseline" : undefined,
+    item.abi === undefined ? undefined : item.abi,
+  ]
+    .filter(Boolean)
+    .join("-")
+
+  console.log(`building ${name} (target: ${bunTarget})`)
   await $`mkdir -p dist/${name}/bin`
 
   const workerPath = "./src/cli/tui/worker.ts"
   const treeSitterWorkerPath = "opentui-tree-sitter-worker.js"
   const bunfsRoot = item.os === "win32" ? "B:/~BUN/root/" : "/$bunfs/root/"
+  const binFile = item.os === "win32" ? `${binaryName}.exe` : binaryName
 
   await Bun.build({
     conditions: ["bun", "node"],
@@ -174,8 +187,8 @@ for (const item of targets) {
       autoloadDotenv: false,
       autoloadTsconfig: true,
       autoloadPackageJson: true,
-      target: name.replace(pkg.name, "bun") as any,
-      outfile: `dist/${name}/bin/fuckcode`,
+      target: bunTarget as any,
+      outfile: `dist/${name}/bin/${binFile}`,
       execArgv: [`--user-agent=fuckcode/${Script.version}`, "--use-system-ca", "--"],
       windows: {},
     },
@@ -203,7 +216,7 @@ for (const item of targets) {
 
   // Smoke test: only run if binary is for current platform
   if (item.os === process.platform && item.arch === process.arch && !item.abi) {
-    const binaryPath = `dist/${name}/bin/fuckcode`
+    const binaryPath = `dist/${name}/bin/${binFile}`
     console.log(`Running smoke test: ${binaryPath} --version`)
     try {
       const versionOutput = await $`${binaryPath} --version`.text()
@@ -232,15 +245,42 @@ for (const item of targets) {
   binaries[name] = Script.version
 }
 
-if (Script.release) {
+if (archiveFlag) {
+  console.log("\n=== Создание архивов (.tar.gz / .zip) ===")
+  const checksums: Array<{ file: string; sha256: string; size: string }> = []
+
   for (const key of Object.keys(binaries)) {
+    const archiveName = key.includes("linux") ? `${key}.tar.gz` : `${key}.zip`
     if (key.includes("linux")) {
-      await $`tar -czf ../../${key}.tar.gz *`.cwd(`dist/${key}/bin`)
+      await $`tar -czf ../../${archiveName} *`.cwd(`dist/${key}/bin`)
     } else {
-      await $`zip -r ../../${key}.zip *`.cwd(`dist/${key}/bin`)
+      await $`zip -r -q ../../${archiveName} *`.cwd(`dist/${key}/bin`)
+    }
+
+    const archivePath = `dist/${archiveName}`
+    const file = Bun.file(archivePath)
+    if (await file.exists()) {
+      const hasher = new Bun.CryptoHasher("sha256")
+      hasher.update(await file.arrayBuffer())
+      const hash = hasher.digest("hex")
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(1) + " MB"
+      checksums.push({ file: archiveName, sha256: hash, size: sizeMb })
     }
   }
-  await $`gh release upload v${Script.version} ./dist/*.zip ./dist/*.tar.gz --clobber --repo ${process.env.GH_REPO}`
+
+  const checksumsContent = checksums.map((c) => `${c.sha256}  ${c.file}`).join("\n") + "\n"
+  await Bun.file("dist/sha256.txt").write(checksumsContent)
+  await Bun.file("dist/checksums.txt").write(checksumsContent)
+
+  console.log("\n📦 Сгенерированные релизные ассеты:")
+  for (const c of checksums) {
+    console.log(`- ${c.file} (${c.size})`)
+    console.log(`  sha256: ${c.sha256}`)
+  }
+
+  if (Script.release) {
+    await $`gh release upload v${Script.version} ./dist/*.zip ./dist/*.tar.gz ./dist/sha256.txt --clobber --repo ${process.env.GH_REPO}`
+  }
 }
 
 export { binaries }

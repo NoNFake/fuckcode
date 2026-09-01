@@ -106,6 +106,67 @@ FuckCode is designed to work with non-interactive command-line utilities. The ag
 
 ---
 
+## PentestCode — Sandboxed Execution Engine (Phase 1)
+
+PentestCode provides network-isolated command execution with structured evidence storage for pentest engagements.
+
+### Architecture
+
+```
+pentest/
+├── config.ts           # TargetScope schema (domains, CIDRs, ports)
+├── preflight.ts        # Dependency checks (pasta/slirp4netns, nftables, dnsmasq), FTS5 validation
+├── sandbox.ts          # Rootless namespace wrapper (pasta or slirp4netns), -sS → -sT rewrite
+├── dns.ts              # Local DNS proxy (127.0.0.1:5353), whitelist-only, NXDOMAIN for non-scope
+├── filter.ts           # nftables DROP rules for IPs outside allowed CIDRs
+├── evidence.ts         # SQLite WAL store (audit_log, findings, evidence_fts), atomic writes, path traversal guard
+├── sanitizer.ts        # Key-line extraction, <300 token structured summaries
+├── read-evidence.ts    # FTS5 grep/pagination tool, two-tier output (summary never enters LLM context raw)
+├── shell-tool.ts       # Sandbox-aware shell, all output stored as evidence
+└── observability.ts    # trace_id/span_id propagation, structured logging, scope violation events
+```
+
+### Key Properties
+
+| Property | Description |
+|----------|-------------|
+| **Network isolation** | Commands run inside `pasta` or `slirp4netns` namespaces. Only IPs in `target_scope.cidrs` are reachable. |
+| **DNS lockdown** | Built-in resolver on `127.0.0.1:5353` returns NXDOMAIN for non-whitelisted domains. |
+| **Two-tier output** | Raw tool output is stored on disk; LLM receives only a `<300 token` summary + `evidence_id`. |
+| **read_evidence** | FTS5-backed retrieval by evidence ID with grep, offset, limit. Sub-5ms on 100MB logs. |
+| **Crash safety** | WAL mode, FK constraints, orphan reconcile on startup. Mid-transaction SIGKILL does not corrupt data. |
+| **Trace chain** | Every tool call carries `trace_id` → `span_id` through scope guard → spawn → capture → DB insert. |
+
+### Configuration
+
+```json
+{
+  "pentest": {
+    "enabled": true,
+    "scope": {
+      "domains": ["target.com", "*.target.com"],
+      "cidrs": ["10.0.0.0/8", "192.168.1.0/24"],
+      "ports": [22, 80, 443, 8080]
+    },
+    "sandboxTimeout": 30000,
+    "evidenceDir": "~/.local/share/opencode/pentest-evidence"
+  }
+}
+```
+
+### Tests
+
+```bash
+# Run pentest tests from packages/opencode
+bun test src/pentest/__tests__/
+```
+
+- **pentest.test.ts** — Evidence write/read, sanitization, observability
+- **safety-bypass.test.ts** — 50+ scope bypass attempts (env vars, subshells, hex IP, DNS rebinding, protocol tricks)
+- **concurrency.test.ts** — 10 parallel writers × 10 ops, crash recovery, orphan detection
+
+---
+
 ## Development & Verification
 
 ```bash
