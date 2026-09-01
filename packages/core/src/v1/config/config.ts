@@ -146,6 +146,23 @@ export const Info = Schema.Struct({
     description:
       "Thresholds for truncating tool output. When output exceeds either limit, the full text is written to the truncation directory and a preview is returned.",
   }),
+  pentest: Schema.optional(
+    Schema.Struct({
+      enabled: Schema.optional(Schema.Boolean).annotate({ description: "Enable pentest sandbox mode" }),
+      scope: Schema.optional(
+        Schema.Struct({
+          domains: Schema.mutable(Schema.Array(Schema.String)).annotate({ description: "Allowed domains for DNS whitelist" }),
+          cidrs: Schema.mutable(Schema.Array(Schema.String)).annotate({ description: "Allowed CIDRs for network access" }),
+          ports: Schema.optional(Schema.mutable(Schema.Array(Schema.Number))).annotate({ description: "Allowed ports (reserved)" }),
+          children: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)).annotate({
+            description: "Named child scopes for sub-targets",
+          }),
+        }),
+      ).annotate({ description: "Target scope for network isolation" }),
+      sandboxTimeout: Schema.optional(Schema.Number).annotate({ description: "Sandbox timeout in milliseconds" }),
+      evidenceDir: Schema.optional(Schema.String).annotate({ description: "Directory for evidence storage" }),
+    }),
+  ).annotate({ description: "Pentest sandbox configuration for network-isolated command execution" }),
   compaction: Schema.optional(
     Schema.Struct({
       auto: Schema.optional(Schema.Boolean).annotate({

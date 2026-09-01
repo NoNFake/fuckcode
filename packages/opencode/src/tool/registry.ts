@@ -123,14 +123,20 @@ const layer = Layer.effect(
     const codeMode = flags.experimentalCodeMode ? yield* Effect.promise(() => import("./code-mode")) : undefined
     const codeModeTool = codeMode ? yield* codeMode.CodeModeTool : undefined
 
-    const pentestEnabled = process.env.FUCKCODE_PENTEST === "1" || process.env.FUCKCODE_PENTEST === "true"
-    const pentestSandboxNoDeps = Sandbox.layer.pipe(Layer.provide(PentestConfig.layer))
+    const cfg = yield* config.get()
+    const pentestConfig = PentestConfig.loadFromConfig((cfg as any).pentest)
+    const pentestEnabled =
+      process.env.FUCKCODE_PENTEST === "1" ||
+      process.env.FUCKCODE_PENTEST === "true" ||
+      pentestConfig.enabled
+    const pentestConfigLayer = PentestConfig.layerFromConfig((cfg as any).pentest)
+    const pentestSandboxNoDeps = Sandbox.layer.pipe(Layer.provide(pentestConfigLayer))
     const pentestReadEvidenceInfo = pentestEnabled
-      ? yield* ReadEvidenceTool.pipe(Effect.provide(PentestConfig.layer))
+      ? yield* ReadEvidenceTool.pipe(Effect.provide(pentestConfigLayer))
       : undefined
     const pentestShellInfo = pentestEnabled
       ? yield* PentestShellTool.pipe(
-          Effect.provide(PentestConfig.layer),
+          Effect.provide(pentestConfigLayer),
           Effect.provide(Observability.layer),
           Effect.provide(pentestSandboxNoDeps),
         )

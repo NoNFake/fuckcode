@@ -49,6 +49,9 @@ const BaseParameterFields = {
       "This should only be set if you mean to resume a previous task (you can pass a prior task_id and the task will continue the same subagent session as before instead of creating a fresh one)",
   }),
   command: Schema.optional(Schema.String).annotate({ description: "The command that triggered this task" }),
+  scope_override: Schema.optional(Schema.String).annotate({
+    description: "Optional named pentest scope override (e.g. 'web', 'api') for the subagent session",
+  }),
 }
 
 const BaseParameters = Schema.Struct(BaseParameterFields)
@@ -186,6 +189,7 @@ export const TaskTool = Tool.define(
         parentSessionId: ctx.sessionID,
         sessionId: nextSession.id,
         model,
+        ...(params.scope_override ? { scope_override: params.scope_override } : {}),
         ...(runInBackground ? { background: true } : {}),
       }
 
