@@ -123,6 +123,25 @@ const layer = Layer.effect(
     const codeMode = flags.experimentalCodeMode ? yield* Effect.promise(() => import("./code-mode")) : undefined
     const codeModeTool = codeMode ? yield* codeMode.CodeModeTool : undefined
 
+    const dynamicPentestConfig = PentestConfig.Service.of({
+      get: () =>
+        Effect.gen(function* () {
+          const c = yield* config.get()
+          return PentestConfig.loadFromConfig((c as any).pentest)
+        }),
+    })
+    const dynamicSandbox = Sandbox.makeService(dynamicPentestConfig)
+    const dynamicObs = Observability.makeService()
+
+    const pentestReadEvidence = yield* ReadEvidenceTool.pipe(
+      Effect.provideService(PentestConfig.Service, dynamicPentestConfig),
+    )
+    const pentestShell = yield* PentestShellTool.pipe(
+      Effect.provideService(PentestConfig.Service, dynamicPentestConfig),
+      Effect.provideService(Sandbox.Service, dynamicSandbox),
+      Effect.provideService(Observability.Service, dynamicObs),
+    )
+
     const state = yield* InstanceState.make<State>(
       Effect.fn("ToolRegistry.state")(function* (ctx) {
         const custom: Tool.Def[] = []
@@ -216,18 +235,6 @@ const layer = Layer.effect(
           process.env.FUCKCODE_PENTEST === "1" ||
           process.env.FUCKCODE_PENTEST === "true" ||
           pentestConfig.enabled
-        const pentestConfigLayer = PentestConfig.layerFromConfig((cfg as any).pentest)
-        const pentestSandboxNoDeps = Sandbox.layer.pipe(Layer.provide(pentestConfigLayer))
-        const pentestReadEvidenceInfo = pentestEnabled
-          ? yield* ReadEvidenceTool.pipe(Effect.provide(pentestConfigLayer))
-          : undefined
-        const pentestShellInfo = pentestEnabled
-          ? yield* PentestShellTool.pipe(
-              Effect.provide(pentestConfigLayer),
-              Effect.provide(Observability.layer),
-              Effect.provide(pentestSandboxNoDeps),
-            )
-          : undefined
 
         const tool = yield* Effect.all({
           invalid: Tool.init(invalid),
@@ -247,8 +254,7 @@ const layer = Layer.effect(
           lsp: Tool.init(lsptool),
           plan: Tool.init(plan),
           ...(codeModeTool ? { execute: Tool.init(codeModeTool) } : {}),
-          ...(pentestReadEvidenceInfo ? { pentestReadEvidence: Tool.init(pentestReadEvidenceInfo) } : {}),
-          ...(pentestShellInfo ? { pentestShell: Tool.init(pentestShellInfo) } : {}),
+          ...(pentestEnabled ? { pentestReadEvidence: Tool.init(pentestReadEvidence), pentestShell: Tool.init(pentestShell) } : {}),
         })
 
         return {
