@@ -42,6 +42,33 @@ describe("EcoMetrics", () => {
     expect(EcoMetrics.extractTruncationSaved(part)).toBe(4520)
   })
 
+  it("extracts from V2 SessionMessage ToolStateCompleted content array", () => {
+    const part = {
+      type: "tool",
+      state: {
+        status: "completed",
+        content: [
+          {
+            type: "text",
+            text: "... output truncated (5,678 tokens saved); full content saved to /path ...",
+          },
+        ],
+      },
+    }
+    expect(EcoMetrics.extractTruncationSaved(part)).toBe(5678)
+  })
+
+  it("extracts from state.truncatedTokens number directly", () => {
+    const part = {
+      type: "tool",
+      state: {
+        status: "completed",
+        truncatedTokens: 9999,
+      },
+    }
+    expect(EcoMetrics.extractTruncationSaved(part)).toBe(9999)
+  })
+
   it("returns 0 when no truncation happened", () => {
     const part = {
       type: "tool",

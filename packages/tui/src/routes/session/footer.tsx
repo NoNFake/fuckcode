@@ -25,10 +25,11 @@ export function Footer() {
       if (item.role === "assistant") {
         cacheRead += item.tokens?.cache?.read ?? 0
       }
-      if ("parts" in item && Array.isArray((item as any).parts)) {
-        for (const part of (item as any).parts) {
-          contextCut += EcoMetrics.extractTruncationSaved(part)
-        }
+      const parts = "parts" in item && Array.isArray((item as any).parts)
+        ? (item as any).parts
+        : (sync.data.part[item.id] ?? [])
+      for (const part of parts) {
+        contextCut += EcoMetrics.extractTruncationSaved(part)
       }
     }
     return { cacheRead, contextCut }

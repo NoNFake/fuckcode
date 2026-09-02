@@ -58,16 +58,17 @@ export function DialogEco(props: { sessionID?: string }) {
         if (item.summary) compactionCount++
       }
 
-      if ("parts" in item && Array.isArray((item as any).parts)) {
-        for (const part of (item as any).parts) {
-          const saved = EcoMetrics.extractTruncationSaved(part)
-          if (saved > 0) {
-            toolTruncationSaved += saved
-            truncatedCount++
-            // Subsequent assistant turns in the session avoided paying for this truncated payload
-            const subsequentTurns = assistantIndices.filter((idx) => idx > i).length
-            cumulativeContextSaved += saved * (subsequentTurns + 1)
-          }
+      const parts = "parts" in item && Array.isArray((item as any).parts)
+        ? (item as any).parts
+        : (sync.data.part[item.id] ?? [])
+      for (const part of parts) {
+        const saved = EcoMetrics.extractTruncationSaved(part)
+        if (saved > 0) {
+          toolTruncationSaved += saved
+          truncatedCount++
+          // Subsequent assistant turns in the session avoided paying for this truncated payload
+          const subsequentTurns = assistantIndices.filter((idx) => idx > i).length
+          cumulativeContextSaved += saved * (subsequentTurns + 1)
         }
       }
     }
