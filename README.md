@@ -106,50 +106,72 @@ FuckCode is designed to work with non-interactive command-line utilities. The ag
 
 ---
 
-## PentestCode — Sandboxed Execution Engine (Phase 1)
+## Pentest Module — Sandboxed Execution & Evidence Engine
 
-PentestCode provides network-isolated command execution with structured evidence storage for pentest engagements.
+The pentest module provides an isolated execution sandbox, automated evidence logging, structured vulnerability parsing, and hierarchical scope enforcement for security engagements.
 
 ### Architecture
 
 ```
 pentest/
-├── config.ts           # TargetScope schema (domains, CIDRs, ports)
-├── preflight.ts        # Dependency checks (pasta/slirp4netns, nftables, dnsmasq), FTS5 validation
-├── sandbox.ts          # Rootless namespace wrapper (pasta or slirp4netns), -sS → -sT rewrite
-├── dns.ts              # Local DNS proxy (127.0.0.1:5353), whitelist-only, NXDOMAIN for non-scope
-├── filter.ts           # nftables DROP rules for IPs outside allowed CIDRs
-├── evidence.ts         # SQLite WAL store (audit_log, findings, evidence_fts), atomic writes, path traversal guard
-├── sanitizer.ts        # Key-line extraction, <300 token structured summaries
-├── read-evidence.ts    # FTS5 grep/pagination tool, two-tier output (summary never enters LLM context raw)
-├── shell-tool.ts       # Sandbox-aware shell, all output stored as evidence
-└── observability.ts    # trace_id/span_id propagation, structured logging, scope violation events
+├── config.ts           # TargetScope schema (domains, CIDRs, ports, named child scopes)
+├── preflight.ts        # Backend validation (pasta, slirp4netns, unshare), FTS5 checks
+├── sandbox.ts          # Rootless namespace wrapper (pasta/slirp4netns/unshare), -sS to -sT rewrite
+├── dns-forwarder.ts    # Embedded DNS resolver (127.0.0.1:53), whitelist filtering, NXDOMAIN for non-scope
+├── filter.ts           # nftables output filtering rules outside allowed CIDRs
+├── evidence.ts         # SQLite WAL store (audit_log, findings, evidence_fts), atomic transaction writes, deduplication
+├── context.ts          # SystemContext provider (pentest/findings) for ambient LLM and subagent awareness
+├── sanitizer.ts        # Output compression, ANSI stripping, structured summaries
+├── read-evidence.ts    # FTS5 trigram grep and pagination tool for large scan logs
+├── shell-tool.ts       # Sandbox shell with immediate findings extraction in output
+├── parsers/            # Automated finding parsers
+│   ├── nmap.ts         # Port scanning, service versions, OS detection, script CVEs
+│   ├── nuclei.ts       # Vulnerability templates, severities, CVSS scores
+│   ├── cme.ts          # SMB/LDAP/WinRM enumeration, Pwn3d admin flags, credentials
+│   ├── ffuf.ts         # Web fuzzing endpoints, status codes, redirects
+│   ├── sqlmap.ts       # SQL injection points, back-end DBMS, extracted databases, hash dumps
+│   ├── nikto.ts        # Web server banners, sensitive files (.git, .env, backups), missing headers
+│   └── whatweb.ts      # Web technology stacks, CMS versions, server components
+└── observability.ts    # Trace context propagation, structured logging, audit trails
 ```
 
-### Key Properties
+### Key Capabilities
 
-| Property | Description |
-|----------|-------------|
-| **Network isolation** | Commands run inside `pasta` or `slirp4netns` namespaces. Only IPs in `target_scope.cidrs` are reachable. |
-| **DNS lockdown** | Built-in resolver on `127.0.0.1:5353` returns NXDOMAIN for non-whitelisted domains. |
-| **Two-tier output** | Raw tool output is stored on disk; LLM receives only a `<300 token` summary + `evidence_id`. |
-| **read_evidence** | FTS5-backed retrieval by evidence ID with grep, offset, limit. Sub-5ms on 100MB logs. |
-| **Crash safety** | WAL mode, FK constraints, orphan reconcile on startup. Mid-transaction SIGKILL does not corrupt data. |
-| **Trace chain** | Every tool call carries `trace_id` → `span_id` through scope guard → spawn → capture → DB insert. |
+| Capability | Description |
+|---|---|
+| **Multi-backend Isolation** | Automatically detects and selects the best available backend (`pasta` -> `slirp4netns` -> `unshare`). Network traffic is restricted strictly to scope CIDRs. |
+| **DNS Whitelist Enforcement** | Embedded forwarder blocks non-scoped domains with NXDOMAIN and prevents DoH/DoT bypasses. |
+| **Automated Vulnerability Parsers** | Raw stdout is parsed in real time into typed findings across 7 tool categories (Nmap, Nuclei, CME, FFuf, SQLMap, Nikto, WhatWeb). |
+| **Context Window Injection** | Findings are injected directly into `PentestShellTool` output summaries and continuously maintained in ambient `SystemContext` for multi-turn models and subagents. |
+| **Hierarchical Scopes** | Supports named child scopes (`web`, `internal`) with inherited constraints and subagent task scoping (`scope_override`). |
+| **High-Performance Evidence Store** | SQLite WAL with transaction batching (`db.transaction`), memory PRAGMAs, FTS5 trigram full-text indexing capped to 64KB, and query deduplication. |
+| **read_evidence Tool** | Safe pagination and grep over arbitrary scan sizes (100MB+) without context window overflow. |
 
-### Configuration
+### Configuration (`fuckcode.json`)
 
 ```json
 {
   "pentest": {
     "enabled": true,
-    "scope": {
-      "domains": ["target.com", "*.target.com"],
-      "cidrs": ["10.0.0.0/8", "192.168.1.0/24"],
-      "ports": [22, 80, 443, 8080]
-    },
     "sandboxTimeout": 30000,
-    "evidenceDir": "~/.local/share/opencode/pentest-evidence"
+    "evidenceDir": "~/.local/share/opencode/pentest-evidence",
+    "scope": {
+      "domains": ["target.corp", "*.target.corp"],
+      "cidrs": ["10.0.0.0/8", "172.16.0.0/12"],
+      "ports": [80, 443],
+      "children": {
+        "web": {
+          "domains": ["web.target.corp"],
+          "cidrs": ["10.10.0.0/16"],
+          "ports": [80, 443, 8080, 8443]
+        },
+        "internal": {
+          "domains": ["dc01.target.corp"],
+          "cidrs": ["10.20.0.0/24"],
+          "ports": [88, 389, 445, 636]
+        }
+      }
+    }
   }
 }
 ```
@@ -157,13 +179,14 @@ pentest/
 ### Tests
 
 ```bash
-# Run pentest tests from packages/opencode
+# Run all pentest unit and integration tests
 bun test src/pentest/__tests__/
 ```
 
-- **pentest.test.ts** — Evidence write/read, sanitization, observability
-- **safety-bypass.test.ts** — 50+ scope bypass attempts (env vars, subshells, hex IP, DNS rebinding, protocol tricks)
-- **concurrency.test.ts** — 10 parallel writers × 10 ops, crash recovery, orphan detection
+- **pentest.test.ts** — Evidence writes, FTS5 trigram searches, parser verification (Nmap, Nuclei, CME, FFuf, SQLMap, Nikto, WhatWeb).
+- **integration.test.ts** — End-to-end scope boundary enforcement, hierarchical child scopes, finding deduplication, and SystemContext formatting.
+- **safety-bypass.test.ts** — Over 50 scope evasion attempts (environment variables, subshells, hex IPs, DNS rebinding).
+- **concurrency.test.ts** — Multi-threaded concurrent writes, crash recovery, and orphan detection.
 
 ---
 
