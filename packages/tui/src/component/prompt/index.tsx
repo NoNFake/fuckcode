@@ -20,6 +20,7 @@ import { EmptyBorder, SplitBorder } from "../../ui/border"
 import { useTuiPaths, useTuiTerminalEnvironment } from "../../context/runtime"
 import { useClipboard } from "../../context/clipboard"
 import { Spinner } from "../spinner"
+import { SPINNER_FRAMES } from "../spinner"
 import { useSDK } from "../../context/sdk"
 import { useRoute } from "../../context/route"
 import { useProject } from "../../context/project"
@@ -1576,7 +1577,12 @@ export function Prompt(props: PromptProps) {
                 <box flexShrink={0} flexDirection="row" gap={1}>
                   <box marginLeft={1}>
                     <Show when={kv.get("animations_enabled", true)} fallback={<text fg={theme.textMuted}>[⋯]</text>}>
-                      <spinner color={spinnerDef().color} frames={spinnerDef().frames} interval={40} />
+                      {/* <spinner color={spinnerDef().color} frames={spinnerDef().frames} interval={40} /> */}
+                      <spinner 
+                        color={status().type === "retry" ? theme.error : theme.primary}
+                        frames={SPINNER_FRAMES} 
+                        interval={80} 
+                      />
                     </Show>
                   </box>
                   <box flexDirection="row" gap={1} flexShrink={0}>
