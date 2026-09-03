@@ -84,19 +84,14 @@ const layer = Layer.effect(
           references.length === 0
             ? undefined
             : [
-                "Project references provide additional directories that can be accessed when relevant.",
+                "Project references:",
                 "<available_references>",
                 ...references
                   .toSorted((a, b) => a.name.localeCompare(b.name))
-                  .flatMap((reference) => [
-                    "  <reference>",
-                    `    <name>${reference.name}</name>`,
-                    `    <path>${reference.path}</path>`,
-                    ...(reference.description === undefined
-                      ? []
-                      : [`    <description>${reference.description}</description>`]),
-                    "  </reference>",
-                  ]),
+                  .map(
+                    (reference) =>
+                      `  * ${reference.name} (${reference.path})${reference.description ? `: ${reference.description}` : ""}`,
+                  ),
                 "</available_references>",
               ].join("\n"),
         ].filter((part): part is string => part !== undefined)
