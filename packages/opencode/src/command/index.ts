@@ -46,6 +46,7 @@ export function hints(template: string) {
 export const Default = {
   INIT: "init",
   REVIEW: "review",
+  STATUS_USE: "status_use",
 } as const
 
 export interface Interface {
@@ -85,6 +86,13 @@ const layer = Layer.effect(
         },
         subtask: true,
         hints: hints(PROMPT_REVIEW),
+      }
+      commands[Default.STATUS_USE] = {
+        name: Default.STATUS_USE,
+        description: "show token usage and stats across all models",
+        source: "command",
+        template: "!`fuckcode stats --models 2>/dev/null || opencode stats --models`",
+        hints: [],
       }
 
       for (const [name, command] of Object.entries(cfg.command ?? {})) {
