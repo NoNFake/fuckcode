@@ -1,14 +1,35 @@
 import { RGBA } from "@opentui/core"
 import { useTerminalDimensions } from "@opentui/solid"
 import { spawnSync } from "node:child_process"
-import { existsSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { createMemo, For, Show } from "solid-js"
+import { useTuiConfig } from "../config"
 
 interface Chunk {
   text: string
   fg?: RGBA
   bg?: RGBA
+}
+
+export interface BackgroundSettings {
+  dim?: number // 0.0 - 1.0, e.g. 0.3 means 30% brightness
+  mode?: "half" | "ascii" | "block" | "braille" | "sextant" | "all"
+  color_mode?: "full" | "256" | "16" | "none"
+  dither?: "none" | "ordered" | "diffusion" | "noise"
+}
+
+function findBackgroundDirectory(): string | undefined {
+  let current = path.resolve(process.cwd())
+  while (true) {
+    if (existsSync(path.join(current, "background-image"))) {
+      return path.join(current, "background-image")
+    }
+    const parent = path.dirname(current)
+    if (parent === current) break
+    current = parent
+  }
+  return undefined
 }
 
 function findBackgroundImage(): string | undefined {
@@ -17,9 +38,11 @@ function findBackgroundImage(): string | undefined {
     const candidates = [
       path.join(current, "background-image/background.jpg"),
       path.join(current, "background-image/background.png"),
+      path.join(current, "background-image/background.jpeg"),
       path.join(current, "background-image/angel.jpg"),
       path.join(current, "background.jpg"),
       path.join(current, "background.png"),
+      path.join(current, "background.jpeg"),
     ]
     const found = candidates.find(existsSync)
     if (found) return found
@@ -30,11 +53,32 @@ function findBackgroundImage(): string | undefined {
   return undefined
 }
 
-function parseAnsiChunks(ansi: string): Chunk[][] {
+function readBackgroundSettings(): BackgroundSettings {
+  const dir = findBackgroundDirectory()
+  if (!dir) return {}
+  const configPath = path.join(dir, "background.json")
+  if (!existsSync(configPath)) return {}
+  try {
+    return JSON.parse(readFileSync(configPath, "utf8")) as BackgroundSettings
+  } catch {
+    return {}
+  }
+}
+
+function parseAnsiChunks(ansi: string, dim: number): Chunk[][] {
   const clean = ansi.replace(/\x1b\[\?25[lh]/g, "").trimEnd()
   const lines = clean.split("\n")
   const result: Chunk[][] = []
   const ansiRegex = /\x1b\[([0-9;]+)m/g
+
+  const applyDim = (r: number, g: number, b: number): RGBA => {
+    return RGBA.fromInts(
+      Math.round(r * dim),
+      Math.round(g * dim),
+      Math.round(b * dim),
+      255,
+    )
+  }
 
   for (const line of lines) {
     let currFg: RGBA | undefined
@@ -57,10 +101,10 @@ function parseAnsiChunks(ansi: string): Chunk[][] {
           currFg = undefined
           currBg = undefined
         } else if (codes[i] === 38 && codes[i + 1] === 2) {
-          currFg = RGBA.fromInts(codes[i + 2], codes[i + 3], codes[i + 4], 255)
+          currFg = applyDim(codes[i + 2], codes[i + 3], codes[i + 4])
           i += 4
         } else if (codes[i] === 48 && codes[i + 1] === 2) {
-          currBg = RGBA.fromInts(codes[i + 2], codes[i + 3], codes[i + 4], 255)
+          currBg = applyDim(codes[i + 2], codes[i + 3], codes[i + 4])
           i += 4
         }
       }
@@ -80,7 +124,26 @@ export function hasBackgroundImage(): boolean {
 
 export function Background() {
   const dimensions = useTerminalDimensions()
+  const tuiConfig = useTuiConfig()
+
   const imagePath = createMemo(() => findBackgroundImage())
+  const fileSettings = createMemo(() => readBackgroundSettings())
+
+  const dim = createMemo(() => {
+    const fromConfig = (tuiConfig as { background_dim?: number }).background_dim
+    if (typeof fromConfig === "number") return Math.max(0, Math.min(1, fromConfig))
+    if (typeof fileSettings().dim === "number") return Math.max(0, Math.min(1, fileSettings().dim!))
+    return 1.0
+  })
+
+  const mode = createMemo(() => {
+    const fromConfig = (tuiConfig as { background_mode?: string }).background_mode
+    return fromConfig ?? fileSettings().mode ?? "half"
+  })
+
+  const dither = createMemo(() => {
+    return fileSettings().dither ?? "none"
+  })
 
   const rows = createMemo(() => {
     const file = imagePath()
@@ -89,17 +152,20 @@ export function Background() {
     const height = dimensions().height
     if (width <= 0 || height <= 0) return []
 
-    const proc = spawnSync("chafa", [
+    const chafaArgs = [
       "--format=symbols",
-      "--symbols=half",
-      "--colors=full",
+      `--symbols=${mode()}`,
+      `--colors=${fileSettings().color_mode ?? "full"}`,
+      `--dither=${dither()}`,
       "--size",
       `${width}x${height}`,
       file,
-    ])
+    ]
+
+    const proc = spawnSync("chafa", chafaArgs)
 
     if (proc.status !== 0 || !proc.stdout) return []
-    return parseAnsiChunks(proc.stdout.toString())
+    return parseAnsiChunks(proc.stdout.toString(), dim())
   })
 
   return (
