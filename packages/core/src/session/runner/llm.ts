@@ -236,6 +236,8 @@ const layer = Layer.effect(
       const publish = (event: LLMEvent, outputPaths: ReadonlyArray<string> = []) =>
         withPublication(publisher.publish(event, outputPaths))
       let overflowFailure: ProviderErrorEvent | undefined
+      let unknownToolErrors = 0
+      const UNKNOWN_TOOL_LIMIT = 3
       const providerStream = llm.stream(request).pipe(
         Stream.runForEach((event) =>
           Effect.gen(function* () {
@@ -263,17 +265,34 @@ const layer = Layer.effect(
                   call: event,
                 }),
               ).pipe(
-                Effect.flatMap((settlement) =>
-                  publish(
+                Effect.flatMap((settlement) => {
+                  let result = settlement.result
+                  if (
+                    result.type === "error" &&
+                    typeof result.value === "string" &&
+                    result.value.startsWith("Unknown tool:")
+                  ) {
+                    unknownToolErrors++
+                    if (unknownToolErrors >= UNKNOWN_TOOL_LIMIT) {
+                      needsContinuation = false
+                      result = {
+                        ...result,
+                        value: `${result.value} [CIRCUIT BREAKER: ${unknownToolErrors} consecutive unknown-tool errors — this agent does not have access to the requested tool. Stopping to avoid wasting steps. Return your findings and let the coordinator re-plan.]`,
+                      }
+                    }
+                  } else {
+                    unknownToolErrors = 0
+                  }
+                  return publish(
                     LLMEvent.toolResult({
                       id: event.id,
                       name: event.name,
-                      result: settlement.result,
+                      result,
                       output: settlement.output,
                     }),
                     settlement.outputPaths ?? [],
-                  ),
-                ),
+                  )
+                }),
               ),
             ).pipe(FiberSet.run(toolFibers))
           }),

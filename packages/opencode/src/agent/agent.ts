@@ -278,6 +278,7 @@ const layer = Layer.effect(
                 knowledge_update: "allow",
                 state_update: "allow",
                 ensure_tools: "allow",
+                os_hook: "allow",
                 read_evidence: "allow",
                 report_gen: "allow",
                 question: "allow",

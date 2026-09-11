@@ -60,6 +60,8 @@ import { ReportGenTool } from "../pentest/report-gen"
 import { StateUpdateTool } from "../pentest/state-update"
 import { KnowledgeUpdateTool } from "../pentest/knowledge-update"
 import { EnsureToolsTool } from "../pentest/ensure-tools"
+import { OsHookTool } from "../pentest/os-hook"
+import { InjectProbeTool } from "../pentest/inject-probe"
 import { PentestConfig } from "../pentest/config"
 import { Sandbox } from "../pentest/sandbox"
 import { Observability } from "../pentest/observability"
@@ -153,6 +155,10 @@ const layer = Layer.effect(
     )
     const pentestKnowledgeUpdate = yield* KnowledgeUpdateTool
     const pentestEnsureTools = yield* EnsureToolsTool
+    const pentestInjectProbe = yield* InjectProbeTool.pipe(
+      Effect.provideService(PentestConfig.Service, dynamicPentestConfig),
+    )
+    const pentestOsHook = yield* OsHookTool
 
     const state = yield* InstanceState.make<State>(
       Effect.fn("ToolRegistry.state")(function* (ctx) {
@@ -274,6 +280,8 @@ const layer = Layer.effect(
                 pentestStateUpdate: Tool.init(pentestStateUpdate),
                 pentestKnowledgeUpdate: Tool.init(pentestKnowledgeUpdate),
                 pentestEnsureTools: Tool.init(pentestEnsureTools),
+                pentestInjectProbe: Tool.init(pentestInjectProbe),
+                pentestOsHook: Tool.init(pentestOsHook),
               }
             : {}),
         })
@@ -304,6 +312,8 @@ const layer = Layer.effect(
             ...(tool.pentestStateUpdate ? [tool.pentestStateUpdate] : []),
             ...(tool.pentestKnowledgeUpdate ? [tool.pentestKnowledgeUpdate] : []),
             ...(tool.pentestEnsureTools ? [tool.pentestEnsureTools] : []),
+            ...(tool.pentestInjectProbe ? [tool.pentestInjectProbe] : []),
+            ...(tool.pentestOsHook ? [tool.pentestOsHook] : []),
           ],
           task: tool.task,
           read: tool.read,

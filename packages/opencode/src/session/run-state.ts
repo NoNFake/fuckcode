@@ -75,7 +75,12 @@ const layer = Layer.effect(
     })
 
     const cancel = Effect.fn("SessionRunState.cancel")(function* (sessionID: SessionID) {
-      yield* cancelBackgroundJobs(background, sessionID)
+      // Only cancel background jobs that belong to THIS session directly,
+      // NOT child subagent sessions. When the user presses ESC to interrupt
+      // the coordinator, subagents should keep running — they're independent
+      // work that shouldn't be killed just because the user wants to send
+      // a new message to the coordinator.
+      yield* cancelOwnBackgroundJobs(background, sessionID)
       const data = yield* InstanceState.get(state)
       const existing = data.runners.get(sessionID)
       if (!existing) {
@@ -108,6 +113,28 @@ const layer = Layer.effect(
   }),
 )
 
+// Cancel ONLY the coordinator's own direct background work (e.g. a running
+// foreground task tool call), NOT child subagent sessions. Subagents are
+// independent background jobs that should survive a coordinator interrupt —
+// the user pressing ESC wants to talk to the coordinator, not kill the fleet.
+const cancelOwnBackgroundJobs = Effect.fn("SessionRunState.cancelOwnJobs")(function* (
+  background: BackgroundJob.Interface,
+  sessionID: SessionID,
+) {
+  const jobs = yield* background.list()
+  yield* Effect.forEach(
+    jobs.filter(
+      (job) =>
+        job.status === "running" &&
+        job.id === sessionID,
+    ),
+    (job) => background.cancel(job.id),
+    { concurrency: "unbounded", discard: true },
+  )
+})
+
+// Cancel ALL background jobs for a session INCLUDING child subagents (cascade).
+// Used for full session teardown (e.g. session delete, app exit).
 const cancelBackgroundJobs = Effect.fn("SessionRunState.cancelBackgroundJobs")(function* (
   background: BackgroundJob.Interface,
   sessionID: SessionID,
