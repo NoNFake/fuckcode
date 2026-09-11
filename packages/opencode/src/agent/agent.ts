@@ -277,6 +277,7 @@ const layer = Layer.effect(
                 grep: "allow",
                 knowledge_update: "allow",
                 state_update: "allow",
+                ensure_tools: "allow",
                 read_evidence: "allow",
                 report_gen: "allow",
                 question: "allow",
