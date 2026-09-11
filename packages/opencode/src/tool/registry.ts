@@ -56,6 +56,8 @@ import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { McpCatalog } from "@/mcp/catalog"
 import { ReadEvidenceTool } from "../pentest/read-evidence"
 import { PentestShellTool } from "../pentest/shell-tool"
+import { ReportGenTool } from "../pentest/report-gen"
+import { StateUpdateTool } from "../pentest/state-update"
 import { PentestConfig } from "../pentest/config"
 import { Sandbox } from "../pentest/sandbox"
 import { Observability } from "../pentest/observability"
@@ -140,6 +142,12 @@ const layer = Layer.effect(
       Effect.provideService(PentestConfig.Service, dynamicPentestConfig),
       Effect.provideService(Sandbox.Service, dynamicSandbox),
       Effect.provideService(Observability.Service, dynamicObs),
+    )
+    const pentestReportGen = yield* ReportGenTool.pipe(
+      Effect.provideService(PentestConfig.Service, dynamicPentestConfig),
+    )
+    const pentestStateUpdate = yield* StateUpdateTool.pipe(
+      Effect.provideService(PentestConfig.Service, dynamicPentestConfig),
     )
 
     const state = yield* InstanceState.make<State>(
@@ -254,7 +262,14 @@ const layer = Layer.effect(
           lsp: Tool.init(lsptool),
           plan: Tool.init(plan),
           ...(codeModeTool ? { execute: Tool.init(codeModeTool) } : {}),
-          ...(pentestEnabled ? { pentestReadEvidence: Tool.init(pentestReadEvidence), pentestShell: Tool.init(pentestShell) } : {}),
+          ...(pentestEnabled
+            ? {
+                pentestReadEvidence: Tool.init(pentestReadEvidence),
+                pentestShell: Tool.init(pentestShell),
+                pentestReportGen: Tool.init(pentestReportGen),
+                pentestStateUpdate: Tool.init(pentestStateUpdate),
+              }
+            : {}),
         })
 
         return {
@@ -279,6 +294,8 @@ const layer = Layer.effect(
             ...(flags.experimentalPlanMode && flags.client === "cli" ? [tool.plan] : []),
             ...(tool.pentestReadEvidence ? [tool.pentestReadEvidence] : []),
             ...(tool.pentestShell ? [tool.pentestShell] : []),
+            ...(tool.pentestReportGen ? [tool.pentestReportGen] : []),
+            ...(tool.pentestStateUpdate ? [tool.pentestStateUpdate] : []),
           ],
           task: tool.task,
           read: tool.read,

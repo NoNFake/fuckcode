@@ -47,6 +47,7 @@ export const Default = {
   INIT: "init",
   REVIEW: "review",
   STATUS_USE: "status_use",
+  REPORT: "report",
 } as const
 
 export interface Interface {
@@ -92,6 +93,14 @@ const layer = Layer.effect(
         description: "show token usage and stats across all models",
         source: "command",
         template: "!`fuckcode stats --models 2>/dev/null || opencode stats --models`",
+        hints: [],
+      }
+      commands[Default.REPORT] = {
+        name: Default.REPORT,
+        description: "Generate a pentest report",
+        source: "command",
+        template:
+          "Generate a comprehensive penetration testing report in markdown and JSON format using the report_gen tool. Summarize all findings, evidence chain, compromised assets, and key milestones.",
         hints: [],
       }
 

@@ -146,6 +146,10 @@ pentest/
 | **Hierarchical Scopes** | Supports named child scopes (`web`, `internal`) with inherited constraints and subagent task scoping (`scope_override`). |
 | **High-Performance Evidence Store** | SQLite WAL with transaction batching (`db.transaction`), memory PRAGMAs, FTS5 trigram full-text indexing capped to 64KB, and query deduplication. |
 | **read_evidence Tool** | Safe pagination and grep over arbitrary scan sizes (100MB+) without context window overflow. |
+| **state_update Tool** | Update or query active pentest engagement state (phase, targets, credentials, hashes). |
+| **report_gen Tool** | Generate markdown/JSON pentest reports from accumulated findings and evidence chains. |
+| **/report Command** | Slash command to generate a full pentest report. |
+| **Result** | Domain admin hash in hand — every step recorded with its evidence chain. |
 
 ### Configuration (`fuckcode.json`)
 
