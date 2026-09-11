@@ -22,6 +22,7 @@ export type ReleaseType = "patch" | "minor" | "major"
 export const Event = InstallationEvent
 
 export function getReleaseType(current: string, latest: string): ReleaseType {
+  if (!semver.valid(current) || !semver.valid(latest)) return "minor"
   const currMajor = semver.major(current)
   const currMinor = semver.minor(current)
   const newMajor = semver.major(latest)
