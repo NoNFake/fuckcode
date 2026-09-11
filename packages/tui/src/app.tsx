@@ -385,6 +385,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
   const pluginRuntime = usePluginRuntime()
   const attention = createTuiAttention({ renderer, config: tuiConfig, kv })
   const clipboard = useClipboard()
+  let lastCtrlCTime = 0
 
   const api = createTuiApi(
     createTuiApiAdapters({
@@ -843,6 +844,25 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         category: "System",
       },
       {
+        name: "app.exit.confirm",
+        title: "Exit the app with confirmation",
+        hidden: true,
+        run: () => {
+          const now = Date.now()
+          if (now - lastCtrlCTime < 1500) {
+            exit()
+          } else {
+            lastCtrlCTime = now
+            toast.show({
+              message: "Press Ctrl+C again to exit",
+              variant: "info",
+              duration: 1500,
+            })
+          }
+        },
+        category: "System",
+      },
+      {
         name: "app.debug",
         title: "Toggle debug panel",
         category: "System",
@@ -1005,7 +1025,9 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
       if (!current?.focused) return true
       return current.current.input === ""
     },
-    bindings: tuiConfig.keybinds.gather("app_exit", ["app.exit"]),
+    bindings: tuiConfig.keybinds
+      .gather("app_exit", ["app.exit"])
+      .map((binding) => ({ ...binding, cmd: "app.exit.confirm" })),
   }))
 
   event.on("tui.command.execute", (evt, { workspace }) => {

@@ -498,4 +498,78 @@ Recent work
       },
     ])
   })
+
+  test("consolidates leading system messages and lowers non-leading system messages for non-anthropic providers", () => {
+    const messages = toLLMMessages(
+      [
+        SessionMessage.System.make({
+          id: id("sys-1"),
+          type: "system",
+          text: "First instruction",
+          time: { created },
+        }),
+        SessionMessage.System.make({
+          id: id("sys-2"),
+          type: "system",
+          text: "Second instruction",
+          time: { created },
+        }),
+        SessionMessage.User.make({
+          id: id("user-1"),
+          type: "user",
+          text: "Hello",
+          time: { created },
+        }),
+        SessionMessage.System.make({
+          id: id("sys-mid"),
+          type: "system",
+          text: "Post-compaction update",
+          time: { created },
+        }),
+      ],
+      model,
+    )
+
+    expect(messages).toHaveLength(3)
+    expect(messages[0]).toEqual(Message.system("First instruction\n\nSecond instruction"))
+    expect(messages[1].role).toBe("user")
+    expect(messages[1].content).toEqual([{ type: "text", text: "Hello" }])
+    expect(messages[2].role).toBe("user")
+    expect(messages[2].content).toEqual([
+      { type: "text", text: "<system-update>\nPost-compaction update\n</system-update>" },
+    ])
+  })
+
+  test("preserves distinct system messages for Anthropic provider", () => {
+    const anthropicModel = Model.make({ id: "claude-3-5-sonnet", provider: "anthropic", route: OpenAIChat.route })
+    const messages = toLLMMessages(
+      [
+        SessionMessage.System.make({
+          id: id("sys-1"),
+          type: "system",
+          text: "First block",
+          time: { created },
+        }),
+        SessionMessage.System.make({
+          id: id("sys-2"),
+          type: "system",
+          text: "Second block",
+          time: { created },
+        }),
+        SessionMessage.User.make({
+          id: id("user-1"),
+          type: "user",
+          text: "Hello",
+          time: { created },
+        }),
+      ],
+      anthropicModel,
+    )
+
+    expect(messages).toHaveLength(3)
+    expect(messages[0]).toEqual(Message.system("First block"))
+    expect(messages[1]).toEqual(Message.system("Second block"))
+    expect(messages[2].role).toBe("user")
+  })
 })
+

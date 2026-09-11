@@ -198,16 +198,57 @@ ${message.recent}
 
 /** Translate projected V2 Session history into canonical @opencode-ai/llm context. */
 export const toLLMMessages = (messages: readonly SessionMessage.Message[], model: Model) => {
+  const isAnthropic = String(model.provider) === "anthropic"
   const assistantCount = messages.filter((m) => m.type === "assistant").length
   let seenAssistants = 0
+  let hasEncounteredNonSystem = false
+  const leadingSystems: string[] = []
+  const result: Message[] = []
 
-  return messages.flatMap((message) => {
+  for (const message of messages) {
+    if (message.type === "agent-switched" || message.type === "model-switched") {
+      continue
+    }
+    if (message.type === "system") {
+      if (isAnthropic) {
+        result.push(Message.system(message.text))
+        continue
+      }
+      if (!hasEncounteredNonSystem) {
+        leadingSystems.push(message.text)
+        continue
+      }
+      result.push(
+        Message.make({
+          id: message.id,
+          role: "user",
+          content: `<system-update>\n${message.text}\n</system-update>`,
+          metadata: message.metadata,
+        }),
+      )
+      continue
+    }
+
+    if (!hasEncounteredNonSystem) {
+      hasEncounteredNonSystem = true
+      if (leadingSystems.length > 0) {
+        result.push(Message.system(leadingSystems.join("\n\n")))
+      }
+    }
+
     if (message.type === "assistant") {
       seenAssistants++
       // Keep full detail for the last 2 assistant turns; prune older turns to conserve context
       const isStale = seenAssistants <= assistantCount - 2
-      return toLLMMessage(message, model, isStale)
+      result.push(...toLLMMessage(message, model, isStale))
+    } else {
+      result.push(...toLLMMessage(message, model, false))
     }
-    return toLLMMessage(message, model, false)
-  })
+  }
+
+  if (!hasEncounteredNonSystem && leadingSystems.length > 0) {
+    result.push(Message.system(leadingSystems.join("\n\n")))
+  }
+
+  return result
 }

@@ -126,3 +126,67 @@ test("app.exit prints the session epilogue after scoped cleanup", async () => {
     mock.restore()
   }
 })
+
+test("app.exit.confirm requires double invocation within interval to exit", async () => {
+  const setup = await createTestRenderer({ width: 80, height: 24, useThread: false })
+  const core = await import("@opentui/core")
+  mock.module("@opentui/core", () => ({ ...core, createCliRenderer: async () => setup.renderer }))
+  const events = createEventSource()
+  const calls = createFetch((url) => {
+    if (url.pathname === "/session")
+      return json([
+        {
+          id: "dummy",
+          title: "Demo session",
+          slug: "dummy",
+          projectID: "project",
+          directory,
+          version: "0.0.0-test",
+          time: { created: 0, updated: 0 },
+        },
+      ])
+  })
+  let api: TuiPluginApi | undefined
+  let started!: () => void
+  const ready = new Promise<void>((resolve) => {
+    started = resolve
+  })
+
+  try {
+    const { run } = await import("../src/app")
+    const task = Effect.runPromise(
+      run({
+        url: "http://test",
+        directory,
+        config: createTuiResolvedConfig({ plugin_enabled: {} }),
+        fetch: calls.fetch,
+        events: events.source,
+        args: { continue: true },
+        pluginHost: {
+          async start(input) {
+            api = input.api
+            started()
+          },
+          async dispose() {},
+        },
+      }).pipe(Effect.provide(AppNodeBuilder.build(Global.node))),
+    )
+
+    await ready
+    await setup.renderOnce()
+
+    // First call should not exit
+    api?.keymap.dispatchCommand("app.exit.confirm")
+    await setup.renderOnce()
+    expect(setup.renderer.isDestroyed).toBe(false)
+
+    // Second call within 1500ms exits
+    api?.keymap.dispatchCommand("app.exit.confirm")
+    await task
+    expect(setup.renderer.isDestroyed).toBe(true)
+  } finally {
+    if (!setup.renderer.isDestroyed) setup.renderer.destroy()
+    mock.restore()
+  }
+})
+
