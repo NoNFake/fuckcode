@@ -12,14 +12,22 @@ interface Chunk {
 }
 
 function findBackgroundImage(): string | undefined {
-  const candidates = [
-    path.resolve(process.cwd(), "background-image/background.jpg"),
-    path.resolve(process.cwd(), "background-image/background.png"),
-    path.resolve(process.cwd(), "background-image/angel.jpg"),
-    path.resolve(process.cwd(), "background.jpg"),
-    path.resolve(process.cwd(), "background.png"),
-  ]
-  return candidates.find(existsSync)
+  let current = path.resolve(process.cwd())
+  while (true) {
+    const candidates = [
+      path.join(current, "background-image/background.jpg"),
+      path.join(current, "background-image/background.png"),
+      path.join(current, "background-image/angel.jpg"),
+      path.join(current, "background.jpg"),
+      path.join(current, "background.png"),
+    ]
+    const found = candidates.find(existsSync)
+    if (found) return found
+    const parent = path.dirname(current)
+    if (parent === current) break
+    current = parent
+  }
+  return undefined
 }
 
 function parseAnsiChunks(ansi: string): Chunk[][] {
@@ -102,7 +110,7 @@ export function Background() {
         left={0}
         width={dimensions().width}
         height={dimensions().height}
-        zIndex={-1}
+        zIndex={0}
       >
         <For each={rows()}>
           {(row) => (

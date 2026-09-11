@@ -1158,7 +1158,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         <TimeToFirstDraw />
       </Show>
       <Show when={ready()}>
-        <box flexGrow={1} minHeight={0} flexDirection="column">
+        <box flexGrow={1} minHeight={0} flexDirection="column" zIndex={1}>
           <Switch>
             <Match when={route.data.type === "home"}>
               <Home />
