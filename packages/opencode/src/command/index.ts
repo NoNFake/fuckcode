@@ -48,6 +48,7 @@ export const Default = {
   REVIEW: "review",
   STATUS_USE: "status_use",
   REPORT: "report",
+  REFLECT: "reflect",
 } as const
 
 export interface Interface {
@@ -101,6 +102,16 @@ const layer = Layer.effect(
         source: "command",
         template:
           "Generate a comprehensive penetration testing report in markdown and JSON format using the report_gen tool. Summarize all findings, evidence chain, compromised assets, and key milestones.",
+        hints: [],
+      }
+      commands[Default.REFLECT] = {
+        name: Default.REFLECT,
+        description: "Analyze session outcomes, record insights, and generate learned skills",
+        source: "command",
+        agent: "reflector",
+        subtask: true,
+        template:
+          "Analyze the engagement session: evaluate tool effectiveness, document false positives, distill learned rules into ~/.fuckcode/knowledge/global.json, and generate reusable skills if novel techniques were discovered.",
         hints: [],
       }
 

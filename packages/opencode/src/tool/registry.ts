@@ -58,6 +58,7 @@ import { ReadEvidenceTool } from "../pentest/read-evidence"
 import { PentestShellTool } from "../pentest/shell-tool"
 import { ReportGenTool } from "../pentest/report-gen"
 import { StateUpdateTool } from "../pentest/state-update"
+import { KnowledgeUpdateTool } from "../pentest/knowledge-update"
 import { PentestConfig } from "../pentest/config"
 import { Sandbox } from "../pentest/sandbox"
 import { Observability } from "../pentest/observability"
@@ -149,6 +150,7 @@ const layer = Layer.effect(
     const pentestStateUpdate = yield* StateUpdateTool.pipe(
       Effect.provideService(PentestConfig.Service, dynamicPentestConfig),
     )
+    const pentestKnowledgeUpdate = yield* KnowledgeUpdateTool
 
     const state = yield* InstanceState.make<State>(
       Effect.fn("ToolRegistry.state")(function* (ctx) {
@@ -268,6 +270,7 @@ const layer = Layer.effect(
                 pentestShell: Tool.init(pentestShell),
                 pentestReportGen: Tool.init(pentestReportGen),
                 pentestStateUpdate: Tool.init(pentestStateUpdate),
+                pentestKnowledgeUpdate: Tool.init(pentestKnowledgeUpdate),
               }
             : {}),
         })
@@ -296,6 +299,7 @@ const layer = Layer.effect(
             ...(tool.pentestShell ? [tool.pentestShell] : []),
             ...(tool.pentestReportGen ? [tool.pentestReportGen] : []),
             ...(tool.pentestStateUpdate ? [tool.pentestStateUpdate] : []),
+            ...(tool.pentestKnowledgeUpdate ? [tool.pentestKnowledgeUpdate] : []),
           ],
           task: tool.task,
           read: tool.read,

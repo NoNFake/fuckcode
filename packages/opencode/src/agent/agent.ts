@@ -12,6 +12,7 @@ import { ProviderTransform } from "@/provider/transform"
 import PROMPT_GENERATE from "./generate.txt"
 import PROMPT_COMPACTION from "./prompt/compaction.txt"
 import PROMPT_EXPLORE from "./prompt/explore.txt"
+import PROMPT_REFLECTOR from "./prompt/reflector.txt"
 import PROMPT_SUMMARY from "./prompt/summary.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
 import { Permission } from "@/permission"
@@ -262,6 +263,30 @@ const layer = Layer.effect(
               user,
             ),
             prompt: PROMPT_SUMMARY,
+          },
+          reflector: {
+            name: "reflector",
+            description: `Post-engagement reflection agent. Analyzes session findings, tool effectiveness, false positives, and generates durable lessons and learned skills.`,
+            permission: Permission.merge(
+              defaults,
+              Permission.fromConfig({
+                "*": "deny",
+                read: "allow",
+                list: "allow",
+                glob: "allow",
+                grep: "allow",
+                knowledge_update: "allow",
+                state_update: "allow",
+                read_evidence: "allow",
+                report_gen: "allow",
+                question: "allow",
+              }),
+              user,
+            ),
+            prompt: PROMPT_REFLECTOR,
+            options: {},
+            mode: "subagent",
+            native: true,
           },
         }
 
