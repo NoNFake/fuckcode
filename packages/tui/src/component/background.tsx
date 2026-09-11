@@ -2,9 +2,11 @@ import { RGBA } from "@opentui/core"
 import { useTerminalDimensions } from "@opentui/solid"
 import { spawnSync } from "node:child_process"
 import { existsSync, readFileSync } from "node:fs"
+import os from "node:os"
 import path from "node:path"
 import { createMemo, For, Show } from "solid-js"
 import { useTuiConfig } from "../config"
+import { DEFAULT_BACKGROUND_BASE64 } from "./default-background"
 
 interface Chunk {
   text: string
@@ -28,6 +30,26 @@ const CANDIDATES = [
   "background.jpeg",
 ]
 
+let defaultBuffer: Buffer | undefined
+function getDefaultBackgroundBuffer(): Buffer {
+  if (!defaultBuffer) {
+    defaultBuffer = Buffer.from(DEFAULT_BACKGROUND_BASE64, "base64")
+  }
+  return defaultBuffer
+}
+
+let hasChafaCache: boolean | undefined
+function isChafaAvailable(): boolean {
+  if (hasChafaCache !== undefined) return hasChafaCache
+  try {
+    const res = spawnSync("chafa", ["--version"])
+    hasChafaCache = !res.error && res.status === 0
+  } catch {
+    hasChafaCache = false
+  }
+  return hasChafaCache
+}
+
 function findBackgroundImage(): string | undefined {
   let current = path.resolve(process.cwd())
   while (true) {
@@ -39,6 +61,21 @@ function findBackgroundImage(): string | undefined {
     if (parent === current) break
     current = parent
   }
+
+  const home = os.homedir()
+  const globalDirs = [
+    path.join(home, ".config/fuckcode"),
+    path.join(home, ".config/fuckcode/background-image"),
+    path.join(home, ".config/opencode"),
+    path.join(home, ".config/opencode/background-image"),
+  ]
+  for (const dir of globalDirs) {
+    for (const ext of ["jpg", "png", "jpeg"]) {
+      const file = path.join(dir, `background.${ext}`)
+      if (existsSync(file)) return file
+    }
+  }
+
   return undefined
 }
 
@@ -124,20 +161,24 @@ function parseAnsiChunks(ansi: string, dim: number): Chunk[][] {
 }
 
 export function hasBackgroundImage(): boolean {
-  return findBackgroundImage() !== undefined
+  return isChafaAvailable()
 }
 
 export function Background() {
   const dimensions = useTerminalDimensions()
   const tuiConfig = useTuiConfig()
 
-  const imagePath = createMemo(() => findBackgroundImage())
-  const fileSettings = createMemo(() => readBackgroundSettings(imagePath()))
+  if (tuiConfig.background_enabled === false || !isChafaAvailable()) {
+    return null
+  }
+
+  const customImagePath = createMemo(() => findBackgroundImage())
+  const fileSettings = createMemo(() => readBackgroundSettings(customImagePath()))
 
   const dim = createMemo(() => {
     if (typeof tuiConfig.background_dim === "number") return Math.max(0, Math.min(1, tuiConfig.background_dim))
     if (typeof fileSettings().dim === "number") return Math.max(0, Math.min(1, fileSettings().dim!))
-    return 1.0
+    return 0.35
   })
 
   const mode = createMemo(() => {
@@ -152,29 +193,32 @@ export function Background() {
   let lastResult: Chunk[][] = []
 
   const rows = createMemo(() => {
-    const file = imagePath()
-    if (!file) return []
     const width = dimensions().width
     const height = dimensions().height
     if (width <= 0 || height <= 0) return []
 
+    const file = customImagePath()
     const m = mode()
     const d = dither()
     const c = fileSettings().color_mode ?? "full"
     const brightness = dim()
-    const key = `${file}:${width}x${height}:${m}:${c}:${d}:${brightness}`
+    const target = file ?? "embedded"
+    const key = `${target}:${width}x${height}:${m}:${c}:${d}:${brightness}`
     if (key === lastKey) return lastResult
 
     try {
-      const proc = spawnSync("chafa", [
+      const chafaArgs = [
         "--format=symbols",
         `--symbols=${m}`,
         `--colors=${c}`,
         `--dither=${d}`,
         "--size",
         `${width}x${height}`,
-        file,
-      ])
+        file ? file : "-",
+      ]
+      const proc = spawnSync("chafa", chafaArgs, {
+        input: file ? undefined : getDefaultBackgroundBuffer(),
+      })
       if (proc.error || proc.status !== 0 || !proc.stdout) return []
       lastKey = key
       lastResult = parseAnsiChunks(proc.stdout.toString(), brightness)

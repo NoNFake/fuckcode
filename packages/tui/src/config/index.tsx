@@ -72,6 +72,9 @@ export const Info = Schema.Struct({
   diff_style: Schema.optional(DiffStyle),
   cursor: Schema.optional(Cursor),
   mouse: Schema.optional(Schema.Boolean).annotate({ description: "Enable or disable mouse capture (default: true)" }),
+  background_enabled: Schema.optional(Schema.Boolean).annotate({
+    description: "Enable or disable background image rendering (default: true)",
+  }),
   background_dim: Schema.optional(Schema.Number.check(Schema.isGreaterThanOrEqualTo(0), Schema.isLessThanOrEqualTo(1))).annotate({
     description: "Background image brightness/dim factor from 0.0 (dark) to 1.0 (full brightness)",
   }),
