@@ -13,17 +13,27 @@ interface Chunk {
 }
 
 export interface BackgroundSettings {
-  dim?: number // 0.0 - 1.0, e.g. 0.3 means 30% brightness
+  dim?: number
   mode?: "half" | "ascii" | "block" | "braille" | "sextant" | "all"
   color_mode?: "full" | "256" | "16" | "none"
   dither?: "none" | "ordered" | "diffusion" | "noise"
 }
 
-function findBackgroundDirectory(): string | undefined {
+const CANDIDATES = [
+  "background-image/background.jpg",
+  "background-image/background.png",
+  "background-image/background.jpeg",
+  "background.jpg",
+  "background.png",
+  "background.jpeg",
+]
+
+function findBackgroundImage(): string | undefined {
   let current = path.resolve(process.cwd())
   while (true) {
-    if (existsSync(path.join(current, "background-image"))) {
-      return path.join(current, "background-image")
+    for (const rel of CANDIDATES) {
+      const full = path.join(current, rel)
+      if (existsSync(full)) return full
     }
     const parent = path.dirname(current)
     if (parent === current) break
@@ -32,37 +42,31 @@ function findBackgroundDirectory(): string | undefined {
   return undefined
 }
 
-function findBackgroundImage(): string | undefined {
-  let current = path.resolve(process.cwd())
-  while (true) {
-    const candidates = [
-      path.join(current, "background-image/background.jpg"),
-      path.join(current, "background-image/background.png"),
-      path.join(current, "background-image/background.jpeg"),
-      path.join(current, "background-image/angel.jpg"),
-      path.join(current, "background.jpg"),
-      path.join(current, "background.png"),
-      path.join(current, "background.jpeg"),
-    ]
-    const found = candidates.find(existsSync)
-    if (found) return found
-    const parent = path.dirname(current)
-    if (parent === current) break
-    current = parent
-  }
-  return undefined
-}
-
-function readBackgroundSettings(): BackgroundSettings {
-  const dir = findBackgroundDirectory()
-  if (!dir) return {}
-  const configPath = path.join(dir, "background.json")
+function readBackgroundSettings(imagePath?: string): BackgroundSettings {
+  if (!imagePath) return {}
+  const configPath = path.join(path.dirname(imagePath), "background.json")
   if (!existsSync(configPath)) return {}
   try {
     return JSON.parse(readFileSync(configPath, "utf8")) as BackgroundSettings
   } catch {
     return {}
   }
+}
+
+function sameColor(a?: RGBA, b?: RGBA): boolean {
+  if (a === b) return true
+  if (!a || !b) return false
+  return a.r === b.r && a.g === b.g && a.b === b.b && a.a === b.a
+}
+
+function pushChunk(row: Chunk[], text: string, fg?: RGBA, bg?: RGBA) {
+  if (!text) return
+  const last = row[row.length - 1]
+  if (last && sameColor(last.fg, fg) && sameColor(last.bg, bg)) {
+    last.text += text
+    return
+  }
+  row.push({ text, fg, bg })
 }
 
 function parseAnsiChunks(ansi: string, dim: number): Chunk[][] {
@@ -90,29 +94,30 @@ function parseAnsiChunks(ansi: string, dim: number): Chunk[][] {
     ansiRegex.lastIndex = 0
     while ((match = ansiRegex.exec(line)) !== null) {
       const text = line.slice(lastIndex, match.index)
-      if (text.length > 0) {
-        rowChunks.push({ text, fg: currFg, bg: currBg })
-      }
+      pushChunk(rowChunks, text, currFg, currBg)
       lastIndex = ansiRegex.lastIndex
 
       const codes = match[1].split(";").map(Number)
       for (let i = 0; i < codes.length; i++) {
-        if (codes[i] === 0) {
+        const code = codes[i]
+        if (code === 0) {
           currFg = undefined
           currBg = undefined
-        } else if (codes[i] === 38 && codes[i + 1] === 2) {
+        } else if (code === 39) {
+          currFg = undefined
+        } else if (code === 49) {
+          currBg = undefined
+        } else if (code === 38 && codes[i + 1] === 2) {
           currFg = applyDim(codes[i + 2], codes[i + 3], codes[i + 4])
           i += 4
-        } else if (codes[i] === 48 && codes[i + 1] === 2) {
+        } else if (code === 48 && codes[i + 1] === 2) {
           currBg = applyDim(codes[i + 2], codes[i + 3], codes[i + 4])
           i += 4
         }
       }
     }
     const rem = line.slice(lastIndex)
-    if (rem.length > 0) {
-      rowChunks.push({ text: rem, fg: currFg, bg: currBg })
-    }
+    pushChunk(rowChunks, rem, currFg, currBg)
     result.push(rowChunks)
   }
   return result
@@ -127,23 +132,24 @@ export function Background() {
   const tuiConfig = useTuiConfig()
 
   const imagePath = createMemo(() => findBackgroundImage())
-  const fileSettings = createMemo(() => readBackgroundSettings())
+  const fileSettings = createMemo(() => readBackgroundSettings(imagePath()))
 
   const dim = createMemo(() => {
-    const fromConfig = (tuiConfig as { background_dim?: number }).background_dim
-    if (typeof fromConfig === "number") return Math.max(0, Math.min(1, fromConfig))
+    if (typeof tuiConfig.background_dim === "number") return Math.max(0, Math.min(1, tuiConfig.background_dim))
     if (typeof fileSettings().dim === "number") return Math.max(0, Math.min(1, fileSettings().dim!))
     return 1.0
   })
 
   const mode = createMemo(() => {
-    const fromConfig = (tuiConfig as { background_mode?: string }).background_mode
-    return fromConfig ?? fileSettings().mode ?? "half"
+    return tuiConfig.background_mode ?? fileSettings().mode ?? "half"
   })
 
   const dither = createMemo(() => {
     return fileSettings().dither ?? "none"
   })
+
+  let lastKey = ""
+  let lastResult: Chunk[][] = []
 
   const rows = createMemo(() => {
     const file = imagePath()
@@ -152,20 +158,30 @@ export function Background() {
     const height = dimensions().height
     if (width <= 0 || height <= 0) return []
 
-    const chafaArgs = [
-      "--format=symbols",
-      `--symbols=${mode()}`,
-      `--colors=${fileSettings().color_mode ?? "full"}`,
-      `--dither=${dither()}`,
-      "--size",
-      `${width}x${height}`,
-      file,
-    ]
+    const m = mode()
+    const d = dither()
+    const c = fileSettings().color_mode ?? "full"
+    const brightness = dim()
+    const key = `${file}:${width}x${height}:${m}:${c}:${d}:${brightness}`
+    if (key === lastKey) return lastResult
 
-    const proc = spawnSync("chafa", chafaArgs)
-
-    if (proc.status !== 0 || !proc.stdout) return []
-    return parseAnsiChunks(proc.stdout.toString(), dim())
+    try {
+      const proc = spawnSync("chafa", [
+        "--format=symbols",
+        `--symbols=${m}`,
+        `--colors=${c}`,
+        `--dither=${d}`,
+        "--size",
+        `${width}x${height}`,
+        file,
+      ])
+      if (proc.error || proc.status !== 0 || !proc.stdout) return []
+      lastKey = key
+      lastResult = parseAnsiChunks(proc.stdout.toString(), brightness)
+      return lastResult
+    } catch {
+      return []
+    }
   })
 
   return (
