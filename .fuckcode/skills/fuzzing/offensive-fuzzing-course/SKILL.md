@@ -1,6 +1,6 @@
 ---
 name: fuzzing-course
-description: Fuzzing methodology curriculum covering target selection, corpus generation, coverage-guided fuzzing with AFL++ and libFuzzer, structured fuzzing, and crash triage and deduplication. Use when setting up fuzz campaigns, choosing harness strategies, or triaging fuzzer output. Triggers - fuzzing curriculum, AFL++, libFuzzer, coverage-guided fuzzing, corpus generation, harness, fuzz target, mutation, crash dedup.
+description: "Fuzzing curriculum: target selection, AFL++/libFuzzer, corpus, harness, crash triage. Triggers - fuzzing, AFL++, libFuzzer, corpus, crash dedup."
 tags: [exploitation, vuln_assess]
 ---
 

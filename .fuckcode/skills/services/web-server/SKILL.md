@@ -1,6 +1,6 @@
 ---
 name: svc-web-server
-description: Web server software attacks (Apache/Nginx/IIS CVEs, misconfigs, status leaks).
+description: "Web server software attacks: Apache/nginx/IIS CVEs, misconfigs, traversal, status/config leak. Triggers - Server header, Tomcat, /server-status."
 ---
 
 # Web Server Attack Reference

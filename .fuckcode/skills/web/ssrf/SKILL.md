@@ -1,6 +1,6 @@
 ---
 name: web-ssrf
-description: Server-Side Request Forgery detection→internal-access→proof for web apps. Use when the app fetches a URL you influence (webhooks, url/image/pdf fetchers, link preview, import-from-URL, SSO/OIDC redirect, XML/SVG). Triggers - url=/uri=/dest=/callback= param, "fetch failed", webhook, image proxy, /_next/image, remotePatterns, redirect.
+description: "SSRF detection, internal access, and proof. Triggers - url/uri/callback param, webhook, image proxy."
 tags: [vuln_assess, exploitation]
 ---
 

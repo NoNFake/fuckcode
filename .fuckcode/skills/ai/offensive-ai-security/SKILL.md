@@ -1,6 +1,6 @@
 ---
 name: ai-security
-description: AI/LLM security offensive checklist covering prompt injection, jailbreaking, model extraction, training data poisoning, adversarial inputs, LLM-assisted attack automation, and AI system reconnaissance. Use when assessing AI/ML systems, red-teaming LLMs, or researching AI attack vectors. Triggers - AI security, LLM security, prompt injection, jailbreak, model extraction, RAG poisoning, AI red team, ML security.
+description: "AI/LLM security: prompt injection, jailbreaking, model extraction, RAG poisoning, adversarial inputs. Triggers - prompt injection, jailbreak, LLM red team, RAG."
 tags: [recon, exploitation]
 ---
 

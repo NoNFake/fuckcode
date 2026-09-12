@@ -1,7 +1,7 @@
 ---
 name: reporting-phase
 tags: [reporting]
-description: Reporting phase — generate structured pentest report from findings. Use when the current phase is REPORTING.
+description: "Reporting phase: build structured pentest report from findings. Triggers - REPORTING phase, report deliverable."
 ---
 
 # Report Generation Guide

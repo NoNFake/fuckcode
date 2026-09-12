@@ -1,6 +1,6 @@
 ---
 name: vulnerability-classes
-description: Exploit development curriculum covering core vulnerability classes with real-world CVE case studies such as stack and heap buffer overflows, use-after-free, integer overflows, format strings, type confusion, and race conditions. Use when researching specific CVE patterns or building exploit dev knowledge. Triggers - vulnerability classes, buffer overflow, use-after-free, UAF, heap overflow, type confusion, integer overflow, format string, memory corruption, CVE case study.
+description: "Exploit development: buffer overflow, UAF, heap overflow, integer overflow, type confusion, race. Triggers - memory corruption, CVE case study."
 tags: [exploitation, vuln_assess]
 ---
 

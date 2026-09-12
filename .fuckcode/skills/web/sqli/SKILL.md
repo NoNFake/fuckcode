@@ -1,6 +1,6 @@
 ---
 name: web-sqli
-description: SQL injection detection→exploitation→proof for web apps and APIs. Use when a parameter reaches a DB query, when input triggers a SQL error / boolean or time differential, or during VULN-ASSESSMENT/EXPLOITATION on a web target. Triggers - sql syntax error, ORA-/MySQL/psql/SQLite error string, ' or 1=1, order by, sleep-based delay, login bypass, id/search/filter param.
+description: "SQL injection detection, exploitation, and proof. Triggers - SQL error, ' or 1=1, order by, time delay, login bypass."
 tags: [vuln_assess, exploitation]
 ---
 

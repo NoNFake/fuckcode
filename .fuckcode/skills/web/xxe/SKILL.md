@@ -1,6 +1,6 @@
 ---
 name: web-xxe
-description: XML External Entity injection detection→file-read/SSRF→proof for web apps. Use when the app parses XML you influence - SOAP/REST XML bodies, SAML, RSS/Atom, DOCX/XLSX/SVG/XML file uploads, sitemap import, SVG avatars. Triggers - Content-Type application/xml or text/xml, <?xml, SOAPAction header, SAMLResponse, .docx/.svg upload, XML parse error.
+description: "XXE to file read, SSRF, and proof. Triggers - application/xml, SOAP, SAML, .docx/.svg upload."
 tags: [vuln_assess, exploitation]
 ---
 

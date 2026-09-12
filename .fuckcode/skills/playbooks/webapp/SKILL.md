@@ -1,6 +1,6 @@
 ---
 name: playbook-webapp
-description: Web application pentest methodology + ROUTER to the per-vuln-class web skills. Load at the START of systematic web testing to get the phase flow (recon → map → test-by-OWASP-class → prove → report) and pick which web-<class> skill to load for each surface. Use on any web app / HTTP API engagement.
+description: "Web app pentest router: recon, map, OWASP-class testing, proof, report. Triggers - web app, HTTP API, systematic testing."
 tags: [vuln_assess, exploitation]
 ---
 

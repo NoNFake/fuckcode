@@ -1,7 +1,7 @@
 ---
 name: enumeration-phase
 tags: [enumeration]
-description: Active enumeration: port scanning, service detection, banner grabbing.
+description: "Enumeration phase: port scanning, service detection, banner grabbing. Triggers - ENUMERATION phase, nmap, banner."
 ---
 
 # Active Enumeration Checklist

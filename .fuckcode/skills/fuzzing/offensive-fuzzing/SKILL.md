@@ -1,6 +1,6 @@
 ---
 name: offensive-fuzzing
-description: "Practical offensive fuzzing methodology covering target identification, fuzzer selection (AFL++, libFuzzer, Honggfuzz, Boofuzz, syzkaller), harness writing, corpus curation, mutation strategies, coverage measurement, and crash triage. Use when setting up or running fuzz campaigns against any target: file parsers, network protocols, kernel drivers, EDR engines, embedded firmware, or language runtimes."
+description: "Offensive fuzzing practice: target ID, harness, mutation, coverage, crash triage. Triggers - fuzz target, harness, Boofuzz, syzkaller."
 ---
 
 # Offensive Fuzzing

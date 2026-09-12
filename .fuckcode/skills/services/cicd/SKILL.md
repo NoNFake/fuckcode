@@ -1,6 +1,6 @@
 ---
 name: svc-cicd
-description: CI/CD & dev-infra attack techniques — credential exposure, RCE (script console / build), pipeline abuse, secret stores. Use when a CI/CD or SCM service is exposed. Triggers - Jenkins /job/ or script console, GitLab, ArgoCD, TeamCity, Gitea, Drone, exposed .git, runner token, pipeline.
+description: "CI/CD and dev-infra attacks: Jenkins script console, GitLab, ArgoCD, exposed .git, runner token. Triggers - Jenkins, GitLab, ArgoCD, TeamCity."
 ---
 
 # CI/CD Attack Reference

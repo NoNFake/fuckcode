@@ -1,6 +1,6 @@
 ---
 name: svc-pivoting
-description: Turn a foothold into a RELIABLE pivot (SOCKS tunnel + persistent shell) so internal volume never rides a fragile stateless RCE. Use the moment you have code-exec on a dual-homed/edge host and need to reach an internal segment. Triggers - dual-homed host, "not reachable from my box", internal CIDR behind a foothold, RCE truncates output, need proxychains/nmap through a host, chisel/ligolo.
+description: "Turn a foothold into a reliable pivot: SOCKS tunnel, persistent shell, proxychains. Triggers - dual-homed, internal CIDR, chisel, ligolo."
 tags: [exploitation, post_exploit]
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: web-upload-rce
-description: File-upload abuse to code execution for web apps. Use when the app accepts a file (avatar, document, image, import, attachment) and you can influence name/type/content, or find where uploads land. Triggers - multipart upload form, avatar/profile picture, import/attachment, "invalid file type", uploaded file URL, /uploads/ path.
+description: "File upload abuse to code execution. Triggers - multipart upload, avatar, import, attachment, /uploads/."
 tags: [vuln_assess, exploitation]
 ---
 

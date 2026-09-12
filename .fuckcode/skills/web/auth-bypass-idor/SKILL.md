@@ -1,6 +1,6 @@
 ---
 name: web-auth-bypass-idor
-description: Broken access control - IDOR, privilege escalation, JWT abuse, mass assignment, forced browsing - for web apps and APIs. Use on any multi-user or role-based app with object IDs, tokens, or admin functionality. Triggers - /api/users/<id>, /orders/<id>, ?account=/uid=/doc=, JWT (eyJ...), role/isAdmin field, admin panel, "403 Forbidden", numeric or guessable object references.
+description: "Broken access control: IDOR, privilege escalation, JWT abuse, mass assignment, forced browsing. Triggers - object IDs, JWT, role field, 403."
 tags: [vuln_assess, exploitation]
 ---
 

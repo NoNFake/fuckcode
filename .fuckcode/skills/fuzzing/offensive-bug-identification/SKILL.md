@@ -1,6 +1,6 @@
 ---
 name: bug-identification
-description: Systematic bug identification methodology covering source code review patterns, black-box testing, taint analysis, dangerous function hunting, data flow tracing, and automated scanning setup. Use for code audits, bug bounty triage, or vulnerability identification pipelines. Triggers - bug identification, code review, taint analysis, dangerous functions, data flow, source audit, static analysis, bug hunting.
+description: "Find bugs by source review, taint analysis, dangerous functions, data flow. Triggers - code audit, source review, static analysis, bug hunting."
 tags: [vuln_assess, recon]
 ---
 

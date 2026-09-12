@@ -1,6 +1,6 @@
 ---
 name: svc-ssh
-description: SSH attack techniques — version CVEs, auth-method/user enumeration, key issues, targeted brute. Use when SSH is open. Triggers - port 22, OpenSSH banner, regreSSHion CVE-2024-6387, user-enum CVE-2018-15473, authorized_keys, weak/leaked key.
+description: "SSH attacks: version CVEs, auth-method and user enumeration, key issues, targeted brute. Triggers - port 22, regreSSHion, CVE-2018-15473."
 ---
 
 # SSH Attack Reference

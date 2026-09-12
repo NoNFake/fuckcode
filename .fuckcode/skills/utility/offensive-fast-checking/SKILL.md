@@ -1,6 +1,6 @@
 ---
 name: fast-checking
-description: Speed-optimized offensive checklist for rapid assessment covering quick-win vulnerability patterns, fast recon shortcuts, automated scanner configurations, and triage shortcuts. Use for time-boxed assessments, CTF-speed engagements, or initial rapid surface mapping. Triggers - fast check, quick recon, rapid assessment, quick wins, fast triage, speed checklist, time-boxed, CTF.
+description: "Rapid offensive checklist: quick-win vulns, fast recon, scanner defaults, triage. Triggers - fast check, quick recon, CTF, time-boxed."
 tags: [recon, enumeration]
 ---
 

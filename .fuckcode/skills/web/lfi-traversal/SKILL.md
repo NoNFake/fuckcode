@@ -1,6 +1,6 @@
 ---
 name: web-lfi-traversal
-description: Path traversal / Local File Inclusion detection→file-read→RCE for web apps. Use when a param names a file/path/page/template/lang/download, or a response embeds file contents. Triggers - file=/page=/path=/template=/lang=/download=/include= param, ../, %2e%2e, "no such file", directory listing, download endpoint.
+description: "Path traversal and LFI to file read or RCE. Triggers - file/path/page/template param, ../, download endpoint."
 tags: [vuln_assess, exploitation]
 ---
 

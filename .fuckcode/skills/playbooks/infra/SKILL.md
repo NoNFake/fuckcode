@@ -1,6 +1,6 @@
 ---
 name: playbook-infra
-description: Infrastructure pentest playbook — PTES-based phase flow for internal networks, servers, and non-web services. Load at the START of an internal/infra engagement or multi-host network assessment. Triggers - internal network, subnet/CIDR scan, infra pentest, multi-host, pivoting, lateral movement across services.
+description: "Internal network pentest: PTES phase flow, servers, pivoting, lateral movement. Triggers - internal network, CIDR, multi-host."
 ---
 
 # Infrastructure Pentest Playbook

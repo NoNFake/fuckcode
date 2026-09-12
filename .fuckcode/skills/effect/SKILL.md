@@ -1,6 +1,6 @@
 ---
 name: effect
-description: Work with Effect v4 / effect-smol TypeScript code in this repo
+description: "Effect v4 / effect-smol TypeScript patterns for this repo. Triggers - Effect.gen, Layer, Schema, effect-smol."
 ---
 
 # Effect

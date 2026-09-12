@@ -1,7 +1,7 @@
 ---
 name: vuln-assessment-phase
 tags: [vuln_assess]
-description: Vulnerability assessment phase — scanning, CVE lookup, misconfig detection. Use when the current phase is VULN_ASSESS.
+description: "Vulnerability assessment: scanning, CVE lookup, misconfig detection. Triggers - VULN_ASSESS phase, CVE, misconfig."
 ---
 
 # Vulnerability Assessment Checklist
