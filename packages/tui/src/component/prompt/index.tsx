@@ -51,7 +51,9 @@ import { useKV } from "../../context/kv"
 import { Token } from "@opencode-ai/core/util/token"
 import { createFadeIn } from "../../util/signal"
 import { DialogSkill } from "../dialog-skill"
+import { DialogVerify } from "../dialog-verify"
 import { DialogWorkspaceUnavailable } from "../dialog-workspace-unavailable"
+import { verify } from "../../util/verify"
 import { useArgs } from "../../context/args"
 import { OPENCODE_BASE_MODE, useBindings, useCommandShortcut, useLeaderActive, useOpencodeKeymap } from "../../keymap"
 import { useTuiConfig } from "../../config"
@@ -282,6 +284,18 @@ export function Prompt(props: PromptProps) {
       cost: cost > 0 ? money.format(cost) : undefined,
     }
   })
+
+  const verifyReport = createMemo(() => {
+    if (!props.sessionID) return { unverified: [] as string[], notFound: 0 }
+    return verify({
+      messages: sync.data.message[props.sessionID] ?? [],
+      partsOf: (message) =>
+        "parts" in (message as any) && Array.isArray((message as any).parts)
+          ? (message as any).parts
+          : (sync.data.part[(message as any).id] ?? []),
+    })
+  })
+  const verifyRisk = createMemo(() => verifyReport().unverified.length + verifyReport().notFound)
 
   const [firstTokenTime, setFirstTokenTime] = createSignal<number | null>(null)
   const [streamTick, setStreamTick] = createSignal(0)
@@ -1738,6 +1752,12 @@ export function Prompt(props: PromptProps) {
                           <Show when={kv.get("token_saving_enabled", true)}>
                             <text fg={theme.success}>◈ eco</text>
                           </Show>
+                          <text
+                            fg={verifyRisk() > 0 ? theme.warning : theme.textMuted}
+                            onMouseUp={() => dialog.replace(() => <DialogVerify report={verifyReport()} />)}
+                          >
+                            ⚠ verify {verifyRisk()}
+                          </text>
                         </box>
                       )}
                     </Match>

@@ -3,8 +3,10 @@ import type { TuiPlugin, TuiPluginApi } from "@opencode-ai/plugin/tui"
 import type { BuiltinTuiPlugin } from "../builtins"
 import { createMemo, Show } from "solid-js"
 import { DialogEco } from "../../component/dialog-eco"
+import { DialogVerify } from "../../component/dialog-verify"
 import { useDialog } from "../../ui/dialog"
 import { EcoMetrics } from "@opencode-ai/core/util/eco-metrics"
+import { verify } from "../../util/verify"
 
 const id = "internal:sidebar-context"
 
@@ -36,6 +38,17 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
     }
     return { cacheRead, contextCut }
   })
+
+  const verifyReport = createMemo(() =>
+    verify({
+      messages: msg(),
+      partsOf: (message) =>
+        "parts" in (message as any) && Array.isArray((message as any).parts)
+          ? (message as any).parts
+          : (props.api.state.part((message as any).id) ?? []),
+    }),
+  )
+  const verifyRisk = createMemo(() => verifyReport().unverified.length + verifyReport().notFound)
 
   const state = createMemo(() => {
     const last = msg().findLast((item): item is AssistantMessage => item.role === "assistant" && item.tokens.output > 0)
@@ -84,6 +97,12 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
           </Show>
         </text>
       </Show>
+      <text
+        fg={verifyRisk() > 0 ? theme().warning : theme().textMuted}
+        onMouseUp={() => dialog.replace(() => <DialogVerify report={verifyReport()} />)}
+      >
+        ⚠ verify {verifyRisk()}
+      </text>
     </box>
   )
 }
