@@ -1,6 +1,7 @@
 # Dependencies & Package Managers
 node_modules/
 .turbo/
+.venv/
 .direnv/
 .worktrees/
 .sst/

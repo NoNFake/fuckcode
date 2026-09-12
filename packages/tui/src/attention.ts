@@ -12,7 +12,6 @@ import type {
 } from "@opencode-ai/plugin/tui"
 import { AttentionSoundName, type TuiConfig } from "./config"
 import { Schema } from "effect"
-import stripAnsi from "strip-ansi"
 import * as TuiAudio from "./audio"
 import defaultSoundPath from "@opencode-ai/ui/audio/bip-bop-01.mp3" with { type: "file" }
 import questionSoundPath from "@opencode-ai/ui/audio/bip-bop-03.mp3" with { type: "file" }
@@ -67,7 +66,7 @@ function skipped(reason: TuiAttentionNotifySkipReason): TuiAttentionNotifyResult
 }
 
 function normalizeText(input: string | undefined, fallback: string, limit: number) {
-  const text = stripAnsi(input ?? "")
+  const text = Bun.stripANSI(input ?? "")
     .replace(/[ \t]*[\r\n]+[ \t]*/g, " ")
     .replace(/[\u0000-\u0009\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, "")
     .trim()

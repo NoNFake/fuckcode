@@ -97,8 +97,7 @@
     "remend": "catalog:",
     "shiki": "catalog:",
     "solid-list": "catalog:",
-    "solid-sonner": "catalog:",
-    "strip-ansi": "7.1.2"
+    "solid-sonner": "catalog:"
   },
   "peerDependencies": {
     "@solidjs/meta": "^0.29.0",

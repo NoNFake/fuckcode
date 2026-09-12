@@ -2,7 +2,6 @@ import { NodeFileSystem } from "@effect/platform-node"
 import { dirname, isAbsolute, join, relative, resolve as pathResolve, sep } from "path"
 import { realpathSync } from "fs"
 import * as NFS from "fs/promises"
-import { lookup } from "mime-types"
 import { Context, Effect, FileSystem, Layer, Schema } from "effect"
 import type { PlatformError } from "effect/PlatformError"
 import { Glob } from "./util/glob"
@@ -223,7 +222,7 @@ export namespace FSUtil {
 
   // Pure helpers that don't need Effect (path manipulation, sync operations)
   export function mimeType(p: string): string {
-    return lookup(p) || "application/octet-stream"
+    return Bun.file(p).type || "application/octet-stream"
   }
 
   export function normalizePath(p: string): string {

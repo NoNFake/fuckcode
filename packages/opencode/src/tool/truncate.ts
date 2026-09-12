@@ -9,7 +9,6 @@ import { Config } from "@/config/config"
 import { ToolID } from "./schema"
 import { TRUNCATION_DIR } from "./truncation-dir"
 
-import stripAnsi from "strip-ansi"
 
 const RETENTION = Duration.days(7)
 
@@ -19,7 +18,7 @@ export const DIR = TRUNCATION_DIR
 export const GLOB = path.join(TRUNCATION_DIR, "*")
 
 export function cleanOutput(text: string): string {
-  const stripped = stripAnsi(text)
+  const stripped = Bun.stripANSI(text)
   return stripped.replace(/\r+/g, "\n").replace(/\n{3,}/g, "\n\n").trim()
 }
 

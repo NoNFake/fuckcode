@@ -1,6 +1,6 @@
 - Regenerate the legacy JavaScript SDK with `./packages/sdk/js/script/build.ts`.
 - After changing the public Protocol or Server `HttpApi`, run `bun run generate` from `packages/client`. Do not edit `src/generated` or `src/generated-effect`.
-- Keep runtime dependencies directed Schema -> Core/Protocol -> Server. Client runtime may depend on Schema and Protocol, never Core or Server; `sdk-next` composes Client, Core, and Server.
+- Keep runtime dependencies directed Schema -> Core/Protocol -> Server. Client runtime may depend on Schema and Protocol, never Core or Server.
 - Default branch is `dev`. Local `main` may not exist; use `dev` or `origin/dev` for diffs.
 
 ## Branch Names

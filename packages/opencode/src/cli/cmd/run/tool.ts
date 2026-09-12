@@ -14,7 +14,6 @@
 // Tools not in TOOL_RULES get fallback formatting.
 import os from "os"
 import path from "path"
-import stripAnsi from "strip-ansi"
 import type { ToolPart } from "@opencode-ai/sdk/v2"
 import type * as Tool from "@/tool/tool"
 import type { ApplyPatchTool } from "@/tool/apply_patch"
@@ -638,7 +637,7 @@ function scrollBashStart(p: ToolProps<typeof BashTool>): string {
 }
 
 function scrollBashProgress(p: ToolProps<typeof BashTool>): string {
-  const out = stripAnsi(p.frame.raw)
+  const out = Bun.stripANSI(p.frame.raw)
   const cmd = (p.input.command ?? "").trim()
   const fmt = (text: string) => {
     const body = text.replace(/^\n+/, "").replace(/\n+$/, "")
@@ -1405,7 +1404,7 @@ function structuredBody(commit: StreamCommit, raw: string): RunEntryBody | undef
 }
 
 function shellOutput(command: string, raw: string): string | undefined {
-  const body = stripAnsi(raw).replace(/^\n+/, "").replace(/\n+$/, "")
+  const body = Bun.stripANSI(raw).replace(/^\n+/, "").replace(/\n+$/, "")
   if (!body) {
     return undefined
   }

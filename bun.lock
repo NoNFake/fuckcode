@@ -274,9 +274,6 @@
     "packages/core": {
       "name": "@opencode-ai/core",
       "version": "1.18.30",
-      "bin": {
-        "opencode": "./bin/opencode",
-      },
       "dependencies": {
         "@ai-sdk/alibaba": "1.0.17",
         "@ai-sdk/amazon-bedrock": "4.0.166",
@@ -336,7 +333,6 @@
         "mime-types": "3.0.2",
         "minimatch": "10.2.5",
         "npm-package-arg": "13.0.2",
-        "semver": "^7.6.3",
         "turndown": "7.2.0",
         "venice-ai-sdk-provider": "2.1.1",
         "which": "6.0.1",
@@ -359,7 +355,6 @@
         "@types/node": "catalog:",
         "@types/npm-package-arg": "6.1.4",
         "@types/npmcli__arborist": "6.3.3",
-        "@types/semver": "catalog:",
         "@types/turndown": "5.0.5",
         "@types/which": "3.0.4",
         "drizzle-kit": "catalog:",
@@ -607,7 +602,6 @@
         "ignore": "7.0.5",
         "immer": "11.1.4",
         "jsonc-parser": "3.3.1",
-        "mime-types": "3.0.2",
         "minimatch": "10.0.3",
         "npm-package-arg": "13.0.2",
         "open": "10.1.2",
@@ -617,7 +611,6 @@
         "remeda": "catalog:",
         "semver": "^7.6.3",
         "solid-js": "catalog:",
-        "strip-ansi": "7.1.2",
         "tree-sitter-bash": "0.25.0",
         "tree-sitter-powershell": "0.25.10",
         "turndown": "7.2.0",
@@ -640,7 +633,6 @@
         "@types/babel__core": "7.20.5",
         "@types/bun": "catalog:",
         "@types/cross-spawn": "catalog:",
-        "@types/mime-types": "3.0.1",
         "@types/npm-package-arg": "6.1.4",
         "@types/semver": "^7.5.8",
         "@types/turndown": "5.0.5",
@@ -707,26 +699,8 @@
     },
     "packages/script": {
       "name": "@opencode-ai/script",
-      "dependencies": {
-        "semver": "^7.6.3",
-      },
       "devDependencies": {
         "@types/bun": "catalog:",
-        "@types/semver": "^7.5.8",
-      },
-    },
-    "packages/sdk-next": {
-      "name": "@opencode-ai/sdk-next",
-      "dependencies": {
-        "@opencode-ai/client": "workspace:*",
-        "@opencode-ai/core": "workspace:*",
-        "@opencode-ai/server": "workspace:*",
-        "effect": "catalog:",
-      },
-      "devDependencies": {
-        "@tsconfig/bun": "catalog:",
-        "@types/bun": "catalog:",
-        "@typescript/native-preview": "catalog:",
       },
     },
     "packages/sdk/js": {
@@ -915,7 +889,6 @@
         "opentui-spinner": "catalog:",
         "remeda": "catalog:",
         "solid-js": "catalog:",
-        "strip-ansi": "7.1.2",
       },
       "devDependencies": {
         "@tsconfig/bun": "catalog:",
@@ -946,7 +919,6 @@
         "shiki": "catalog:",
         "solid-list": "catalog:",
         "solid-sonner": "catalog:",
-        "strip-ansi": "7.1.2",
       },
       "devDependencies": {
         "@solidjs/meta": "catalog:",
@@ -1871,8 +1843,6 @@
 
     "@opencode-ai/sdk": ["@opencode-ai/sdk@workspace:packages/sdk/js"],
 
-    "@opencode-ai/sdk-next": ["@opencode-ai/sdk-next@workspace:packages/sdk-next"],
-
     "@opencode-ai/server": ["@opencode-ai/server@workspace:packages/server"],
 
     "@opencode-ai/session-ui": ["@opencode-ai/session-ui@workspace:packages/session-ui"],
@@ -2730,8 +2700,6 @@
     "@types/micromatch": ["@types/micromatch@4.0.10", "", { "dependencies": { "@types/braces": "*" } }, "sha512-5jOhFDElqr4DKTrTEbnW8DZ4Hz5LRUEmyrGpCMrD/NphYv3nUnaF08xmSLx1rGGnyEs/kFnhiw6dCgcDqMr5PQ=="],
 
     "@types/mime": ["@types/mime@1.3.5", "", {}, "sha512-/pyBZWSLD2n0dcHE3hq8s8ZvcETHtEuF+3E7XVt0Ig2nvsVQXdghHVcEkIWjy9A0wKfTn97a/PSDYohKIlnP/w=="],
-
-    "@types/mime-types": ["@types/mime-types@3.0.1", "", {}, "sha512-xRMsfuQbnRq1Ef+C+RKaENOxXX87Ygl38W1vDfPHRku02TgQr+Qd8iivLtAMcR0KF5/29xlnFihkTlbqFrGOVQ=="],
 
     "@types/ms": ["@types/ms@2.1.0", "", {}, "sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA=="],
 
