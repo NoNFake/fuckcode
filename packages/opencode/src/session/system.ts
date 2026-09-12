@@ -24,6 +24,7 @@ import { LocationServiceMap, locationServiceMapLayer } from "@opencode-ai/core/l
 import { Reference } from "@opencode-ai/core/reference"
 import { MCP } from "@/mcp"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
+import { TokenSavingState } from "@opencode-ai/core/token-saving-state"
 
 export function provider(model: Provider.Model) {
   if (model.api.id.includes("muse")) {
@@ -103,13 +104,15 @@ const layer = Layer.effect(
         if (Permission.disabled(["skill"], agent.permission).has("skill")) return
 
         const list = yield* skill.available(agent)
+        const eco =
+          process.env.FUCKCODE_TOKEN_SAVING === "1" ||
+          (process.env.FUCKCODE_TOKEN_SAVING !== "0" && TokenSavingState.read() === true)
 
         return [
           "Skills provide specialized instructions and workflows for specific tasks.",
           "Use the skill tool to load a skill when a task matches its description.",
-          // the agents seem to ingest the information about skills a bit better if we present a more verbose
-          // version of them here and a less verbose version in tool description, rather than vice versa.
-          Skill.fmt(list, { verbose: true }),
+          // Verbose XML reads slightly better for the model, so use it unless token saving is on.
+          Skill.fmt(list, { verbose: !eco }),
         ].join("\n")
       }),
 

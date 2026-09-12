@@ -8,10 +8,16 @@ import { Global } from "./global"
 // env var cannot carry the live toggle. Both sides share this state file.
 const file = () => path.join(Global.Path.state, "token-saving.json")
 
+let cache: { mtime: number; value: boolean | undefined } | undefined
+
 export function read(): boolean | undefined {
   try {
+    const mtime = fs.statSync(file()).mtimeMs
+    if (cache && cache.mtime === mtime) return cache.value
     const parsed: Record<string, unknown> = JSON.parse(fs.readFileSync(file(), "utf-8"))
-    return typeof parsed.enabled === "boolean" ? parsed.enabled : undefined
+    const value = typeof parsed.enabled === "boolean" ? parsed.enabled : undefined
+    cache = { mtime, value }
+    return value
   } catch {
     return undefined
   }
@@ -23,5 +29,6 @@ export function write(enabled: boolean): void {
     const tmp = `${file()}.tmp`
     fs.writeFileSync(tmp, JSON.stringify({ enabled }))
     fs.renameSync(tmp, file())
+    cache = undefined
   } catch {}
 }
