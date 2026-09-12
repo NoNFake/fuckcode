@@ -64,6 +64,7 @@ import { OsHookTool } from "../pentest/os-hook"
 import { InjectProbeTool } from "../pentest/inject-probe"
 import { OobTool } from "../pentest/oob"
 import { ScanImportTool } from "../pentest/scan-import"
+import { SessionTool } from "../pentest/session"
 import { PentestConfig } from "../pentest/config"
 import { Sandbox } from "../pentest/sandbox"
 import { Observability } from "../pentest/observability"
@@ -165,6 +166,7 @@ const layer = Layer.effect(
     const pentestScanImport = yield* ScanImportTool.pipe(
       Effect.provideService(PentestConfig.Service, dynamicPentestConfig),
     )
+    const pentestSession = yield* SessionTool.pipe(Effect.provideService(PentestConfig.Service, dynamicPentestConfig))
 
     const state = yield* InstanceState.make<State>(
       Effect.fn("ToolRegistry.state")(function* (ctx) {
@@ -290,6 +292,7 @@ const layer = Layer.effect(
                 pentestOsHook: Tool.init(pentestOsHook),
                 pentestOob: Tool.init(pentestOob),
                 pentestScanImport: Tool.init(pentestScanImport),
+                pentestSession: Tool.init(pentestSession),
               }
             : {}),
         })
@@ -324,6 +327,7 @@ const layer = Layer.effect(
             ...(tool.pentestOsHook ? [tool.pentestOsHook] : []),
             ...(tool.pentestOob ? [tool.pentestOob] : []),
             ...(tool.pentestScanImport ? [tool.pentestScanImport] : []),
+            ...(tool.pentestSession ? [tool.pentestSession] : []),
           ],
           task: tool.task,
           read: tool.read,
