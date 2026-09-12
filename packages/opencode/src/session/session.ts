@@ -274,8 +274,6 @@ export const ForkInput = Schema.Struct({
   sessionID: SessionID,
   messageID: Schema.optional(MessageID),
 })
-export const GetInput = SessionID
-export const ChildrenInput = SessionID
 export const RemoveInput = SessionID
 export const SetTitleInput = Schema.Struct({ sessionID: SessionID, title: Schema.String })
 export const SetArchivedInput = Schema.Struct({
@@ -289,11 +287,6 @@ export const SetMetadataInput = Schema.Struct({
 export const SetPermissionInput = Schema.Struct({
   sessionID: SessionID,
   permission: PermissionV1.Ruleset,
-})
-export const SetRevertInput = Schema.Struct({
-  sessionID: SessionID,
-  revert: Schema.optional(Revert),
-  summary: Schema.optional(Summary),
 })
 export const MessagesInput = Schema.Struct({
   sessionID: SessionID,

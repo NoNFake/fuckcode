@@ -22,7 +22,3 @@ export function submitTuiRequest(body: TuiRequest) {
 export function submitTuiResponse(body: unknown) {
   response.push(body)
 }
-
-export function nextTuiResponse() {
-  return response.next()
-}

@@ -317,24 +317,3 @@ export function questionReject(request: QuestionRequest): QuestionReject {
     requestID: request.id,
   }
 }
-
-export function questionHint(request: QuestionRequest, state: QuestionBodyState): string {
-  if (state.submitting) {
-    return "Waiting for question event..."
-  }
-
-  if (questionConfirm(request, state)) {
-    return "enter submit   esc dismiss"
-  }
-
-  if (state.editing) {
-    return "enter save   esc cancel"
-  }
-
-  const info = questionInfo(request, state)
-  if (questionSingle(request)) {
-    return `↑↓ select   enter ${info?.multiple ? "toggle" : "submit"}   esc dismiss`
-  }
-
-  return `⇆ tab   ↑↓ select   enter ${info?.multiple ? "toggle" : "confirm"}   esc dismiss`
-}
