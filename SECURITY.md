@@ -18,6 +18,17 @@ OpenCode does **not** sandbox the agent. The permission system exists as a UX fe
 
 If you need true isolation, run OpenCode inside a Docker container or VM.
 
+### Pentest Sandbox
+
+The pentest module (`pentest.enabled`) adds a separate command runner, `pentest_shell`, that is not covered by the regular permission prompt. Its isolation guarantees and limits:
+
+- Network isolation is applied with `nftables` inside a new network namespace (`unshare --net`) or by `pasta`. Rules default to `drop` and only allow the configured scope CIDRs, the configured TCP ports, loopback, and DNS to the embedded forwarder.
+- DNS is filtered by an embedded forwarder. Only configured domains resolve; everything else returns `NXDOMAIN`.
+- Commands whose explicit IP or URL targets fall outside the configured scope are rejected before execution, and the violation is logged.
+- There is **no** memory, CPU, PID, or filesystem isolation. The command runs as the current user and can read and write files the user can access.
+- `pasta` is preferred when installed; otherwise `unshare` is required. If neither backend can enforce rules, the command is not run.
+- Scope is only as strong as the network path. Do not run untrusted code, and do not rely on this sandbox to contain a determined attacker.
+
 ### Server Mode
 
 Server mode is opt-in only. When enabled, set `OPENCODE_SERVER_PASSWORD` to require HTTP Basic Auth. Without this, the server runs unauthenticated (with a warning). It is the end user's responsibility to secure the server - any functionality it provides is not a vulnerability.
@@ -38,7 +49,7 @@ Server mode is opt-in only. When enabled, set `OPENCODE_SERVER_PASSWORD` to requ
 
 We appreciate your efforts to responsibly disclose your findings, and will make every effort to acknowledge your contributions.
 
-To report a security issue, please use the GitHub Security Advisory ["Report a Vulnerability"](https://github.com/anomalyco/opencode/security/advisories/new) tab.
+To report a security issue, please use the GitHub Security Advisory ["Report a Vulnerability"](https://github.com/NoNFake/fuckcode/security/advisories/new) tab.
 
 The team will send a response indicating the next steps in handling your report. After the initial reply to your report, the security team will keep you informed of the progress towards a fix and full announcement, and may ask for additional information or guidance.
 
