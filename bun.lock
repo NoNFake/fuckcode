@@ -11,6 +11,7 @@
         "typescript": "catalog:",
       },
       "devDependencies": {
+        "@opentui/solid": "catalog:",
         "@tsconfig/bun": "catalog:",
         "@typescript/native-preview": "catalog:",
         "husky": "9.1.7",
