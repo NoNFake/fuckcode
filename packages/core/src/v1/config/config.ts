@@ -153,7 +153,9 @@ export const Info = Schema.Struct({
         Schema.Struct({
           domains: Schema.mutable(Schema.Array(Schema.String)).annotate({ description: "Allowed domains for DNS whitelist" }),
           cidrs: Schema.mutable(Schema.Array(Schema.String)).annotate({ description: "Allowed CIDRs for network access" }),
-          ports: Schema.optional(Schema.mutable(Schema.Array(Schema.Number))).annotate({ description: "Allowed ports (reserved)" }),
+          ports: Schema.optional(Schema.mutable(Schema.Array(Schema.Number))).annotate({
+            description: "Allowed target ports enforced by the sandbox and target checks",
+          }),
           children: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)).annotate({
             description: "Named child scopes for sub-targets",
           }),
@@ -161,6 +163,14 @@ export const Info = Schema.Struct({
       ).annotate({ description: "Target scope for network isolation" }),
       sandboxTimeout: Schema.optional(Schema.Number).annotate({ description: "Sandbox timeout in milliseconds" }),
       evidenceDir: Schema.optional(Schema.String).annotate({ description: "Directory for evidence storage" }),
+      oob: Schema.optional(
+        Schema.Struct({
+          server: Schema.optional(Schema.String).annotate({
+            description: "Comma-separated interactsh servers (default: public oast.pro and friends)",
+          }),
+          token: Schema.optional(Schema.String).annotate({ description: "Auth token for a protected interactsh server" }),
+        }),
+      ).annotate({ description: "Out-of-band interaction testing via interactsh" }),
     }),
   ).annotate({ description: "Pentest sandbox configuration for network-isolated command execution" }),
   compaction: Schema.optional(
