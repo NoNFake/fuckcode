@@ -21,8 +21,8 @@ describe("embedded skills", () => {
     expect(EMBEDDED_SKILLS["phases/recon/SKILL.md"]).toBeDefined()
   })
 
-  it("materializes every embedded skill to disk", () => {
-    const root = materializeEmbeddedSkills()
+  it("materializes every embedded skill to disk", async () => {
+    const root = await materializeEmbeddedSkills()
     expect(fs.existsSync(path.join(root, "web/sqli/SKILL.md"))).toBe(true)
     expect(fs.readFileSync(path.join(root, "web/sqli/SKILL.md"), "utf-8")).toBe(EMBEDDED_SKILLS["web/sqli/SKILL.md"])
   })

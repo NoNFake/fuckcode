@@ -1,34 +1,170 @@
 import yargs from "yargs"
 import { hideBin } from "yargs/helpers"
-import { RunCommand } from "./cli/cmd/run"
-import { GenerateCommand } from "./cli/cmd/generate"
-import { ConsoleCommand } from "./cli/cmd/account"
-import { ProvidersCommand } from "./cli/cmd/providers"
-import { AgentCommand } from "./cli/cmd/agent"
-import { UpgradeCommand } from "./cli/cmd/upgrade"
-import { UninstallCommand } from "./cli/cmd/uninstall"
-import { ModelsCommand } from "./cli/cmd/models"
+import type { Argv, CommandBuilder } from "yargs"
 import { UI } from "./cli/ui"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { FormatError } from "./cli/error"
-import { ServeCommand } from "./cli/cmd/serve"
-import { DebugCommand } from "./cli/cmd/debug"
-import { StatsCommand } from "./cli/cmd/stats"
-import { McpCommand } from "./cli/cmd/mcp"
-import { GithubCommand } from "./cli/cmd/github"
-import { ExportCommand } from "./cli/cmd/export"
-import { ImportCommand } from "./cli/cmd/import"
-import { AttachCommand } from "./cli/cmd/attach"
-import { TuiThreadCommand } from "./cli/cmd/tui"
-import { AcpCommand } from "./cli/cmd/acp"
 import { EOL } from "os"
-import { WebCommand } from "./cli/cmd/web"
-import { PrCommand } from "./cli/cmd/pr"
-import { SessionCommand } from "./cli/cmd/session"
-import { DbCommand } from "./cli/cmd/db"
 import { errorMessage } from "./util/error"
-import { PluginCommand } from "./cli/cmd/plug"
+import { cmd } from "./cli/cmd/cmd"
 import { Heap } from "./cli/heap"
+
+type CommandLike = {
+  builder?: CommandBuilder<Record<string, unknown>, unknown>
+  handler?: (args: never) => unknown
+}
+
+type LazyCommand = {
+  command: string
+  describe: string | false
+  exportName: string
+  aliases?: string[]
+  load: () => Promise<unknown>
+}
+
+// Commands load on demand so `--version`, `--help`, and completion skip the
+// effect, provider, and SDK module graph.
+function lazyCommand(input: LazyCommand) {
+  const entry = async () => ((await input.load()) as Record<string, CommandLike | undefined>)[input.exportName]
+
+  return cmd({
+    command: input.command,
+    describe: input.describe,
+    aliases: input.aliases,
+    builder: async (yargs) => {
+      const builder = (await entry())?.builder
+      if (!builder) return yargs
+      if (typeof builder === "function") return (await builder(yargs)) as Argv
+      return yargs.options(builder)
+    },
+    async handler(args) {
+      await (await entry())?.handler?.(args as never)
+    },
+  })
+}
+
+const commands: LazyCommand[] = [
+  {
+    command: "acp",
+    describe: "start ACP (Agent Client Protocol) server",
+    exportName: "AcpCommand",
+    load: () => import("./cli/cmd/acp"),
+  },
+  {
+    command: "mcp",
+    describe: "manage MCP (Model Context Protocol) servers",
+    exportName: "McpCommand",
+    load: () => import("./cli/cmd/mcp"),
+  },
+  {
+    command: "$0 [project]",
+    describe: "start opencode tui",
+    exportName: "TuiThreadCommand",
+    load: () => import("./cli/cmd/tui"),
+  },
+  {
+    command: "attach <url>",
+    describe: "attach to a running opencode server",
+    exportName: "AttachCommand",
+    load: () => import("./cli/cmd/attach"),
+  },
+  {
+    command: "run [message..]",
+    describe: "run opencode with a message",
+    exportName: "RunCommand",
+    load: () => import("./cli/cmd/run"),
+  },
+  { command: "generate", describe: false, exportName: "GenerateCommand", load: () => import("./cli/cmd/generate") },
+  {
+    command: "debug",
+    describe: "debugging and troubleshooting tools",
+    exportName: "DebugCommand",
+    load: () => import("./cli/cmd/debug"),
+  },
+  { command: "console", describe: false, exportName: "ConsoleCommand", load: () => import("./cli/cmd/account") },
+  {
+    command: "providers",
+    describe: "manage AI providers and credentials",
+    exportName: "ProvidersCommand",
+    aliases: ["auth"],
+    load: () => import("./cli/cmd/providers"),
+  },
+  { command: "agent", describe: "manage agents", exportName: "AgentCommand", load: () => import("./cli/cmd/agent") },
+  {
+    command: "upgrade [target]",
+    describe: "upgrade opencode to the latest or a specific version",
+    exportName: "UpgradeCommand",
+    load: () => import("./cli/cmd/upgrade"),
+  },
+  {
+    command: "uninstall",
+    describe: "uninstall opencode and remove all related files",
+    exportName: "UninstallCommand",
+    load: () => import("./cli/cmd/uninstall"),
+  },
+  {
+    command: "serve",
+    describe: "starts a headless opencode server",
+    exportName: "ServeCommand",
+    load: () => import("./cli/cmd/serve"),
+  },
+  {
+    command: "web",
+    describe: "start opencode server and open web interface",
+    exportName: "WebCommand",
+    load: () => import("./cli/cmd/web"),
+  },
+  {
+    command: "models [provider]",
+    describe: "list all available models",
+    exportName: "ModelsCommand",
+    load: () => import("./cli/cmd/models"),
+  },
+  {
+    command: "stats",
+    describe: "show token usage and cost statistics",
+    exportName: "StatsCommand",
+    load: () => import("./cli/cmd/stats"),
+  },
+  {
+    command: "export [sessionID]",
+    describe: "export session data as JSON",
+    exportName: "ExportCommand",
+    load: () => import("./cli/cmd/export"),
+  },
+  {
+    command: "import <file>",
+    describe: "import session data from JSON file or URL",
+    exportName: "ImportCommand",
+    load: () => import("./cli/cmd/import"),
+  },
+  {
+    command: "github",
+    describe: "manage GitHub agent",
+    exportName: "GithubCommand",
+    load: () => import("./cli/cmd/github"),
+  },
+  {
+    command: "pr <number>",
+    describe: "fetch and checkout a GitHub PR branch, then run opencode",
+    exportName: "PrCommand",
+    load: () => import("./cli/cmd/pr"),
+  },
+  {
+    command: "session",
+    describe: "manage sessions",
+    exportName: "SessionCommand",
+    load: () => import("./cli/cmd/session"),
+  },
+  {
+    command: "plugin <module>",
+    describe: "install plugin and update config",
+    exportName: "PluginCommand",
+    aliases: ["plug"],
+    load: () => import("./cli/cmd/plug"),
+  },
+  { command: "db", describe: "database tools", exportName: "DbCommand", load: () => import("./cli/cmd/db") },
+]
 
 const args = hideBin(process.argv)
 
@@ -78,37 +214,18 @@ const cli = yargs(args)
   })
   .usage("")
   .completion("completion", "generate shell completion script")
-  .command(AcpCommand)
-  .command(McpCommand)
-  .command(TuiThreadCommand)
-  .command(AttachCommand)
-  .command(RunCommand)
-  .command(GenerateCommand)
-  .command(DebugCommand)
-  .command(ConsoleCommand)
-  .command(ProvidersCommand)
-  .command(AgentCommand)
-  .command(UpgradeCommand)
-  .command(UninstallCommand)
-  .command(ServeCommand)
-  .command(WebCommand)
-  .command(ModelsCommand)
-  .command(StatsCommand)
-  .command(ExportCommand)
-  .command(ImportCommand)
-  .command(GithubCommand)
-  .command(PrCommand)
-  .command(SessionCommand)
-  .command(PluginCommand)
-  .command(DbCommand)
-  .fail((msg, err) => {
+
+for (const command of commands) cli.command(lazyCommand(command))
+
+cli
+  .fail(async (msg, err) => {
     if (
       msg?.startsWith("Unknown argument") ||
       msg?.startsWith("Not enough non-option arguments") ||
       msg?.startsWith("Invalid values:")
     ) {
       if (err) throw err
-      cli.showHelp(show)
+      show(await cli.getHelp())
     }
     if (err) throw err
     process.exit(1)
@@ -116,12 +233,8 @@ const cli = yargs(args)
   .strict()
 
 try {
-  if (args.includes("-h") || args.includes("--help")) {
-    await cli.parse(args, (err: Error | undefined, _argv: unknown, out: string) => {
-      if (err) throw err
-      if (!out) return
-      show(out)
-    })
+  if ((args[0] === "-h" || args[0] === "--help") && args.length === 1) {
+    show(await cli.getHelp())
   } else {
     await cli.parse()
   }

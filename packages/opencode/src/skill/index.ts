@@ -1,7 +1,6 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import path from "path"
 import fs from "fs"
-import { fileURLToPath } from "url"
 import { Effect, Layer, Context, Schema } from "effect"
 import { NamedError } from "@opencode-ai/core/util/error"
 import type { Agent } from "@/agent/agent"
@@ -17,9 +16,7 @@ import { ConfigMarkdown } from "@/config/markdown"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Glob } from "@opencode-ai/core/util/glob"
 import { Discovery } from "./discovery"
-import { EMBEDDED_SKILLS } from "./embedded.gen"
 import { isRecord } from "@/util/record"
-import { escapeHtml } from "@/util/html"
 
 const CLAUDE_EXTERNAL_DIR = ".claude"
 const AGENTS_EXTERNAL_DIR = ".agents"
@@ -176,7 +173,8 @@ const scan = Effect.fnUntraced(function* (
   }
 })
 
-export function materializeEmbeddedSkills(): string {
+export async function materializeEmbeddedSkills(): Promise<string> {
+  const { EMBEDDED_SKILLS } = await import("./embedded.gen")
   const root = path.join(Global.Path.cache, "skills-embedded")
   for (const [relative, content] of Object.entries(EMBEDDED_SKILLS)) {
     const target = path.join(root, relative)
@@ -200,7 +198,7 @@ const discoverSkills = Effect.fnUntraced(function* (
   const state: ScanState = { matches: new Set(), dirs: new Set() }
 
   // Embedded skills load first so user and project skills can override them.
-  const embeddedRoot = yield* Effect.sync(() => materializeEmbeddedSkills())
+  const embeddedRoot = yield* Effect.promise(() => materializeEmbeddedSkills())
   yield* scan(state, embeddedRoot, SKILL_PATTERN)
 
   const externalDirs: string[] = []
