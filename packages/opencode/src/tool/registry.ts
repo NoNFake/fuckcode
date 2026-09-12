@@ -66,6 +66,7 @@ import { OobTool } from "../pentest/oob"
 import { ScanImportTool } from "../pentest/scan-import"
 import { SessionTool } from "../pentest/session"
 import { ReconTool } from "../pentest/recon"
+import { ScopeImportTool } from "../pentest/scope-import"
 import { PentestConfig } from "../pentest/config"
 import { Sandbox } from "../pentest/sandbox"
 import { Observability } from "../pentest/observability"
@@ -171,6 +172,9 @@ const layer = Layer.effect(
     const pentestRecon = yield* ReconTool.pipe(
       Effect.provideService(PentestConfig.Service, dynamicPentestConfig),
       Effect.provideService(Sandbox.Service, dynamicSandbox),
+    )
+    const pentestScopeImport = yield* ScopeImportTool.pipe(
+      Effect.provideService(PentestConfig.Service, dynamicPentestConfig),
     )
 
     const state = yield* InstanceState.make<State>(
@@ -299,6 +303,7 @@ const layer = Layer.effect(
                 pentestScanImport: Tool.init(pentestScanImport),
                 pentestSession: Tool.init(pentestSession),
                 pentestRecon: Tool.init(pentestRecon),
+                pentestScopeImport: Tool.init(pentestScopeImport),
               }
             : {}),
         })
@@ -335,6 +340,7 @@ const layer = Layer.effect(
             ...(tool.pentestScanImport ? [tool.pentestScanImport] : []),
             ...(tool.pentestSession ? [tool.pentestSession] : []),
             ...(tool.pentestRecon ? [tool.pentestRecon] : []),
+            ...(tool.pentestScopeImport ? [tool.pentestScopeImport] : []),
           ],
           task: tool.task,
           read: tool.read,
