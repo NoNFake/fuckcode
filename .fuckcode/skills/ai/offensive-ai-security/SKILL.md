@@ -1,4 +1,10 @@
-# SKILL: AI Pentest
+---
+name: ai-security
+description: AI/LLM security offensive checklist covering prompt injection, jailbreaking, model extraction, training data poisoning, adversarial inputs, LLM-assisted attack automation, and AI system reconnaissance. Use when assessing AI/ML systems, red-teaming LLMs, or researching AI attack vectors. Triggers - AI security, LLM security, prompt injection, jailbreak, model extraction, RAG poisoning, AI red team, ML security.
+tags: [recon, exploitation]
+---
+
+# AI Pentest
 
 ## Metadata
 - **Skill Name**: ai-security

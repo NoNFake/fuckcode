@@ -1,4 +1,10 @@
-# SKILL: Week 2: Finding Vulnerabilities Through Fuzzing
+---
+name: fuzzing-course
+description: Fuzzing methodology curriculum covering target selection, corpus generation, coverage-guided fuzzing with AFL++ and libFuzzer, structured fuzzing, and crash triage and deduplication. Use when setting up fuzz campaigns, choosing harness strategies, or triaging fuzzer output. Triggers - fuzzing curriculum, AFL++, libFuzzer, coverage-guided fuzzing, corpus generation, harness, fuzz target, mutation, crash dedup.
+tags: [exploitation, vuln_assess]
+---
+
+# Week 2: Finding Vulnerabilities Through Fuzzing
 
 ## Metadata
 - **Skill Name**: fuzzing-course

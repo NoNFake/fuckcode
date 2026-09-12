@@ -1,5 +1,6 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import path from "path"
+import fs from "fs"
 import { fileURLToPath } from "url"
 import { Effect, Layer, Context, Schema } from "effect"
 import { NamedError } from "@opencode-ai/core/util/error"
@@ -16,6 +17,7 @@ import { ConfigMarkdown } from "@/config/markdown"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Glob } from "@opencode-ai/core/util/glob"
 import { Discovery } from "./discovery"
+import { EMBEDDED_SKILLS } from "./embedded.gen"
 import { isRecord } from "@/util/record"
 import { escapeHtml } from "@/util/html"
 
@@ -123,10 +125,13 @@ const add = Effect.fnUntraced(function* (state: State, match: string, events: Ev
 
   if (!isSkillFrontmatter(md.data)) return
 
-  if (state.skills[md.data.name]) {
+  const existing = state.skills[md.data.name]
+  if (existing) {
+    // The embedded copy and a disk copy of the same skill are expected to match.
+    if (existing.content === md.content) return
     yield* Effect.logWarning("duplicate skill name", {
       name: md.data.name,
-      existing: state.skills[md.data.name].location,
+      existing: existing.location,
       duplicate: match,
     })
   }
@@ -171,6 +176,17 @@ const scan = Effect.fnUntraced(function* (
   }
 })
 
+export function materializeEmbeddedSkills(): string {
+  const root = path.join(Global.Path.cache, "skills-embedded")
+  for (const [relative, content] of Object.entries(EMBEDDED_SKILLS)) {
+    const target = path.join(root, relative)
+    if (fs.existsSync(target) && fs.readFileSync(target, "utf-8") === content) continue
+    fs.mkdirSync(path.dirname(target), { recursive: true })
+    fs.writeFileSync(target, content)
+  }
+  return root
+}
+
 const discoverSkills = Effect.fnUntraced(function* (
   config: Config.Interface,
   discovery: Discovery.Interface,
@@ -182,6 +198,10 @@ const discoverSkills = Effect.fnUntraced(function* (
   worktree: string,
 ) {
   const state: ScanState = { matches: new Set(), dirs: new Set() }
+
+  // Embedded skills load first so user and project skills can override them.
+  const embeddedRoot = yield* Effect.sync(() => materializeEmbeddedSkills())
+  yield* scan(state, embeddedRoot, SKILL_PATTERN)
 
   const externalDirs: string[] = []
   if (!disableExternalSkills) {
