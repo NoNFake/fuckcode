@@ -8,7 +8,9 @@ import { useRoute } from "../../context/route"
 import { useKV } from "../../context/kv"
 import { useDialog } from "../../ui/dialog"
 import { DialogEco } from "../../component/dialog-eco"
+import { DialogVerify } from "../../component/dialog-verify"
 import { EcoMetrics } from "@opencode-ai/core/util/eco-metrics"
+import { verify } from "../../util/verify"
 
 export function Footer() {
   const { theme } = useTheme()
@@ -34,6 +36,16 @@ export function Footer() {
     }
     return { cacheRead, contextCut }
   })
+  const report = createMemo(() =>
+    verify({
+      messages: msg(),
+      partsOf: (message) =>
+        "parts" in (message as any) && Array.isArray((message as any).parts)
+          ? (message as any).parts
+          : (sync.data.part[(message as any).id] ?? []),
+    }),
+  )
+  const risk = createMemo(() => report().unverified.length + report().notFound)
   const mcp = createMemo(() => Object.values(sync.data.mcp).filter((x) => x.status === "connected").length)
   const mcpError = createMemo(() => Object.values(sync.data.mcp).some((x) => x.status === "failed"))
   const lsp = createMemo(() => Object.keys(sync.data.lsp))
@@ -119,6 +131,14 @@ export function Footer() {
                       : ""}
                   </span>
                 </Show>
+              </text>
+            </Show>
+            <Show when={risk() > 0}>
+              <text
+                fg={theme.warning}
+                onMouseUp={() => dialog.replace(() => <DialogVerify report={report()} />)}
+              >
+                ⚠ verify {risk()}
               </text>
             </Show>
             <text fg={theme.textMuted}>/status</text>
