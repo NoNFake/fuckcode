@@ -58,6 +58,7 @@ import { ReadEvidenceTool } from "../pentest/read-evidence"
 import { PentestShellTool } from "../pentest/shell-tool"
 import { ReportGenTool } from "../pentest/report-gen"
 import { StateUpdateTool } from "../pentest/state-update"
+import { FilenameBypassTool } from "../pentest/filename"
 import { KnowledgeUpdateTool } from "../pentest/knowledge-update"
 import { EnsureToolsTool } from "../pentest/ensure-tools"
 import { OsHookTool } from "../pentest/os-hook"
@@ -176,6 +177,7 @@ const layer = Layer.effect(
     const pentestScopeImport = yield* ScopeImportTool.pipe(
       Effect.provideService(PentestConfig.Service, dynamicPentestConfig),
     )
+    const pentestFilenameBypass = yield* FilenameBypassTool
 
     const state = yield* InstanceState.make<State>(
       Effect.fn("ToolRegistry.state")(function* (ctx) {
@@ -304,6 +306,7 @@ const layer = Layer.effect(
                 pentestSession: Tool.init(pentestSession),
                 pentestRecon: Tool.init(pentestRecon),
                 pentestScopeImport: Tool.init(pentestScopeImport),
+                pentestFilenameBypass: Tool.init(pentestFilenameBypass),
               }
             : {}),
         })
@@ -341,6 +344,7 @@ const layer = Layer.effect(
             ...(tool.pentestSession ? [tool.pentestSession] : []),
             ...(tool.pentestRecon ? [tool.pentestRecon] : []),
             ...(tool.pentestScopeImport ? [tool.pentestScopeImport] : []),
+            ...(tool.pentestFilenameBypass ? [tool.pentestFilenameBypass] : []),
           ],
           task: tool.task,
           read: tool.read,

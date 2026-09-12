@@ -20,6 +20,12 @@ Any upload sink (avatar, doc, image, CSV/XML import, attachment) where you contr
 - **Server config writable** → upload `.htaccess` (`AddType application/x-httpd-php .jpg`) then a `.jpg` webshell.
 - **SVG/XML upload** → stored XSS or XXE (see web-xxe). **Zip/import** → path traversal (`../../`) to write outside the upload dir.
 
+## Filename normalization bypass
+Desync the filter's parser from the server's by inserting an encoded separator between the executable and allowed extension (`shell.php<X>.png`):
+- Run `filename_bypass` with `name`, `extension`, `allowed`. It generates raw, percent, double-percent, `\x`, HTML-entity, JS-unicode, and overlong-UTF-8 forms of CR, LF, TAB, NUL, `#`, `;`, space, plus double extension, case, and trailing dot/space.
+- Encodings must be real: CR is `%0d` / `\u000d` / `&#13;` / overlong `%c0%8d` / `%e0%80%8d`. Do not use CJK lookalikes such as `\u560d` or `%e5%98%8d` — those are different characters and only add noise.
+- Send candidates with `pentest_shell` in the multipart `filename=` field, then request the returned path to confirm execution.
+
 ## Exploit → PROVE IMPACT
 ```bash
 # minimal webshells
@@ -30,7 +36,7 @@ curl 'http://<t>/uploads/shell.phtml?c=id'             # execute → prove
 **Proof required:** `id`/`whoami` from the uploaded shell (RCE). Then upgrade to a stable shell / `record_artifact`; drop markers where the engagement requires.
 
 ## Tooling
-`ffuf` to locate the upload dir; `exiftool` for magic-byte polyglots; `nuclei -tags fileupload`. Feed dir-discovery to `gobuster_parse`.
+`filename_bypass` for encoded filename variants; `ffuf` to locate the upload dir; `exiftool` for magic-byte polyglots; `nuclei -tags fileupload`. Feed dir-discovery to `gobuster_parse`.
 
 ## False positives / pitfalls
 - Upload succeeds but dir is non-executable (static/CDN) → find an interpreted path, or pivot to LFI-include of the uploaded file.
