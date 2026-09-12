@@ -182,7 +182,7 @@ const layer = Layer.effect(
 
       const outputPath = yield* write(contextual)
       const previewOnly = boundedPreview(contextual, "", outputLimits.maxLines, outputLimits.maxBytes)
-      const savedTokens = EcoMetrics.globalTracker.recordTruncation(contextual, previewOnly)
+      const savedTokens = EcoMetrics.truncationSaved(contextual, previewOnly)
       const marker =
         savedTokens > 0
           ? `... output truncated (${savedTokens.toLocaleString()} tokens saved); full content saved to ${outputPath} ...`

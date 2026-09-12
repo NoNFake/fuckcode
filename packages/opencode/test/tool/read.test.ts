@@ -321,7 +321,8 @@ describe("tool.read truncation", () => {
       const content = base.length >= target ? base : base.repeat(Math.ceil(target / base.length))
       yield* put(path.join(test.directory, "large.json"), content)
 
-      const result = yield* run({ filePath: path.join(test.directory, "large.json") })
+      // High limit so the byte cap is what triggers, not the default line cap.
+      const result = yield* run({ filePath: path.join(test.directory, "large.json"), limit: 5000 })
       expect(result.metadata.truncated).toBe(true)
       expect(result.output).toContain("Output capped at")
       expect(result.output).toContain("Use offset=")
@@ -337,7 +338,7 @@ describe("tool.read truncation", () => {
 
       const fs = yield* FSUtil.Service
       const counter = { bytes: 0 }
-      const result = yield* run({ filePath: filepath }).pipe(
+      const result = yield* run({ filePath: filepath, limit: 5000 }).pipe(
         Effect.provideService(
           FSUtil.Service,
           FSUtil.Service.of({

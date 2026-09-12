@@ -4,7 +4,6 @@
 
 ---
 
-
 <p align="center">
   <img src="https://github.com/NoNFake/fuckcode/raw/dev/.github/logo.png" alt="fuckcode" />
 </p>
@@ -20,12 +19,16 @@
    - Automatic terminal output sanitization (stripping ANSI color codes, progress animations, and escape sequences).
    - Deterministic tool output capping with full raw output logging to disk.
    - Intelligent pruning of stale tool results from historical turns to maintain prompt cache locality and avoid context overflow.
+   - **Eco mode** (`--token-saving` / `--eco`, or `token_saving` in config): caps tool output (moderate 80 lines / 16 KB, aggressive 40 / 8 KB), serves a compact skill list, and skips re-reading an unchanged file slice that is still present in message history.
+   - **Verification indicator**: the footer shows `⚠ verify N` when assistant text references files that no tool result confirms, or when tool calls fail as "not found". This is a heuristic prompt to verify, not proof of hallucination.
 
-3. **Built-in Security Skills & Methodology Catalog (31 Skills)**:
+3. **Built-in Security Skills & Methodology Catalog (41 Skills)**:
    - **Engagement Phases (`phases/`)**: `recon-phase`, `enumeration-phase`, `vuln-assessment-phase`, `exploitation-phase`, `post-exploit-phase`, `reporting-phase`.
    - **Services & Protocols (`services/`)**: `svc-web-server`, `svc-database`, `svc-smb`, `svc-ssh`, `svc-docker-k8s`, `svc-cicd`, `svc-dns`, `svc-mail`, `svc-ftp`, `svc-pivoting`.
    - **Playbooks (`playbooks/`)**: `playbook-webapp`, `playbook-ad`, `playbook-cloud`, `playbook-infra`.
    - **Web Vulnerabilities (`web/`)**: `web-sqli`, `web-auth-bypass-idor`, `web-upload-rce`, `web-ssti`, `web-deserialization`, `web-ssrf`, `web-lfi-traversal`, `web-xxe`.
+   - **Methodology (`api/`, `cloud/`, `cicd/`, `fuzzing/`, `ai/`, `utility/`)**: API abuse/security, cloud, CI/CD pipeline and secrets, fuzzing, AI security, bug identification, vulnerability classes, fast checking, reporting.
+   - **Repo-specific (`effect/`)**: Effect v4 patterns for this codebase.
 
 4. **Red & Black Theme & Configuration Discovery**:
    - High-contrast visual theme (deep black background `#0a0a0a` with crimson/red accent colors and borders).
@@ -50,11 +53,13 @@ bun run dev
 ### 2. Connecting to a Local Model (llama.cpp)
 
 1. Launch your `llama-server` instance:
+
    ```bash
    ./llama-server -m /path/to/your/model.gguf --port 8080 -c 32768
    ```
 
 2. Start FuckCode:
+
    ```bash
    bun run dev
    ```
@@ -89,19 +94,22 @@ FuckCode is designed to work with non-interactive command-line utilities. The ag
 ### Example Prompts:
 
 - **Network Reconnaissance & Port Enumeration**:
-  > *"Perform active reconnaissance and port discovery on 192.168.1.50"*
+
+  > _"Perform active reconnaissance and port discovery on 192.168.1.50"_
   - Executes `rustscan` / `nmap` with service version detection (`-sV -sC -Pn`), followed by HTTP service validation via `httpx`.
 
 - **Web Application Security Assessment (OWASP Top 10)**:
-  > *"Test http://target.local/api/item?id=1 for SQL injection and XSS vulnerabilities"*
+
+  > _"Test http://target.local/api/item?id=1 for SQL injection and XSS vulnerabilities"_
   - Activates `web-sqli` and `web-owasp` checklists, running `ghauri`/`sqlmap` and `dalfox` in non-interactive batch mode (`--batch`, `-silent`).
 
 - **Active Directory & SMB Auditing**:
-  > *"Enumerate network shares, users, and permissions on 10.10.10.10"*
+
+  > _"Enumerate network shares, users, and permissions on 10.10.10.10"_
   - Loads `svc-smb` and `playbook-ad`, executing `nxc smb` and `enum4linux-ng`.
 
 - **Audit Reporting & Remediation**:
-  > *"Generate a structured security assessment report with CVSS scoring and remediation steps"*
+  > _"Generate a structured security assessment report with CVSS scoring and remediation steps"_
   - Applies `reporting-phase` to document findings, reproduction steps, technical evidence, and actionable fixes.
 
 ---
@@ -115,41 +123,55 @@ The pentest module provides an isolated execution sandbox, automated evidence lo
 ```
 pentest/
 ├── config.ts           # TargetScope schema (domains, CIDRs, ports, named child scopes)
-├── preflight.ts        # Backend validation (pasta, slirp4netns, unshare), FTS5 checks
 ├── sandbox.ts          # Rootless namespace wrapper (pasta/slirp4netns/unshare), -sS to -sT rewrite
 ├── dns-forwarder.ts    # Embedded DNS resolver (127.0.0.1:53), whitelist filtering, NXDOMAIN for non-scope
-├── filter.ts           # nftables output filtering rules outside allowed CIDRs
-├── evidence.ts         # SQLite WAL store (audit_log, findings, evidence_fts), atomic transaction writes, deduplication
+├── evidence.ts         # SQLite WAL store (audit_log, findings, evidence_fts), atomic writes, deduplication
 ├── context.ts          # SystemContext provider (pentest/findings) for ambient LLM and subagent awareness
 ├── sanitizer.ts        # Output compression, ANSI stripping, structured summaries
 ├── read-evidence.ts    # FTS5 trigram grep and pagination tool for large scan logs
 ├── shell-tool.ts       # Sandbox shell with immediate findings extraction in output
-├── parsers/            # Automated finding parsers
-│   ├── nmap.ts         # Port scanning, service versions, OS detection, script CVEs
-│   ├── nuclei.ts       # Vulnerability templates, severities, CVSS scores
-│   ├── cme.ts          # SMB/LDAP/WinRM enumeration, Pwn3d admin flags, credentials
-│   ├── ffuf.ts         # Web fuzzing endpoints, status codes, redirects
-│   ├── sqlmap.ts       # SQL injection points, back-end DBMS, extracted databases, hash dumps
-│   ├── nikto.ts        # Web server banners, sensitive files (.git, .env, backups), missing headers
-│   └── whatweb.ts      # Web technology stacks, CMS versions, server components
-└── observability.ts    # Trace context propagation, structured logging, audit trails
+├── inject-probe.ts     # HTTP injection probes (xss, ssti, cmdi, sqli, nosql, lfi, ssrf, ldap, xpath)
+├── filename.ts         # Filename normalization-bypass generator
+├── oob.ts              # Out-of-band interaction testing via interactsh
+├── recon.ts            # Scoped recon chain (subfinder, httpx, nuclei)
+├── scan-import.ts      # Import Burp, HAR, Nmap, and OpenAPI artifacts as findings
+├── scope-import.ts     # Parse HackerOne scope exports into pentest config
+├── session.ts          # Authenticated session store (headers, cookies)
+├── os-hook.ts          # Post-exploitation command generator per OS/module
+├── ensure-tools.ts     # Check or install common pentest tools
+├── state-update.ts     # Engagement state store
+├── report-gen.ts       # markdown / JSON / SARIF reports
+├── knowledge.ts        # Cross-engagement knowledge store and learned rules
+├── knowledge-update.ts # knowledge_update tool
+├── observability.ts    # Trace context propagation, structured logging, audit trails
+└── parsers/            # nmap, nuclei, cme, ffuf, sqlmap, nikto, whatweb, burp, har, openapi, recon
 ```
 
 ### Key Capabilities
 
-| Capability | Description |
-|---|---|
-| **Multi-backend Isolation** | Automatically detects and selects the best available backend (`pasta` -> `slirp4netns` -> `unshare`). Network traffic is restricted strictly to scope CIDRs. |
-| **DNS Whitelist Enforcement** | Embedded forwarder blocks non-scoped domains with NXDOMAIN and prevents DoH/DoT bypasses. |
-| **Automated Vulnerability Parsers** | Raw stdout is parsed in real time into typed findings across 7 tool categories (Nmap, Nuclei, CME, FFuf, SQLMap, Nikto, WhatWeb). |
-| **Context Window Injection** | Findings are injected directly into `PentestShellTool` output summaries and continuously maintained in ambient `SystemContext` for multi-turn models and subagents. |
-| **Hierarchical Scopes** | Supports named child scopes (`web`, `internal`) with inherited constraints and subagent task scoping (`scope_override`). |
-| **High-Performance Evidence Store** | SQLite WAL with transaction batching (`db.transaction`), memory PRAGMAs, FTS5 trigram full-text indexing capped to 64KB, and query deduplication. |
-| **read_evidence Tool** | Safe pagination and grep over arbitrary scan sizes (100MB+) without context window overflow. |
-| **state_update Tool** | Update or query active pentest engagement state (phase, targets, credentials, hashes). |
-| **report_gen Tool** | Generate markdown/JSON pentest reports from accumulated findings and evidence chains. |
-| **/report Command** | Slash command to generate a full pentest report. |
-| **Result** | Domain admin hash in hand — every step recorded with its evidence chain. |
+| Capability                          | Description                                                                                                                                                         |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Multi-backend Isolation**         | Automatically detects and selects the best available backend (`pasta` -> `slirp4netns` -> `unshare`). Network traffic is restricted strictly to scope CIDRs.        |
+| **DNS Whitelist Enforcement**       | Embedded forwarder blocks non-scoped domains with NXDOMAIN and prevents DoH/DoT bypasses.                                                                           |
+| **Automated Vulnerability Parsers** | Raw stdout and imported artifacts are parsed into typed findings (Nmap, Nuclei, CME, FFuf, SQLMap, Nikto, WhatWeb, Burp, HAR, OpenAPI, recon).                      |
+| **Context Window Injection**        | Findings are injected directly into `PentestShellTool` output summaries and continuously maintained in ambient `SystemContext` for multi-turn models and subagents. |
+| **Hierarchical Scopes**             | Supports named child scopes (`web`, `internal`) with inherited constraints and subagent task scoping (`scope_override`).                                            |
+| **High-Performance Evidence Store** | SQLite WAL with transaction batching (`db.transaction`), memory PRAGMAs, FTS5 trigram full-text indexing capped to 64KB, and query deduplication.                   |
+| **read_evidence Tool**              | Safe pagination and grep over arbitrary scan sizes (100MB+) without context window overflow.                                                                        |
+| **state_update Tool**               | Update or query active pentest engagement state (phase, targets, credentials, hashes).                                                                              |
+| **report_gen Tool**                 | Generate markdown/JSON/SARIF pentest reports from accumulated findings and evidence chains.                                                                         |
+| **inject_probe Tool**               | Nonce-tagged HTTP injection probes; returns observations to verify, not confirmed findings.                                                                         |
+| **filename_bypass Tool**            | Encoded filename variants (control chars, entities, overlong UTF-8) for upload and path filters.                                                                    |
+| **oob Tool**                        | Out-of-band interaction testing via interactsh (DNS/HTTP/SMTP/LDAP callbacks).                                                                                      |
+| **recon Tool**                      | Scoped subfinder/httpx/nuclei chain with evidence storage.                                                                                                          |
+| **scan_import Tool**                | Import Burp XML, HAR, Nmap XML, and OpenAPI artifacts as findings.                                                                                                  |
+| **scope_import Tool**               | Parse HackerOne scope exports into a paste-ready `pentest.scope` block.                                                                                             |
+| **ensure_tools Tool**               | Check or install 21 common pentest tools.                                                                                                                           |
+| **os_hook Tool**                    | Post-exploitation command generator per OS and module.                                                                                                              |
+| **session Tool**                    | Authenticated session store applied to inject_probe and pentest_shell.                                                                                              |
+| **knowledge_update Tool**           | Cross-engagement knowledge store and learned skills.                                                                                                                |
+| **/report Command**                 | Slash command to generate a full pentest report.                                                                                                                    |
+| **Result**                          | Domain admin hash in hand — every step recorded with its evidence chain.                                                                                            |
 
 ### Configuration (`fuckcode.json`)
 
@@ -158,7 +180,7 @@ pentest/
   "pentest": {
     "enabled": true,
     "sandboxTimeout": 30000,
-    "evidenceDir": "~/.local/share/opencode/pentest-evidence",
+    "evidenceDir": "~/.local/share/fuckcode/pentest-evidence",
     "scope": {
       "domains": ["target.corp", "*.target.corp"],
       "cidrs": ["10.0.0.0/8", "172.16.0.0/12"],
@@ -191,6 +213,8 @@ bun test src/pentest/__tests__/
 - **integration.test.ts** — End-to-end scope boundary enforcement, hierarchical child scopes, finding deduplication, and SystemContext formatting.
 - **safety-bypass.test.ts** — Over 50 scope evasion attempts (environment variables, subshells, hex IPs, DNS rebinding).
 - **concurrency.test.ts** — Multi-threaded concurrent writes, crash recovery, and orphan detection.
+- **benchmark.test.ts** — Parser and evidence throughput benchmarks.
+- **filename.test.ts** — Filename variant generation (`../filename.test.ts`, run separately).
 
 ---
 
