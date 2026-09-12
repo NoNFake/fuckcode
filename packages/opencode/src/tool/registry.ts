@@ -65,6 +65,7 @@ import { InjectProbeTool } from "../pentest/inject-probe"
 import { OobTool } from "../pentest/oob"
 import { ScanImportTool } from "../pentest/scan-import"
 import { SessionTool } from "../pentest/session"
+import { ReconTool } from "../pentest/recon"
 import { PentestConfig } from "../pentest/config"
 import { Sandbox } from "../pentest/sandbox"
 import { Observability } from "../pentest/observability"
@@ -167,6 +168,10 @@ const layer = Layer.effect(
       Effect.provideService(PentestConfig.Service, dynamicPentestConfig),
     )
     const pentestSession = yield* SessionTool.pipe(Effect.provideService(PentestConfig.Service, dynamicPentestConfig))
+    const pentestRecon = yield* ReconTool.pipe(
+      Effect.provideService(PentestConfig.Service, dynamicPentestConfig),
+      Effect.provideService(Sandbox.Service, dynamicSandbox),
+    )
 
     const state = yield* InstanceState.make<State>(
       Effect.fn("ToolRegistry.state")(function* (ctx) {
@@ -293,6 +298,7 @@ const layer = Layer.effect(
                 pentestOob: Tool.init(pentestOob),
                 pentestScanImport: Tool.init(pentestScanImport),
                 pentestSession: Tool.init(pentestSession),
+                pentestRecon: Tool.init(pentestRecon),
               }
             : {}),
         })
@@ -328,6 +334,7 @@ const layer = Layer.effect(
             ...(tool.pentestOob ? [tool.pentestOob] : []),
             ...(tool.pentestScanImport ? [tool.pentestScanImport] : []),
             ...(tool.pentestSession ? [tool.pentestSession] : []),
+            ...(tool.pentestRecon ? [tool.pentestRecon] : []),
           ],
           task: tool.task,
           read: tool.read,
