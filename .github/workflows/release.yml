@@ -1,0 +1,54 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version without leading v (e.g. 1.18.30)"
+        required: true
+        type: string
+
+concurrency: release-${{ github.ref }}
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Resolve version
+        id: version
+        run: |
+          version="${{ inputs.version || github.ref_name }}"
+          echo "value=${version#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build all platforms
+        run: bun run build:all
+        env:
+          OPENCODE_VERSION: ${{ steps.version.outputs.value }}
+          OPENCODE_CHANNEL: latest
+          BINARY_NAME: fuckcode
+
+      - name: Publish release
+        run: |
+          gh release create "v${{ steps.version.outputs.value }}" \
+            ./packages/opencode/dist/*.zip \
+            ./packages/opencode/dist/*.tar.gz \
+            ./packages/opencode/dist/sha256.txt \
+            --title "v${{ steps.version.outputs.value }}" \
+            --generate-notes \
+            --repo "${{ github.repository }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
