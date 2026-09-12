@@ -226,6 +226,29 @@ export const ReadTool = Tool.define<
       return nonPrintableCount / bytes.length > 0.3
     }
 
+    // Opt-in: when the same file slice was already read in this session and is
+    // still present in the message history, return a stub instead of the body.
+    // If the prior result is gone (pruned or compacted), fall back to a full read.
+    const findPriorRead = (
+      messages: Tool.Context<Metadata>["messages"],
+      filepath: string,
+      lineStart: number,
+      hash: string,
+    ) => {
+      for (const message of messages) {
+        if (!("parts" in message)) continue
+        for (const part of message.parts) {
+          if (part.type !== "tool" || part.tool !== "read") continue
+          if (part.state.status !== "completed") continue
+          const display = part.state.metadata.display
+          if (!display || display.type !== "file" || display.path !== filepath) continue
+          if (display.lineStart !== lineStart || display.hash !== hash) continue
+          return true
+        }
+      }
+      return false
+    }
+
     const run = Effect.fn("ReadTool.execute")(function* (
       params: Schema.Schema.Type<typeof Parameters>,
       ctx: Tool.Context<Metadata>,
@@ -356,6 +379,35 @@ export const ReadTool = Tool.define<
         output += `\n\n<system-reminder>\n${loaded.map((item) => item.content).join("\n\n")}\n</system-reminder>`
       }
 
+      const hash = Bun.hash(`${file.offset}:${file.raw.join("\n")}`).toString(36)
+      if (process.env.FUCKCODE_CACHE_TOOLS === "1" && findPriorRead(ctx.messages, filepath, file.offset, hash)) {
+        return {
+          title,
+          output: [
+            `<path>${filepath}</path>`,
+            `<type>file</type>`,
+            `<content>`,
+            `(unchanged since last read; lines ${file.offset}-${last} of ${file.count}; content already in context)`,
+            `</content>`,
+          ].join("\n"),
+          metadata: {
+            preview: "",
+            truncated: false,
+            loaded: [] as string[],
+            display: {
+              type: "file" as const,
+              path: filepath,
+              text: "",
+              lineStart: file.offset,
+              lineEnd: last,
+              totalLines: file.count,
+              truncated: false,
+              hash,
+            },
+          },
+        }
+      }
+
       return {
         title,
         output,
@@ -371,6 +423,7 @@ export const ReadTool = Tool.define<
             lineEnd: last,
             totalLines: file.count,
             truncated,
+            hash,
           },
         },
       }

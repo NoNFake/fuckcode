@@ -81,8 +81,18 @@ export class Tracker {
 
 export const globalTracker = new Tracker()
 
+const truncationCache = new WeakMap<object, number>()
+
 export function extractTruncationSaved(part: unknown): number {
   if (!part || typeof part !== "object") return 0
+  const cached = truncationCache.get(part)
+  if (cached !== undefined) return cached
+  const saved = extractTruncationSavedUncached(part)
+  truncationCache.set(part, saved)
+  return saved
+}
+
+function extractTruncationSavedUncached(part: object): number {
   const anyPart = part as Record<string, any>
 
   if (typeof anyPart.state?.structured?.tokensSaved === "number") return anyPart.state.structured.tokensSaved
