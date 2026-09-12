@@ -6,6 +6,7 @@ import { useRoute } from "../context/route"
 import { useKV } from "../context/kv"
 import { createMemo, onMount, Show } from "solid-js"
 import { EcoMetrics } from "@opencode-ai/core/util/eco-metrics"
+import { TokenSavingState } from "@opencode-ai/core/token-saving-state"
 import type { AssistantMessage } from "@opencode-ai/sdk/v2"
 
 const money = new Intl.NumberFormat("en-US", {
@@ -193,7 +194,9 @@ export function DialogEco(props: { sessionID?: string }) {
         <text
           fg={theme.primary}
           onMouseUp={() => {
-            kv.set("token_saving_enabled", !enabled())
+            const next = !enabled()
+            kv.set("token_saving_enabled", next)
+            TokenSavingState.write(next)
           }}
         >
           [{enabled() ? "Disable Eco Mode" : "Enable Eco Mode"}]

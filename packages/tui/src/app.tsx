@@ -3,6 +3,7 @@ import { registerOpencodeSpinner } from "./component/register-spinner"
 import { createDefaultOpenTuiKeymap } from "@opentui/keymap/opentui"
 import { Deferred, Effect } from "effect"
 import { Global } from "@opencode-ai/core/global"
+import { TokenSavingState } from "@opencode-ai/core/token-saving-state"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { ClipboardProvider, useClipboard } from "./context/clipboard"
@@ -387,6 +388,16 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
   const attention = createTuiAttention({ renderer, config: tuiConfig, kv })
   const clipboard = useClipboard()
   let lastCtrlCTime = 0
+
+  createEffect(() => {
+    if (!kv.ready) return
+    const flag = process.env.FUCKCODE_TOKEN_SAVING
+    if (flag !== undefined) {
+      kv.set("token_saving_enabled", flag !== "0")
+      return
+    }
+    TokenSavingState.write(kv.get("token_saving_enabled", true))
+  })
 
   const api = createTuiApi(
     createTuiApiAdapters({
@@ -993,6 +1004,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         run: () => {
           const next = !kv.get("token_saving_enabled", true)
           kv.set("token_saving_enabled", next)
+          TokenSavingState.write(next)
           toast.show({
             message: next ? "Token saving mode enabled" : "Token saving mode disabled",
             variant: "info",

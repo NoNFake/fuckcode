@@ -9,6 +9,7 @@ import { makeGlobalNode, makeLocationNode } from "./effect/app-node"
 import { SessionSchema } from "./session/schema"
 import { Identifier } from "./util/identifier"
 import { Token } from "./util/token"
+import { TokenSavingState } from "./token-saving-state"
 import { EcoMetrics } from "./util/eco-metrics"
 import type { ToolOutput } from "@opencode-ai/llm"
 
@@ -130,12 +131,14 @@ const layer = Layer.effect(
         {},
         ...entries.flatMap((entry) => (entry.type === "document" ? [entry.info.token_saving ?? {}] : [])),
       )
+      const live = TokenSavingState.read()
       const isSavingEnabled =
         process.env.FUCKCODE_TOKEN_SAVING === "1" ||
         (process.env.FUCKCODE_TOKEN_SAVING !== "0" &&
-          (tokenSaving.enabled === true ||
-            tokenSaving.mode === "aggressive" ||
-            tokenSaving.mode === "moderate"))
+          (live ??
+            (tokenSaving.enabled === true ||
+              tokenSaving.mode === "aggressive" ||
+              tokenSaving.mode === "moderate")))
       const savingMaxLines = tokenSaving.mode === "aggressive" ? 40 : 80
       const savingMaxBytes = tokenSaving.mode === "aggressive" ? 8 * 1024 : 16 * 1024
 
