@@ -11,6 +11,16 @@ FuckCode is a fork of [OpenCode](https://github.com/anomalyco/opencode) focused 
 
 Open an issue before large features so the direction can be discussed.
 
+## Cloning
+
+The repository carries the full upstream OpenCode history, so a regular clone is heavy. Use a blobless partial clone to avoid downloading historical blobs:
+
+```bash
+git clone --filter=blob:none https://github.com/NoNFake/fuckcode.git
+```
+
+Git fetches file contents on demand afterward.
+
 ## Developing FuckCode
 
 - Requirements: Bun 1.3+
