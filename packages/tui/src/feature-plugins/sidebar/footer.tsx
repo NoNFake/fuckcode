@@ -78,7 +78,11 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
           <b>Code</b>
         </span>{" "}
         <span>{props.api.app.version}</span>
-        {" "}
+
+
+        <span style={{ fg: theme().text }}>
+        {" / "}
+        </span>
          <span style={{ fg: theme().primary }}>[sec-edition]</span>
       </text>
 

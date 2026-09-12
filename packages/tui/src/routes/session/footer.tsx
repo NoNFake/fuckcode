@@ -138,7 +138,7 @@ export function Footer() {
                 fg={theme.warning}
                 onMouseUp={() => dialog.replace(() => <DialogVerify report={report()} />)}
               >
-                ⚠ verify {risk()}
+                [!] verify {risk()}
               </text>
             </Show>
             <text fg={theme.textMuted}>/status</text>

@@ -101,7 +101,7 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
         fg={verifyRisk() > 0 ? theme().warning : theme().textMuted}
         onMouseUp={() => dialog.replace(() => <DialogVerify report={verifyReport()} />)}
       >
-        ⚠ verify {verifyRisk()}
+        [!] verify {verifyRisk()}
       </text>
     </box>
   )

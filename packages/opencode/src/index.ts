@@ -3,11 +3,9 @@ import { hideBin } from "yargs/helpers"
 import type { Argv, CommandBuilder } from "yargs"
 import { UI } from "./cli/ui"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
-import { FormatError } from "./cli/error"
 import { EOL } from "os"
 import { errorMessage } from "./util/error"
 import { cmd } from "./cli/cmd/cmd"
-import { Heap } from "./cli/heap"
 
 type CommandLike = {
   builder?: CommandBuilder<Record<string, unknown>, unknown>
@@ -206,6 +204,7 @@ const cli = yargs(args)
       process.env.OPENCODE_PURE = "1"
     }
 
+    const { Heap } = await import("./cli/heap")
     Heap.start()
 
     process.env.AGENT = "1"
@@ -233,12 +232,16 @@ cli
   .strict()
 
 try {
-  if ((args[0] === "-h" || args[0] === "--help") && args.length === 1) {
+  if ((args[0] === "-v" || args[0] === "--version") && args.length === 1) {
+    process.stdout.write(InstallationVersion + EOL)
+  } else if ((args[0] === "-h" || args[0] === "--help") && args.length === 1) {
     show(await cli.getHelp())
   } else {
     await cli.parse()
   }
 } catch (e) {
+  // Loaded lazily: it pulls the Effect runtime, which the happy path does not need.
+  const { FormatError } = await import("./cli/error")
   const formatted = FormatError(e)
   if (formatted) UI.error(formatted)
   if (formatted === undefined) {

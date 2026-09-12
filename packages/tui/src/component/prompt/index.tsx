@@ -1756,7 +1756,7 @@ export function Prompt(props: PromptProps) {
                             fg={verifyRisk() > 0 ? theme.warning : theme.textMuted}
                             onMouseUp={() => dialog.replace(() => <DialogVerify report={verifyReport()} />)}
                           >
-                            ⚠ verify {verifyRisk()}
+                            [!] verify {verifyRisk()}
                           </text>
                         </box>
                       )}
