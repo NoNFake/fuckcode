@@ -3,6 +3,7 @@ import { NonNegativeInt } from "@opencode-ai/core/schema"
 import * as path from "path"
 import * as Tool from "./tool"
 import { FSUtil } from "@opencode-ai/core/fs-util"
+import { TokenSavingState } from "@opencode-ai/core/token-saving-state"
 import { LSP } from "@/lsp/lsp"
 import DESCRIPTION from "./read.txt"
 import { InstanceState } from "@/effect/instance-state"
@@ -380,7 +381,7 @@ export const ReadTool = Tool.define<
       }
 
       const hash = Bun.hash(`${file.offset}:${file.raw.join("\n")}`).toString(36)
-      if (process.env.FUCKCODE_CACHE_TOOLS === "1" && findPriorRead(ctx.messages, filepath, file.offset, hash)) {
+      if (TokenSavingState.enabled() && findPriorRead(ctx.messages, filepath, file.offset, hash)) {
         return {
           title,
           output: [

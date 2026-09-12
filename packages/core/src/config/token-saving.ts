@@ -16,10 +16,4 @@ export class Info extends Schema.Class<Info>("ConfigV2.TokenSaving")({
   max_tool_lines: PositiveInt.pipe(Schema.optional).annotate({
     description: "Override maximum lines returned by tools before truncation occurs",
   }),
-  cache_tools: Schema.Boolean.pipe(Schema.optional).annotate({
-    description: "Enable hash-based file read deduplication to avoid reloading unchanged files",
-  }),
-  compact_instructions: Schema.Boolean.pipe(Schema.optional).annotate({
-    description: "Strip verbose instruction formatting and redundant guidance",
-  }),
 }) {}

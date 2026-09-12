@@ -104,15 +104,12 @@ const layer = Layer.effect(
         if (Permission.disabled(["skill"], agent.permission).has("skill")) return
 
         const list = yield* skill.available(agent)
-        const eco =
-          process.env.FUCKCODE_TOKEN_SAVING === "1" ||
-          (process.env.FUCKCODE_TOKEN_SAVING !== "0" && TokenSavingState.read() === true)
 
         return [
           "Skills provide specialized instructions and workflows for specific tasks.",
           "Use the skill tool to load a skill when a task matches its description.",
           // Verbose XML reads slightly better for the model, so use it unless token saving is on.
-          Skill.fmt(list, { verbose: !eco }),
+          Skill.fmt(list, { verbose: !TokenSavingState.enabled() }),
         ].join("\n")
       }),
 

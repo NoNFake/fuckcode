@@ -23,6 +23,14 @@ export function read(): boolean | undefined {
   }
 }
 
+// Precedence: explicit env wins, otherwise the live TUI toggle in the state file.
+export function enabled(): boolean {
+  return (
+    process.env.FUCKCODE_TOKEN_SAVING === "1" ||
+    (process.env.FUCKCODE_TOKEN_SAVING !== "0" && read() === true)
+  )
+}
+
 export function write(enabled: boolean): void {
   try {
     fs.mkdirSync(path.dirname(file()), { recursive: true })
