@@ -17,7 +17,9 @@ const ROE_MARKER = "Rules of Engagement"
 // Skills whose offline/coding nature does not warrant the pentest ROE block.
 const ROE_EXEMPT = new Set(["effect"])
 
-const BODY_BUDGET = 125_000
+// Ratchet over the current catalog (~39.6k tokens). Bump deliberately when the
+// catalog genuinely grows; this catches prompt-bloat regressions.
+const BODY_BUDGET = 42_000
 
 function registeredTools() {
   const names = new Set<string>(["bash", "read", "write", "edit", "glob", "grep", "task", "webfetch", "websearch"])
