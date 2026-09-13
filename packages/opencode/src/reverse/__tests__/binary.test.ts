@@ -47,6 +47,9 @@ const ctx: any = {
 
 let dir: string
 let so: string
+let dll: string
+
+const hasMingw = !!Bun.which("x86_64-w64-mingw32-gcc")
 
 const hashOf = async (file: string) =>
   createHash("sha256")
@@ -84,6 +87,17 @@ beforeAll(() => {
   )
   const result = spawnSync("cc", ["-shared", "-fPIC", "-O0", "-o", so, source], { encoding: "utf-8" })
   if (result.status !== 0) throw new Error(`cc failed: ${result.stderr}`)
+
+  if (hasMingw) {
+    const peSource = path.join(dir, "fixture-pe.c")
+    dll = path.join(dir, "fixture.dll")
+    Bun.write(
+      peSource,
+      `__declspec(dllexport) int greet(void) { return 42; }\n__declspec(dllexport) int add(int a, int b) { return a + b; }\nconst char marker[] = "${marker}";\n`,
+    )
+    const pe = spawnSync("x86_64-w64-mingw32-gcc", ["-shared", "-O0", "-o", dll, peSource], { encoding: "utf-8" })
+    if (pe.status !== 0) throw new Error(`mingw failed: ${pe.stderr}`)
+  }
 })
 
 afterAll(() => {
@@ -166,6 +180,18 @@ describe("binary tool", () => {
     const result = await execute(tool, { action: "info", file: so })
     expect(result.output).toContain("hardening:")
     if (!Bun.which("checksec")) expect(result.output).toContain("RELRO:")
+  })
+
+  it.skipIf(!hasMingw)("analyses a PE DLL", async () => {
+    const tool = await makeTool()
+    const info = await execute(tool, { action: "info", file: dll })
+    expect(info.output).toContain("PE32")
+
+    if (!Bun.which("rabin2")) return
+    expect((await execute(tool, { action: "sections", file: dll })).output).toContain(".text")
+    expect((await execute(tool, { action: "exports", file: dll })).output).toContain("greet")
+    expect((await execute(tool, { action: "imports", file: dll })).output).toContain("KERNEL32.dll")
+    expect((await execute(tool, { action: "entropy", file: dll })).output).toContain(".text")
   })
 
   it("rejects r2 targets that are not hex or symbols", async () => {

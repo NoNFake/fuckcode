@@ -1,6 +1,6 @@
 # Reverse Engineering
 
-Static analysis of ELF binaries: triage, disassembly, byte reads, byte-pattern search, and patching of copies.
+Static analysis of ELF and PE binaries: triage, disassembly, byte reads, byte-pattern search, and patching of copies.
 
 ## Enable
 
@@ -28,7 +28,7 @@ Or set `FUCKCODE_REVERSE=1`. Registering the tools is gated on `reverse.enabled`
 
 Permissions: read actions use the `reverse` action, `patch` uses `reverse_patch`.
 
-Backends: `file`, `readelf`, `objdump`, `nm`, `strings` are required for the core actions. `info` uses `checksec` when installed and otherwise derives RELRO, canary, NX, PIE, and FORTIFY from `readelf`. `disasm` prefers radare2 when present and falls back to objdump. `decompile`, `xrefs`, `functions`, and `emulate` use radare2 when installed; `functions` falls back to `nm`.
+Backends: `file` and `strings` are always required. ELF uses `readelf`, `objdump`, `nm`; PE uses radare2's `rabin2` for sections, imports, exports, and header/hardening. `info` uses `checksec` when installed and otherwise derives hardening itself. `disasm` prefers radare2 when present and falls back to objdump for ELF. `decompile`, `xrefs`, `emulate`, and PE `functions` require radare2; ELF `functions` falls back to `nm`.
 
 `emulate` runs radare2's ESIL VM: it maps a stack, optionally writes `hex` bytes at `write`, seeks to `address` (a symbol or hex), steps `count` instructions, then returns registers and a 128-byte dump at `dump` (default `rsp`). No process is executed.
 
@@ -56,6 +56,7 @@ The built-in `binary` tool covers static analysis without extra processes. For r
 
 ## Limitations
 
-- ELF only in this MVP. PE and Mach-O are not supported yet.
-- No dynamic execution. Debugging, live memory writes, and Frida require an isolated VM or container; do not run untrusted binaries on the host.
+- ELF and PE are supported. Mach-O is not.
+- PE sections, imports, exports, and headers need radare2 (`rabin2`); PE disassembly and functions need radare2. Without it, `info` still reports the file type, size, and hash.
+- No dynamic execution. Debugging, live memory writes, and Frida require an isolated VM or container; do not run untrusted binaries on the host. `emulate` is ESIL emulation, not execution.
 - `search_bytes` reads the whole file into memory. Large-file scanning should switch to a chunked scan.

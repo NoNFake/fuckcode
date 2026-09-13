@@ -167,7 +167,7 @@ async function patchFile(config: ReverseConfig.Config, params: Params, file: str
   return { target, before, after, offset, bytes: pattern.length }
 }
 
-function disasm(file: string, params: Params) {
+function disasm(file: string, params: Params, format: Format) {
   const r2 = Bun.which("r2")
   if (r2) {
     const count = params.count ?? 40
@@ -175,6 +175,7 @@ function disasm(file: string, params: Params) {
     const target = address ? `@ ${address}` : ""
     return run(r2, ["-q", "-e", "scr.color=0", "-e", "bin.relocs.apply=true", "-c", `aaa; pd ${count} ${target}`, file])
   }
+  if (format === "pe") throw new Error("PE disassembly requires radare2. Run ensure_tools to install it.")
   const start = params.address && /^0x[0-9a-fA-F]+$/.test(params.address) ? parseInt(params.address, 16) : undefined
   const count = params.count ?? 40
   const args = ["-d", "-M", "intel"]
@@ -221,29 +222,68 @@ function entropyOf(buffer: Buffer) {
   return value
 }
 
-async function entropyReport(file: string) {
-  const whole = entropyOf(Buffer.from(await Bun.file(file).arrayBuffer()))
-  const rows: string[] = []
-  for (const line of run("readelf", ["-S", "-W", file]).split("\n")) {
-    const match = line.match(
-      /^\s*\[\s*\d+\]\s+(\S+)\s+([A-Z_][A-Z0-9_]*)\s+[0-9a-f]+\s+([0-9a-f]+)\s+([0-9a-f]+)/,
-    )
-    if (!match) continue
-    const [, name, type, offsetHex, sizeHex] = match
-    if (type === "NOBITS") continue
-    const offset = parseInt(offsetHex, 16)
-    const size = parseInt(sizeHex, 16)
-    if (size === 0) continue
-    const data = await readBytes(file, offset, Math.min(size, 16 * 1024 * 1024))
-    const value = entropyOf(data)
-    const flag = value > 7 ? "  HIGH: packed, encrypted, or compressed?" : ""
-    rows.push(`${name.padEnd(24)} offset=0x${offsetHex} size=${size} entropy=${value.toFixed(4)}${flag}`)
-  }
-  return [`whole file entropy=${whole.toFixed(4)} (max 8.0)`, "", ...rows].join("\n")
+type Format = "elf" | "pe"
+
+function detectFormat(file: string): Format {
+  const description = runOptional("file", ["-b", file])
+  if (/PE32/i.test(description)) return "pe"
+  if (/ELF/i.test(description)) return "elf"
+  throw new Error(`Unsupported binary format: ${description}`)
 }
 
-function hardening(file: string) {
+function requireR2(action: string) {
+  const r2 = Bun.which("r2")
+  if (!r2) throw new Error(`${action} requires radare2. Run ensure_tools to install it.`)
+  return r2
+}
+
+function elfSections(file: string) {
+  return run("readelf", ["-S", "-W", file])
+    .split("\n")
+    .flatMap((line) => {
+      const match = line.match(
+        /^\s*\[\s*\d+\]\s+(\S+)\s+([A-Z_][A-Z0-9_]*)\s+[0-9a-f]+\s+([0-9a-f]+)\s+([0-9a-f]+)/,
+      )
+      if (!match || match[2] === "NOBITS") return []
+      return [{ name: match[1], offset: parseInt(match[3], 16), size: parseInt(match[4], 16) }]
+    })
+}
+
+function peSections(file: string) {
+  return run("rabin2", ["-S", file])
+    .split("\n")
+    .flatMap((line) => {
+      const match = line.match(
+        /^\d+\s+(0x[0-9a-f]+)\s+(0x[0-9a-f]+)\s+0x[0-9a-f]+\s+0x[0-9a-f]+\s+\S+\s+\S+\s+\S+\s+(\S+)/,
+      )
+      if (!match) return []
+      return [{ name: match[3], offset: parseInt(match[1], 16), size: parseInt(match[2], 16) }]
+    })
+}
+
+async function entropyReport(file: string, format: Format) {
+  const whole = entropyOf(Buffer.from(await Bun.file(file).arrayBuffer()))
+  const sections = format === "elf" ? elfSections(file) : peSections(file)
+  const rows: string[] = []
+  for (const section of sections) {
+    if (section.size === 0) continue
+    const data = await readBytes(file, section.offset, Math.min(section.size, 16 * 1024 * 1024))
+    const value = entropyOf(data)
+    const flag = value > 7 ? "  HIGH: packed, encrypted, or compressed?" : ""
+    rows.push(
+      `${section.name.padEnd(24)} offset=0x${section.offset.toString(16)} size=${section.size} entropy=${value.toFixed(4)}${flag}`,
+    )
+  }
+  return [`format=${format}`, `whole file entropy=${whole.toFixed(4)} (max 8.0)`, "", ...rows].join("\n")
+}
+
+function hardening(file: string, format: Format) {
   if (Bun.which("checksec")) return run("checksec", ["--file", file])
+  if (format === "pe") {
+    const info = run("rabin2", ["-I", file])
+    const pick = (key: string) => info.match(new RegExp(`^${key}\\s+(\\S+)`, "m"))?.[1] ?? "?"
+    return [`Stack canary: ${pick("canary")}`, `NX: ${pick("nx")}`, `PIE/PIC: ${pick("pic")}`].join("\n")
+  }
   const header = run("readelf", ["-h", "-W", file])
   const segments = run("readelf", ["-l", "-W", file])
   const dynamic = run("readelf", ["-d", "-W", file])
@@ -257,14 +297,16 @@ function hardening(file: string) {
   return [`RELRO: ${relro}`, `Stack canary: ${canary}`, `NX: ${nx}`, `PIE: ${pie}`, `FORTIFY: ${fortify}`].join("\n")
 }
 
-function functions(file: string) {
-  if (Bun.which("r2")) {
+function functions(file: string, format: Format) {
+  const r2 = Bun.which("r2")
+  if (r2) {
     return run(
-      "r2",
+      r2,
       ["-q", "-e", "scr.color=0", "-e", "bin.relocs.apply=true", "-c", "aaa; afl", file],
       120_000,
     )
   }
+  if (format === "pe") throw new Error("functions for PE requires radare2. Run ensure_tools to install it.")
   return run("nm", ["-C", "--defined-only", file])
 }
 
@@ -273,43 +315,55 @@ async function dispatch(config: ReverseConfig.Config, params: Params) {
 
   switch (params.action) {
     case "info": {
+      const format = detectFormat(resolved)
       const fileType = run("file", ["-b", resolved])
-      const header = run("readelf", ["-h", "-W", resolved])
-      const sections = run("readelf", ["-l", "-W", resolved])
-      const hardness = hardening(resolved)
       const hash = await sha256(resolved)
-      return [
-        `file: ${fileType}`,
-        `size: ${size} bytes`,
-        `sha256: ${hash}`,
-        "",
-        header,
-        "",
-        sections,
-        "",
-        `hardening:\n${hardness}`,
-      ].join("\n")
+      const lines = [`file: ${fileType}`, `size: ${size} bytes`, `sha256: ${hash}`]
+      if (format === "pe") {
+        const details = Bun.which("rabin2")
+          ? run("rabin2", ["-I", resolved])
+          : "(rabin2 not installed; install radare2 via ensure_tools for PE details)"
+        const hardness =
+          Bun.which("checksec") || Bun.which("rabin2")
+            ? hardening(resolved, format)
+            : "(install checksec or radare2 for hardening)"
+        lines.push("", details, "", `hardening:\n${hardness}`)
+      } else {
+        lines.push(
+          "",
+          run("readelf", ["-h", "-W", resolved]),
+          "",
+          run("readelf", ["-l", "-W", resolved]),
+          "",
+          `hardening:\n${hardening(resolved, format)}`,
+        )
+      }
+      return lines.join("\n")
     }
     case "sections":
-      return run("readelf", ["-S", "-W", resolved])
+      return detectFormat(resolved) === "pe"
+        ? run("rabin2", ["-S", resolved])
+        : run("readelf", ["-S", "-W", resolved])
     case "imports":
-      return run("nm", ["-D", "--undefined-only", resolved])
+      return detectFormat(resolved) === "pe"
+        ? run("rabin2", ["-i", resolved])
+        : run("nm", ["-D", "--undefined-only", resolved])
     case "exports":
-      return run("nm", ["-D", "--defined-only", resolved])
+      return detectFormat(resolved) === "pe"
+        ? run("rabin2", ["-E", resolved])
+        : run("nm", ["-D", "--defined-only", resolved])
     case "strings":
       return run("strings", ["-a", "-t", "x", resolved])
     case "disasm":
-      return disasm(resolved, params)
+      return disasm(resolved, params, detectFormat(resolved))
     case "decompile": {
-      const r2 = Bun.which("r2")
-      if (!r2) throw new Error("decompile requires radare2 with r2ghidra. Run ensure_tools to install radare2.")
+      const r2 = requireR2("decompile")
       const address = r2Address(params)
       const target = address ? `@ ${address}` : "@ entry0"
       return run(r2, ["-q", "-e", "scr.color=0", "-e", "bin.relocs.apply=true", "-c", `aaa; pdg ${target}`, resolved])
     }
     case "xrefs": {
-      const r2 = Bun.which("r2")
-      if (!r2) throw new Error("xrefs requires radare2. Run ensure_tools to install it.")
+      const r2 = requireR2("xrefs")
       const address = r2Address(params)
       const target = address ? `@ ${address}` : "@ entry0"
       return run(r2, ["-q", "-e", "scr.color=0", "-e", "bin.relocs.apply=true", "-c", `aaa; axt ${target}`, resolved])
@@ -317,9 +371,9 @@ async function dispatch(config: ReverseConfig.Config, params: Params) {
     case "emulate":
       return emulate(resolved, params)
     case "entropy":
-      return entropyReport(resolved)
+      return entropyReport(resolved, detectFormat(resolved))
     case "functions":
-      return functions(resolved)
+      return functions(resolved, detectFormat(resolved))
     case "read_bytes": {
       const offset = params.offset ?? 0
       const length = Math.min(params.count ?? 256, 65536)
@@ -352,7 +406,7 @@ export const BinaryTool = Tool.define(
     const config = yield* ReverseConfig.Service
     return {
       description:
-        "Static analysis of ELF binaries (.so, .a, .o, executables): file info and hardening, sections, imports, exports, function list, strings, entropy, disassembly, decompilation, cross-references, raw byte reads, byte-pattern search, byte patching of a copy, and register/memory emulation via radare2 ESIL. Read-only actions never modify the target; patch writes a copy under reverse.workDir and leaves the original unchanged.",
+        "Static analysis of ELF (.so, .a, .o, executables) and PE (.dll, .exe) binaries: file info and hardening, sections, imports, exports, function list, strings, entropy, disassembly, decompilation, cross-references, raw byte reads, byte-pattern search, byte patching of a copy, and register/memory emulation via radare2 ESIL. Read-only actions never modify the target; patch writes a copy under reverse.workDir and leaves the original unchanged.",
       parameters: Parameters,
       jsonSchema: {
         type: "object",
@@ -361,9 +415,9 @@ export const BinaryTool = Tool.define(
             type: "string",
             enum: [...Actions],
             description:
-              "info: file type, size, hashes, ELF header and hardening; sections/imports/exports/functions/strings/entropy: static lists; disasm/decompile/xrefs: code views; read_bytes: hex dump at offset; search_bytes: find a hex pattern; patch: write bytes into a copy; emulate: step radare2 ESIL and dump registers plus memory",
+              "info: file type, size, hashes, header and hardening (ELF and PE); sections/imports/exports/functions/strings/entropy: static lists; disasm/decompile/xrefs: code views; read_bytes: hex dump at offset; search_bytes: find a hex pattern; patch: write bytes into a copy; emulate: step radare2 ESIL and dump registers plus memory",
           },
-          file: { type: "string", description: "Path to the ELF binary" },
+          file: { type: "string", description: "Path to the binary (ELF or PE)" },
           offset: { type: "number", description: "File offset in bytes for read_bytes and patch" },
           address: { type: "string", description: "Virtual address or symbol for disasm, decompile, xrefs, and the emulate start" },
           count: { type: "number", description: "Bytes to read, instructions to disassemble, or instructions to emulate" },

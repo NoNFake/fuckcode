@@ -1,7 +1,7 @@
 ---
 name: reverse-static
-tags: [reverse, binary, elf, vulnerability]
-description: "Static reverse engineering of ELF binaries (.so, .a, .o, executables): triage, disassembly, byte patching, and vulnerability hunting. Triggers - reverse engineering, binary analysis, .so, .dll, disassembly, decompile, patch bytes, ELF."
+tags: [reverse, binary, elf, pe, vulnerability]
+description: "Static reverse engineering of ELF (.so, .a, .o) and PE (.dll, .exe) binaries: triage, disassembly, byte patching, and vulnerability hunting. Triggers - reverse engineering, binary analysis, .so, .dll, disassembly, decompile, patch bytes, ELF, PE."
 ---
 
 ## Rules of Engagement
@@ -10,11 +10,11 @@ Analyze only binaries you own or are authorized to assess. Static analysis never
 
 # Static Reverse Engineering Checklist
 
-Use the `binary` tool. Read-only actions (everything except `patch`) never modify the target.
+Use the `binary` tool. Read-only actions (everything except `patch`) never modify the target. The tool auto-detects ELF and PE; PE details need radare2.
 
 ## 1. Triage
 
-- `binary action=info file=<path>`: file type, size, sha256, ELF header, hardening.
+- `binary action=info file=<path>`: file type, size, sha256, header, hardening. ELF hardening covers RELRO, canary, NX, PIE, FORTIFY. PE hardening covers canary, NX, PIE/PIC.
 - Record `sha256` in state before any patching. That hash is the chain-of-custody anchor.
 - Check hardening: NX, PIE, RELRO, stack canary, FORTIFY. Missing NX or PIE widens exploitation options.
 - `binary action=sections file=<path>`: writable, executable, and unusual sections.
@@ -52,8 +52,9 @@ No process is executed, so emulation is safe on untrusted code and needs no VM.
 - If ESIL stops on an unsupported instruction or a syscall, narrow the address range or inspect with disassembly instead.
 - Requires radare2.
 
-## 6. Vulnerability patterns in ELF
+## 6. Vulnerability patterns
 
+ELF:
 - Unbounded copies: `strcpy`/`strcat`/`sprintf`/`gets` into fixed stack or heap buffers.
 - Integer issues: allocation size computed from a length field, then copied with a different length (signed/unsigned, truncation, overflow).
 - Off-by-one in loop bounds or terminator writes.
@@ -64,10 +65,19 @@ No process is executed, so emulation is safe on untrusted code and needs no VM.
 - Insecure deserialization and type confusion in parsers.
 - Missing bounds checks in protocol handlers (length field versus buffer capacity).
 
+PE:
+- Exported DLL functions are the attack surface. Check every export for unchecked lengths and pointer arithmetic.
+- DLL search-order and side-loading: unsigned `LoadLibrary`/`LoadLibraryEx` paths, missing `SetDefaultDllDirectories`, or a writable directory in the search order.
+- Ordinal-only imports and forwarded exports hide the real target; resolve them through `rabin2 -i`.
+- `strcpy`/`strcat`/`sprintf` and `lstrcpy` variants with fixed `MAX_PATH` buffers.
+- Structured exception handling and atom tables abused from parsed input.
+- Check `DllMain` for work under the loader lock.
+- Signed-binary bypasses: overlay data, section slack, and certificate table padding.
+
 ## 7. Tooling
 
 - `ensure_tools` installs: radare2, rizin, binutils, checksec, binwalk, patchelf, yara.
-- Prefer binutils (`readelf`, `objdump`, `nm`, `strings`) for guaranteed availability; radare2 adds decompilation, xrefs, and richer disassembly.
+- Prefer binutils (`readelf`, `objdump`, `nm`, `strings`) for guaranteed ELF availability; radare2 adds PE support, decompilation, xrefs, emulation, and richer disassembly.
 - Ghidra headless and Frida are not part of the static MVP. Real dynamic execution (debugging, memory writes) requires an isolated VM or container; do not run untrusted binaries on the host.
 
 ## Phase Completion Criteria
