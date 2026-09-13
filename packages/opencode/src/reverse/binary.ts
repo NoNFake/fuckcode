@@ -1,8 +1,9 @@
 import { Effect, Schema } from "effect"
 import { spawnSync } from "child_process"
 import { createHash } from "crypto"
-import { createReadStream } from "fs"
+import { createReadStream, mkdtempSync, rmSync, writeFileSync } from "fs"
 import { open, copyFile, mkdir, realpath, stat } from "fs/promises"
+import os from "os"
 import path from "path"
 import * as Tool from "../tool/tool"
 import { ReverseConfig } from "./config"
@@ -26,7 +27,7 @@ const Actions = [
 
 const Parameters = Schema.Struct({
   action: Schema.Literals(Actions),
-  file: Schema.String.annotate({ description: "Path to the ELF binary (.so, .a, .o, or executable)" }),
+  file: Schema.String.annotate({ description: "Path to the binary (ELF or PE)" }),
   offset: Schema.optional(Schema.Number).annotate({
     description: "File offset in bytes for read_bytes",
   }),
@@ -48,6 +49,9 @@ const Parameters = Schema.Struct({
   }),
   encoding: Schema.optional(Schema.Literals(["ascii", "utf16le"])).annotate({
     description: "String encoding for the strings action (default: ascii). Use utf16le for Windows binaries",
+  }),
+  asm: Schema.optional(Schema.String).annotate({
+    description: "Assembly to assemble and write for the patch action, instead of hex. Example: 'mov eax, 1'",
   }),
 })
 
@@ -150,9 +154,37 @@ async function searchBytes(file: string, pattern: Buffer) {
   return hits
 }
 
-async function patchFile(config: ReverseConfig.Config, params: Params, file: string) {
+// Assembles through rasm2 with the file's own arch/bits. The assembly is written
+// to a temp file and read with -f, so it never becomes part of an r2 command string.
+// ponytail: rasm2 takes arch/bits, not the exact cpu/endian features `pa` inherits;
+// if exotic instructions fail, assemble inside r2 and pass the bytes as hex.
+function assemble(file: string, asm: string) {
+  if (asm.length === 0 || asm.length > 4096) throw new Error("asm must be 1..4096 characters")
+  const r2 = requireR2("assembly patch")
+  const settings = run(r2, ["-q", "-e", "scr.color=0", "-c", "e asm.arch; e asm.bits; e asm.syntax", file])
+  const arch = settings.match(/asm\.arch\s*=\s*(\S+)/)?.[1] ?? "x86"
+  const bits = settings.match(/asm\.bits\s*=\s*(\d+)/)?.[1] ?? "64"
+  const syntax = settings.match(/asm\.syntax\s*=\s*(\S+)/)?.[1]
+  const dir = mkdtempSync(path.join(os.tmpdir(), "reverse-asm-"))
+  try {
+    const source = path.join(dir, "in.asm")
+    writeFileSync(source, asm)
+    const args = ["-a", arch, "-b", bits, ...(syntax ? ["-S", syntax] : []), "-f", source]
+    const result = spawnSync("rasm2", args, { encoding: "utf-8", timeout: 10_000, stdio: ["ignore", "pipe", "pipe"] })
+    if (result.status !== 0) {
+      const detail = (result.stderr || result.stdout || "assembler failed").trim().split("\n").slice(-2).join(" | ")
+      throw new Error(`Cannot assemble '${asm}': ${detail}`)
+    }
+    const cleaned = (result.stdout ?? "").trim().replace(/[^0-9a-fA-F]/g, "")
+    if (cleaned.length === 0 || cleaned.length % 2 !== 0) throw new Error(`Cannot assemble '${asm}'`)
+    return Buffer.from(cleaned, "hex")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+}
+
+async function patchFile(config: ReverseConfig.Config, params: Params, file: string, pattern: Buffer) {
   if (!config.allowPatch) throw new Error("Patching is disabled. Set reverse.allowPatch=true to enable it.")
-  const pattern = parseHex(params.hex ?? "")
   const offset = params.offset
   if (offset === undefined || offset < 0) throw new Error("patch requires a non-negative offset")
   const before = await sha256(file)
@@ -395,7 +427,11 @@ async function dispatch(config: ReverseConfig.Config, params: Params) {
       return `Found ${hits.length} match(es):\n${hits.map((h) => `0x${h.toString(16)}`).join("\n")}`
     }
     case "patch": {
-      const result = await patchFile(config, params, resolved)
+      if (params.hex !== undefined && params.asm !== undefined) {
+        throw new Error("patch takes either hex or asm, not both")
+      }
+      const pattern = params.asm !== undefined ? assemble(resolved, params.asm) : parseHex(params.hex ?? "")
+      const result = await patchFile(config, params, resolved, pattern)
       return [
         `patched copy: ${result.target}`,
         `bytes written: ${result.bytes} at offset ${result.offset}`,
@@ -413,7 +449,7 @@ export const BinaryTool = Tool.define(
     const config = yield* ReverseConfig.Service
     return {
       description:
-        "Static analysis of ELF (.so, .a, .o, executables) and PE (.dll, .exe) binaries: file info and hardening, sections, imports, exports, function list, strings, entropy, disassembly, decompilation, cross-references, raw byte reads, byte-pattern search, byte patching of a copy, and register/memory emulation via radare2 ESIL. Read-only actions never modify the target; patch writes a copy under reverse.workDir and leaves the original unchanged.",
+        "Static analysis of ELF (.so, .a, .o, executables) and PE (.dll, .exe) binaries: file info and hardening, sections, imports, exports, function list, strings, entropy, disassembly, decompilation, cross-references, raw byte reads, byte-pattern search, byte patching of a copy (raw hex or assembled instruction), and register/memory emulation via radare2 ESIL. Read-only actions never modify the target; patch writes a copy under reverse.workDir and leaves the original unchanged.",
       parameters: Parameters,
       jsonSchema: {
         type: "object",
@@ -422,7 +458,7 @@ export const BinaryTool = Tool.define(
             type: "string",
             enum: [...Actions],
             description:
-              "info: file type, size, hashes, header and hardening (ELF and PE); sections/imports/exports/functions/strings/entropy: static lists; disasm/decompile/xrefs: code views; read_bytes: hex dump at offset; search_bytes: find a hex pattern; patch: write bytes into a copy; emulate: step radare2 ESIL and dump registers plus memory",
+              "info: file type, size, hashes, header and hardening (ELF and PE); sections/imports/exports/functions/strings/entropy: static lists; disasm/decompile/xrefs: code views; read_bytes: hex dump at offset; search_bytes: find a hex pattern; patch: write raw hex or assembled instructions into a copy; emulate: step radare2 ESIL and dump registers plus memory",
           },
           file: { type: "string", description: "Path to the binary (ELF or PE)" },
           offset: { type: "number", description: "File offset in bytes for read_bytes and patch" },
@@ -437,6 +473,7 @@ export const BinaryTool = Tool.define(
             enum: ["ascii", "utf16le"],
             description: "String encoding for the strings action (default: ascii). Use utf16le for Windows binaries",
           },
+          asm: { type: "string", description: "Assembly to assemble and write for the patch action, instead of hex" },
         },
         required: ["action", "file"],
       },

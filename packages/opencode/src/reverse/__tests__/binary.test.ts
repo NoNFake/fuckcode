@@ -196,6 +196,22 @@ describe("binary tool", () => {
     expect((await execute(tool, { action: "entropy", file: dll })).output).toContain(".text")
   })
 
+  it("rejects using hex and asm together", async () => {
+    const tool = await makeTool()
+    await expect(execute(tool, { action: "patch", file: so, offset: 0, hex: "90", asm: "nop" })).rejects.toThrow(
+      "either hex or asm",
+    )
+  })
+
+  it.skipIf(!Bun.which("r2") || !Bun.which("rasm2"))("assembles and patches an instruction", async () => {
+    const tool = await makeTool()
+    const result = await execute(tool, { action: "patch", file: so, offset: 0, asm: "nop" })
+    const patched = result.output.split("patched copy: ")[1].split("\n")[0]
+    expect(result.output).toContain("bytes written: 1")
+    const bytes = await execute(tool, { action: "read_bytes", file: patched, offset: 0, count: 1 })
+    expect(bytes.output).toContain("90")
+  })
+
   it("rejects r2 targets that are not hex or symbols", async () => {
     const tool = await makeTool()
     await expect(execute(tool, { action: "emulate", file: so, address: "!sh", count: 1 })).rejects.toThrow(

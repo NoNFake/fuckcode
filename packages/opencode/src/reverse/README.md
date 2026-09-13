@@ -34,6 +34,8 @@ Backends: `file` and `strings` are always required. ELF uses `readelf`, `objdump
 
 `strings` defaults to ASCII; pass `encoding=utf16le` for Windows binaries.
 
+`patch` accepts raw bytes with `hex` or an instruction with `asm`. The `asm` form assembles through `rasm2` using the file's own architecture and bits, so instruction edits do not need hand-computed bytes. Both forms write a copy under `workDir`.
+
 Install external tools with the `ensure_tools` tool.
 
 ## MCP alternative

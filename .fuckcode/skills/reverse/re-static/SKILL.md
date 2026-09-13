@@ -39,7 +39,8 @@ Use the `binary` tool. Read-only actions (everything except `patch`) never modif
 
 - `binary action=read_bytes file=<path> offset=<n> count=<n>`: hex dump at a file offset.
 - `binary action=search_bytes file=<path> hex=<hexbytes>`: find a byte pattern; returns file offsets.
-- `binary action=patch file=<path> offset=<n> hex=<hexbytes> [output=<path>]`: writes bytes into a copy under the reverse work directory. The original is never modified. Requires `reverse.allowPatch=true`.
+- `binary action=patch file=<path> offset=<n> hex=<hexbytes> [output=<path>]`: writes raw bytes into a copy under the reverse work directory. The original is never modified. Requires `reverse.allowPatch=true`.
+- `binary action=patch file=<path> offset=<n> asm="<instruction>" [output=<path>]`: assembles one or more instructions for the file's own architecture with radare2 `rasm2`, then writes the result. Prefer this over hand-computed hex for instruction edits.
 
 Use patching to neutralize a check, flip a branch, or force a code path, then compare behavior. Always keep the recorded original hash and the patch diff.
 
