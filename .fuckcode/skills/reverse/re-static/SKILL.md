@@ -18,7 +18,7 @@ Use the `binary` tool. Read-only actions (everything except `patch`) never modif
 - Record `sha256` in state before any patching. That hash is the chain-of-custody anchor.
 - Check hardening: NX, PIE, RELRO, stack canary, FORTIFY. Missing NX or PIE widens exploitation options.
 - `binary action=sections file=<path>`: writable, executable, and unusual sections.
-- `binary action=entropy file=<path>`: per-section Shannon entropy. Sections above 7.0 are likely packed, encrypted, or compressed; treat the binary as packed and look for a stub.
+- `binary action=entropy file=<path>`: per-section Shannon entropy. Sections above 7.0 may be packed, encrypted, or compressed; hash tables such as `.gnu.hash` are high by nature, so judge executable sections first. If `.text` is high, treat the binary as packed and look for a stub.
 - `binary action=strings file=<path> [encoding=utf16le]`: paths, URLs, keys, format strings, error messages, version banners. Use `encoding=utf16le` for Windows binaries, where most strings are wide.
 
 ## 2. Symbols and linkage

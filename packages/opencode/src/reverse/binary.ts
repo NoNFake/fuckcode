@@ -160,8 +160,8 @@ async function searchBytes(file: string, pattern: Buffer) {
 // if exotic instructions fail, assemble inside r2 and pass the bytes as hex.
 function assemble(file: string, asm: string) {
   if (asm.length === 0 || asm.length > 4096) throw new Error("asm must be 1..4096 characters")
-  const r2 = requireR2("assembly patch")
-  const settings = run(r2, ["-q", "-e", "scr.color=0", "-c", "e asm.arch; e asm.bits; e asm.syntax", file])
+  requireR2("assembly patch")
+  const settings = r2Run(file, "e asm.arch; e asm.bits; e asm.syntax", 30_000)
   const arch = settings.match(/asm\.arch\s*=\s*(\S+)/)?.[1] ?? "x86"
   const bits = settings.match(/asm\.bits\s*=\s*(\d+)/)?.[1] ?? "64"
   const syntax = settings.match(/asm\.syntax\s*=\s*(\S+)/)?.[1]
@@ -203,12 +203,11 @@ async function patchFile(config: ReverseConfig.Config, params: Params, file: str
 }
 
 function disasm(file: string, params: Params, format: Format) {
-  const r2 = Bun.which("r2")
-  if (r2) {
+  if (Bun.which("r2")) {
     const count = params.count ?? 40
     const address = r2Address(params)
     const target = address ? `@ ${address}` : ""
-    return run(r2, ["-q", "-e", "scr.color=0", "-e", "bin.relocs.apply=true", "-c", `aaa; pd ${count} ${target}`, file])
+    return r2Run(file, `aaa; pd ${count} ${target}`)
   }
   if (format === "pe") throw new Error("PE disassembly requires radare2. Run ensure_tools to install it.")
   const start = params.address && /^0x[0-9a-fA-F]+$/.test(params.address) ? parseInt(params.address, 16) : undefined
@@ -228,7 +227,6 @@ function emulate(file: string, params: Params) {
   if (params.dump) assertR2Target(params.dump, "dump")
   if (params.write && !params.hex) throw new Error("emulate write requires hex bytes")
   const bytes = params.write ? parseHex(params.hex ?? "").toString("hex") : undefined
-  const r2 = requireR2("emulate")
   const count = Math.min(Math.max(params.count ?? 20, 1), 1000)
   const script = [
     "aaa",
@@ -240,7 +238,7 @@ function emulate(file: string, params: Params) {
     "aer",
     `px 128 @ ${params.dump ?? "rsp"}`,
   ].join("; ")
-  return run(r2, ["-q", "-e", "scr.color=0", "-e", "bin.relocs.apply=true", "-c", script, file], 120_000)
+  return r2Run(file, script)
 }
 
 function entropyOf(buffer: Buffer) {
@@ -269,6 +267,12 @@ function requireR2(action: string) {
   const r2 = Bun.which("r2")
   if (!r2) throw new Error(`${action} requires radare2. Run ensure_tools to install it.`)
   return r2
+}
+
+const r2Base = ["-q", "-e", "scr.color=0", "-e", "log.level=0", "-e", "bin.relocs.apply=true"]
+
+function r2Run(file: string, script: string, timeoutMs = 120_000) {
+  return run(requireR2("this action"), [...r2Base, "-c", script, file], timeoutMs)
 }
 
 function elfSections(file: string) {
@@ -303,7 +307,7 @@ async function entropyReport(file: string, format: Format) {
     if (section.size === 0) continue
     const data = await readBytes(file, section.offset, Math.min(section.size, 16 * 1024 * 1024))
     const value = entropyOf(data)
-    const flag = value > 7 ? "  HIGH: packed, encrypted, or compressed?" : ""
+    const flag = value > 7 ? "  HIGH entropy: packed, encrypted, compressed, or a hash table?" : ""
     rows.push(
       `${section.name.padEnd(24)} offset=0x${section.offset.toString(16)} size=${section.size} entropy=${value.toFixed(4)}${flag}`,
     )
@@ -332,14 +336,7 @@ function hardening(file: string, format: Format) {
 }
 
 function functions(file: string, format: Format) {
-  const r2 = Bun.which("r2")
-  if (r2) {
-    return run(
-      r2,
-      ["-q", "-e", "scr.color=0", "-e", "bin.relocs.apply=true", "-c", "aaa; afl", file],
-      120_000,
-    )
-  }
+  if (Bun.which("r2")) return r2Run(file, "aaa; afl")
   if (format === "pe") throw new Error("functions for PE requires radare2. Run ensure_tools to install it.")
   return run("nm", ["-C", "--defined-only", file])
 }
@@ -395,16 +392,16 @@ async function dispatch(config: ReverseConfig.Config, params: Params) {
     case "disasm":
       return disasm(resolved, params, detectFormat(resolved))
     case "decompile": {
-      const r2 = requireR2("decompile")
+      requireR2("decompile")
       const address = r2Address(params)
       const target = address ? `@ ${address}` : "@ entry0"
-      return run(r2, ["-q", "-e", "scr.color=0", "-e", "bin.relocs.apply=true", "-c", `aaa; pdg ${target}`, resolved])
+      return r2Run(resolved, `aaa; pdg ${target}`)
     }
     case "xrefs": {
-      const r2 = requireR2("xrefs")
+      requireR2("xrefs")
       const address = r2Address(params)
       const target = address ? `@ ${address}` : "@ entry0"
-      return run(r2, ["-q", "-e", "scr.color=0", "-e", "bin.relocs.apply=true", "-c", `aaa; axt ${target}`, resolved])
+      return r2Run(resolved, `aaa; axt ${target}`)
     }
     case "emulate":
       return emulate(resolved, params)
