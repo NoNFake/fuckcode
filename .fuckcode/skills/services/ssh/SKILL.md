@@ -9,7 +9,7 @@ Only test systems you are authorized to assess. Confirm the written scope and ra
 # SSH Attack Reference
 
 ## Version-Specific CVEs
-- **OpenSSH <7.7** (CVE-2018-15473): Username enumeration via timing
+- **OpenSSH <7.7** (CVE-2018-15473): Username enumeration via malformed authentication request
 - **OpenSSH 8.5-9.7** (CVE-2024-6387 / regreSSHion): Race condition → unauthenticated RCE (glibc-based Linux)
 - **OpenSSH <6.6**: Various auth bypass and info disclosure
 
@@ -19,9 +19,10 @@ Only test systems you are authorized to assess. Confirm the written scope and ra
 nc -nv <target> 22
 nmap -sV -p 22 <target>
 
-# Username enumeration (CVE-2018-15473)
-ssh-audit <target>
+# Username enumeration (CVE-2018-15473, malformed auth request)
+nmap -p 22 --script ssh-auth-methods <target>
 # Or use msf: auxiliary/scanner/ssh/ssh_enumusers
+# Crypto/config audit (not user enumeration): ssh-audit <target>
 
 # Auth methods
 ssh -o PreferredAuthentications=none -o PubkeyAuthentication=no <target> 2>&1
@@ -38,7 +39,7 @@ hydra -L users.txt -p admin ssh://<target> -t 4
 hydra -l root -p toor ssh://<target>
 
 # Spray found credentials
-crackmapexec ssh <target> -u users.txt -p passwords.txt --no-bruteforce
+netexec ssh <target> -u users.txt -p passwords.txt --no-bruteforce
 ```
 
 ## Key-Based Attacks

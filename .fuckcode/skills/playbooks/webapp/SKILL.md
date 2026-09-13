@@ -1,6 +1,6 @@
 ---
 name: playbook-webapp
-description: "Web app pentest router: recon, map, OWASP-class testing, proof, report. Triggers - web app, HTTP API, systematic testing."
+description: "Web app pentest router: recon, map, OWASP-class testing, proof, report, plus Apache/nginx/IIS misconfig and path traversal. Triggers - web app, HTTP API, systematic testing, Server header, Tomcat, /server-status."
 tags: [vuln_assess, exploitation]
 ---
 
@@ -17,7 +17,16 @@ Fingerprint stack+version (whatweb/httpx, headers), CMS (wpscan/etc.), APIs (/sw
 ## 2. Map (hidden surface, AFTER the scan)
 `ffuf`/`gobuster` (run via `pentest_shell`), vhosts (`ffuf -H Host:FUZZ`), params (`arjun`), auth endpoints (login/register/reset/OAuth), API routes. Review client-side JS for endpoints/secrets.
 
-## 3. Test by class → load the matching skill
+## 3. Server software layer (after version fingerprint)
+- Apache: probe `/server-status`, `/server-info`, `/.htaccess`, `/.htpasswd`; traversal via double-encoded dots in a `/cgi-bin/` path (path-normalization CVEs in 2.4.49/50).
+- nginx: `/nginx_status`, `/status`; alias traversal `GET /static../etc/passwd`; range-filter info leak on old versions.
+- IIS: `~1` shortname enumeration (`GET /~1/`); WebDAV `OPTIONS /`; HTTP.sys header issues.
+- Tomcat: `/manager/html`, `/host-manager/html`, default/weak manager creds.
+- Generic: directory indexing, `TRACE`/`PUT`/`DELETE` enabled, backup/source files (`*.bak`, `*.old`, `*.swp`, `~`), default install pages.
+- Leaks: `X-Powered-By`, verbose error pages exposing stack/paths, front-end vs back-end normalization or `CL`/`TE` disagreement (request smuggling).
+- Read the `Server` banner, map it to the version's CVE (look it up — do not replay stale payloads), confirm with `nuclei -u <t> -tags apache,nginx,iis` via `pentest_shell`.
+
+## 4. Test by class → load the matching skill
 | Signal / surface | Load |
 |---|---|
 | param → DB query, SQL error/differential | **web-sqli** |
@@ -31,5 +40,5 @@ Fingerprint stack+version (whatweb/httpx, headers), CMS (wpscan/etc.), APIs (/sw
 | known framework+version CVE | shared exploitation methodology + searchsploit/nuclei |
 Also-check (no dedicated skill yet): XSS (`dalfox`, `inject_probe`), command injection (`;id`/`$(id)`), CSRF, CORS/security-headers, crypto/secrets-in-JS, business-logic/race conditions.
 
-## 4. PROVE + Report
+## 5. PROVE + Report
 A finding is `suspected` until you reproduce concrete impact (dumped canary row / `id` / file bytes / cloud creds / cross-user data) — then mark it confirmed via `state_update` with the evidence. Never mark a host resolved/"safe" without a completed active scan. Report: reproduction steps + request/response evidence + CVSS + OWASP-WSTG mapping.

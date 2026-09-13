@@ -26,7 +26,7 @@ whatweb http://<target> -a 3
 ffuf -u http://<target>/FUZZ -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -mc 200,301,302,403
 
 # SMB (445)
-crackmapexec smb <target> --shares
+netexec smb <target> --shares
 enum4linux-ng -A <target>
 
 # LDAP (389/636)

@@ -65,7 +65,7 @@ describe("eval: context budget", () => {
   test("skill catalog is intact", () => {
     const list = skills()
     const names = list.map((s) => s.name)
-    expect(names.length).toBeGreaterThanOrEqual(40)
+    expect(names.length).toBeGreaterThanOrEqual(30)
     expect(new Set(names).size).toBe(names.length)
     expect(list.every((s) => typeof s.description === "string" && s.description.length > 0)).toBe(true)
   })

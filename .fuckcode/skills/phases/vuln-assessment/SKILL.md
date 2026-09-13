@@ -1,7 +1,7 @@
 ---
 name: vuln-assessment-phase
 tags: [vuln_assess]
-description: "Vulnerability assessment: scanning, CVE lookup, misconfig detection. Triggers - VULN_ASSESS phase, CVE, misconfig."
+description: "Vulnerability assessment and exploitation: scanning, CVE lookup, misconfig detection, exploit verification, credential attacks, foothold. Triggers - VULN_ASSESS phase, EXPLOITATION phase, CVE, misconfig, credential attack."
 ---
 
 ## Rules of Engagement
@@ -24,14 +24,16 @@ nuclei -l urls.txt -severity critical,high -o nuclei_bulk.txt
 nmap --script vuln -p <ports> <target> -oA vuln_scan
 ```
 
-## CVE Lookup
-For each identified service version:
+## CVE and Exploit Lookup
+For each identified service version, after scope is confirmed:
 ```bash
 searchsploit <service> <version>
 searchsploit --nmap services.xml   # parse nmap output
+searchsploit -m <exploit_id>       # only after scope confirmed
 ```
+Resolve the version to an exploit only after scope confirmation, then prove applicability with a non-destructive check (read-only banner, version probe) before any attempt.
 
-## Default Credentials Check
+## Default Credentials and Credential Attacks
 Test common defaults for discovered services:
 - Web admin panels: admin/admin, admin/password, root/root
 - Databases: root/(empty), sa/(empty), postgres/postgres
@@ -39,14 +41,22 @@ Test common defaults for discovered services:
 - Network devices: admin/admin, cisco/cisco
 
 ```bash
-# Hydra single credential test
+# Single default credential test
 hydra -l admin -p admin <target> <protocol>
+```
+
+Credential attacks are noisy and lockout-prone. Run only under confirmed authorization and rate limits:
+```bash
+hydra -l <user> -P /usr/share/wordlists/rockyou.txt ssh://<target> -t 4
+netexec smb <target> -u users.txt -p passwords.txt
 ```
 
 ## Web Vulnerability Assessment
 ```bash
-# SQL injection discovery
+# SQL injection: detection, then scoped extraction
 sqlmap -u "http://<target>/page?id=1" --batch --level 3 --risk 2
+sqlmap -u "http://<target>/page?id=1" --batch --dbs
+sqlmap -u "http://<target>/page?id=1" --batch -D <db> -T <table> --dump
 
 # XSS scanning
 dalfox url "http://<target>/page?q=test"
@@ -58,6 +68,13 @@ testssl.sh <target>
 # Security headers
 curl -sI http://<target> | grep -iE "x-frame|x-content|strict-transport|content-security|x-xss"
 ```
+Run sqlmap extraction only after scope is confirmed and the injection is verified with a harmless boolean or timing check; avoid `--dump` on production data unless authorized.
+
+## LFI / Command Injection / SSRF Confirmation
+Confirm only after scope is confirmed and a non-destructive check has passed.
+- LFI: demonstrate with a benign, world-readable file (`/etc/hostname`) rather than blind traversal; escalate to sensitive files only with authorization.
+- Command injection: prove with a timing or benign marker (e.g. `sleep`), never a bare `;id` chain.
+- SSRF: use a controlled callback or known-safe internal endpoint; never probe cloud metadata (IMDS) without explicit written authorization.
 
 ## Misconfiguration Checks
 - Anonymous FTP access: `ftp <target>` with anonymous/anonymous
@@ -74,10 +91,17 @@ curl -sI http://<target> | grep -iE "x-frame|x-content|strict-transport|content-
 - **Low**: XSS (reflected), verbose errors, minor info disclosure
 - **Info**: Open ports, version disclosure, missing headers
 
+## Post-Authentication Foothold
+After credentials or code execution are confirmed and documented, establish the least-privileged foothold needed to prove access. Re-confirm scope and rate limits before pivoting.
+```bash
+ssh <user>@<target>
+evil-winrm -i <target> -u <user> -p '<pass>'
+impacket-psexec <domain>/<user>:'<pass>'@<target>
+```
+
 ## Phase Completion Criteria
-Move to EXPLOITATION when:
 - Automated scans completed
 - CVEs checked for all versioned services
 - Default credentials tested
 - Web vulns assessed
-- All findings recorded with severity and evidence
+- Verified exploits and footholds documented with severity and evidence

