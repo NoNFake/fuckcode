@@ -74,8 +74,12 @@ async function makeTool(overrides: Record<string, unknown> = {}) {
   return Effect.runPromise(Tool.init(info).pipe(Effect.provide(layer)))
 }
 
-async function execute(tool: Awaited<ReturnType<typeof makeTool>>, params: Record<string, unknown>) {
-  return Effect.runPromise(tool.execute(params as any, ctx))
+async function execute(
+  tool: Awaited<ReturnType<typeof makeTool>>,
+  params: Record<string, unknown>,
+  customCtx: any = ctx,
+) {
+  return Effect.runPromise(tool.execute(params as any, customCtx))
 }
 
 beforeAll(() => {
@@ -176,6 +180,13 @@ describe("binary tool", () => {
     expect(result.output).toContain("greet")
   })
 
+  it("disassembles", async () => {
+    const tool = await makeTool()
+    const result = await execute(tool, { action: "disasm", file: so, count: 10 })
+    expect(result.output.length).toBeGreaterThan(20)
+    expect(result.output).toMatch(/push|sub|mov|ret|endbr64/)
+  })
+
   it("derives hardening without checksec", async () => {
     const tool = await makeTool()
     const result = await execute(tool, { action: "info", file: so })
@@ -227,10 +238,111 @@ describe("binary tool", () => {
   })
 })
 
+describe("binary tool validation and permissions", () => {
+  it("requests reverse for reads and reverse_patch for patch", async () => {
+    const calls: any[] = []
+    const spyCtx = {
+      ...ctx,
+      ask: (input: any) => {
+        calls.push(input)
+        return Effect.void
+      },
+    }
+    const tool = await makeTool()
+    await execute(tool, { action: "info", file: so }, spyCtx)
+    await execute(tool, { action: "patch", file: so, offset: 0, hex: "90" }, spyCtx)
+
+    expect(calls[0].permission).toBe("reverse")
+    expect(calls[0].always).toEqual(["*"])
+    const patchCall = calls.find((c) => c.permission === "reverse_patch")
+    expect(patchCall).toBeDefined()
+    expect(patchCall.always).toEqual([])
+  })
+
+  it("rejects a directory path", async () => {
+    const tool = await makeTool()
+    await expect(execute(tool, { action: "info", file: dir })).rejects.toThrow("Not a file")
+  })
+
+  it("rejects files above maxFileSize", async () => {
+    const tool = await makeTool({ maxFileSize: 4 })
+    await expect(execute(tool, { action: "info", file: so })).rejects.toThrow("exceeds reverse.maxFileSize")
+  })
+
+  it("rejects a negative read offset and odd hex", async () => {
+    const tool = await makeTool()
+    await expect(execute(tool, { action: "read_bytes", file: so, offset: -1, count: 4 })).rejects.toThrow(
+      "non-negative offset",
+    )
+    await expect(execute(tool, { action: "search_bytes", file: so, hex: "abc" })).rejects.toThrow("even")
+  })
+
+  it("reports no match for an absent pattern", async () => {
+    const tool = await makeTool()
+    const result = await execute(tool, { action: "search_bytes", file: so, hex: "deadbeefcafebabe" })
+    expect(result.output).toContain("Pattern not found")
+  })
+
+  it("rejects unknown formats for format-specific actions but still reads bytes", async () => {
+    const plain = path.join(dir, "plain.txt")
+    await Bun.write(plain, "not a binary at all")
+    const tool = await makeTool()
+    await expect(execute(tool, { action: "sections", file: plain })).rejects.toThrow("Unsupported binary format")
+    expect((await execute(tool, { action: "read_bytes", file: plain, offset: 0, count: 4 })).output).toContain("read 4")
+  })
+
+  it("rejects emulate write without hex", async () => {
+    const tool = await makeTool()
+    await expect(execute(tool, { action: "emulate", file: so, write: "rsp", count: 1 })).rejects.toThrow(
+      "emulate write requires hex bytes",
+    )
+  })
+
+  it("writes a patch to a custom output path", async () => {
+    const target = path.join(dir, "custom.bin")
+    const tool = await makeTool()
+    const result = await execute(tool, { action: "patch", file: so, offset: 0, hex: "90", output: target })
+    expect(result.output).toContain(target)
+    expect(await Bun.file(target).exists()).toBe(true)
+  })
+
+  it.skipIf(!Bun.which("r2") || !Bun.which("rasm2"))("rejects assembly that does not assemble", async () => {
+    const tool = await makeTool()
+    await expect(execute(tool, { action: "patch", file: so, offset: 0, asm: "definitely_not_an_instruction" })).rejects.toThrow(
+      "Cannot assemble",
+    )
+  })
+})
+
 describe("reverse config", () => {
+  it("uses secure defaults", () => {
+    const config = loadFromConfig(undefined)
+    expect(config.enabled).toBe(false)
+    expect(config.allowPatch).toBe(false)
+    expect(config.allowedDirs).toEqual([])
+    expect(config.workDir.endsWith("reverse-work")).toBe(true)
+    expect(config.maxFileSize).toBe(268435456)
+  })
+
+  it("falls back on invalid maxFileSize", () => {
+    expect(loadFromConfig({ maxFileSize: 0 }).maxFileSize).toBe(268435456)
+    expect(loadFromConfig({ maxFileSize: -1 }).maxFileSize).toBe(268435456)
+    expect(loadFromConfig({ maxFileSize: "big" }).maxFileSize).toBe(268435456)
+    expect(loadFromConfig({ maxFileSize: 1024 }).maxFileSize).toBe(1024)
+  })
+
+  it("resolves allowedDirs to absolute paths", () => {
+    const config = loadFromConfig({ allowedDirs: ["."] })
+    expect(path.isAbsolute(config.allowedDirs[0])).toBe(true)
+  })
+
   it("restricts paths only when allowedDirs is non-empty", () => {
     expect(pathAllowed(loadFromConfig({ allowedDirs: [] }), "/etc/passwd")).toBe(true)
     expect(pathAllowed(loadFromConfig({ allowedDirs: ["/srv"] }), "/srv/lib.so")).toBe(true)
     expect(pathAllowed(loadFromConfig({ allowedDirs: ["/srv"] }), "/etc/passwd")).toBe(false)
+  })
+
+  it("does not treat a path prefix as contained", () => {
+    expect(pathAllowed(loadFromConfig({ allowedDirs: ["/srv"] }), "/srv2/lib.so")).toBe(false)
   })
 })

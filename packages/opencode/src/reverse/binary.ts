@@ -226,11 +226,10 @@ function emulate(file: string, params: Params) {
   const address = params.address ? r2Address(params) : undefined
   if (params.write) assertR2Target(params.write, "write")
   if (params.dump) assertR2Target(params.dump, "dump")
-  const r2 = Bun.which("r2")
-  if (!r2) throw new Error("emulate requires radare2. Run ensure_tools to install it.")
-  const count = Math.min(Math.max(params.count ?? 20, 1), 1000)
   if (params.write && !params.hex) throw new Error("emulate write requires hex bytes")
   const bytes = params.write ? parseHex(params.hex ?? "").toString("hex") : undefined
+  const r2 = requireR2("emulate")
+  const count = Math.min(Math.max(params.count ?? 20, 1), 1000)
   const script = [
     "aaa",
     "aeim",
