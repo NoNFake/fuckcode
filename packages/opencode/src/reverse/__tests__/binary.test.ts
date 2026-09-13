@@ -147,6 +147,27 @@ describe("binary tool", () => {
     rmSync(outside, { force: true })
   })
 
+  it("reports per-section entropy", async () => {
+    const tool = await makeTool()
+    const result = await execute(tool, { action: "entropy", file: so })
+    expect(result.output).toContain("whole file entropy=")
+    expect(result.output).toContain(".text")
+    expect(result.output).toContain("entropy=")
+  })
+
+  it("lists functions", async () => {
+    const tool = await makeTool()
+    const result = await execute(tool, { action: "functions", file: so })
+    expect(result.output).toContain("greet")
+  })
+
+  it("derives hardening without checksec", async () => {
+    const tool = await makeTool()
+    const result = await execute(tool, { action: "info", file: so })
+    expect(result.output).toContain("hardening:")
+    if (!Bun.which("checksec")) expect(result.output).toContain("RELRO:")
+  })
+
   it("rejects r2 targets that are not hex or symbols", async () => {
     const tool = await makeTool()
     await expect(execute(tool, { action: "emulate", file: so, address: "!sh", count: 1 })).rejects.toThrow(

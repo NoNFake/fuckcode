@@ -18,12 +18,14 @@ Use the `binary` tool. Read-only actions (everything except `patch`) never modif
 - Record `sha256` in state before any patching. That hash is the chain-of-custody anchor.
 - Check hardening: NX, PIE, RELRO, stack canary, FORTIFY. Missing NX or PIE widens exploitation options.
 - `binary action=sections file=<path>`: writable, executable, and unusual sections.
+- `binary action=entropy file=<path>`: per-section Shannon entropy. Sections above 7.0 are likely packed, encrypted, or compressed; treat the binary as packed and look for a stub.
 - `binary action=strings file=<path>`: paths, URLs, keys, format strings, error messages, version banners.
 
 ## 2. Symbols and linkage
 
 - `binary action=imports file=<path>`: undefined dynamic symbols reveal called APIs (network, exec, crypto, `system`, `strcpy`, `sprintf`).
 - `binary action=exports file=<path>`: exported functions define the attack surface of a shared library.
+- `binary action=functions file=<path>`: function list with addresses and sizes (radare2 analysis, or `nm` when radare2 is absent). Use it to navigate a stripped or symbol-rich binary.
 - Correlate imports with risky sinks: `strcpy`, `strcat`, `sprintf`, `memcpy` with attacker-controlled length, `system`, `popen`, `execve`, `dlopen`.
 
 ## 3. Code review

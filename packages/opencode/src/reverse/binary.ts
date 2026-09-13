@@ -20,6 +20,8 @@ const Actions = [
   "search_bytes",
   "patch",
   "emulate",
+  "entropy",
+  "functions",
 ] as const
 
 const Parameters = Schema.Struct({
@@ -206,6 +208,66 @@ function emulate(file: string, params: Params) {
   return run(r2, ["-q", "-e", "scr.color=0", "-e", "bin.relocs.apply=true", "-c", script, file], 120_000)
 }
 
+function entropyOf(buffer: Buffer) {
+  if (buffer.length === 0) return 0
+  const counts = new Array(256).fill(0)
+  for (const byte of buffer) counts[byte]++
+  let value = 0
+  for (const count of counts) {
+    if (count === 0) continue
+    const p = count / buffer.length
+    value -= p * Math.log2(p)
+  }
+  return value
+}
+
+async function entropyReport(file: string) {
+  const whole = entropyOf(Buffer.from(await Bun.file(file).arrayBuffer()))
+  const rows: string[] = []
+  for (const line of run("readelf", ["-S", "-W", file]).split("\n")) {
+    const match = line.match(
+      /^\s*\[\s*\d+\]\s+(\S+)\s+([A-Z_][A-Z0-9_]*)\s+[0-9a-f]+\s+([0-9a-f]+)\s+([0-9a-f]+)/,
+    )
+    if (!match) continue
+    const [, name, type, offsetHex, sizeHex] = match
+    if (type === "NOBITS") continue
+    const offset = parseInt(offsetHex, 16)
+    const size = parseInt(sizeHex, 16)
+    if (size === 0) continue
+    const data = await readBytes(file, offset, Math.min(size, 16 * 1024 * 1024))
+    const value = entropyOf(data)
+    const flag = value > 7 ? "  HIGH: packed, encrypted, or compressed?" : ""
+    rows.push(`${name.padEnd(24)} offset=0x${offsetHex} size=${size} entropy=${value.toFixed(4)}${flag}`)
+  }
+  return [`whole file entropy=${whole.toFixed(4)} (max 8.0)`, "", ...rows].join("\n")
+}
+
+function hardening(file: string) {
+  if (Bun.which("checksec")) return run("checksec", ["--file", file])
+  const header = run("readelf", ["-h", "-W", file])
+  const segments = run("readelf", ["-l", "-W", file])
+  const dynamic = run("readelf", ["-d", "-W", file])
+  const symbols = run("nm", ["-D", file]) + "\n" + run("readelf", ["-s", "-W", file])
+  const type = header.match(/Type:\s+(\S+)/)?.[1] ?? "?"
+  const relro = /GNU_RELRO/.test(segments) ? (/BIND_NOW/.test(dynamic) ? "Full" : "Partial") : "No"
+  const nx = /GNU_STACK.*\bRWE\b/.test(segments) ? "disabled" : "enabled"
+  const canary = /__stack_chk_fail/.test(symbols) ? "present" : "absent"
+  const fortify = /__fortify_fail/.test(symbols) ? "present" : "absent"
+  const pie = /DYN/.test(type) ? "PIE/PIC" : "No PIE (EXEC)"
+  return [`RELRO: ${relro}`, `Stack canary: ${canary}`, `NX: ${nx}`, `PIE: ${pie}`, `FORTIFY: ${fortify}`].join("\n")
+}
+
+function functions(file: string) {
+  if (Bun.which("r2")) {
+    return run(
+      "r2",
+      ["-q", "-e", "scr.color=0", "-e", "bin.relocs.apply=true", "-c", "aaa; afl", file],
+      120_000,
+    )
+  }
+  return run("nm", ["-C", "--defined-only", file])
+}
+
 async function dispatch(config: ReverseConfig.Config, params: Params) {
   const { resolved, size } = await resolveFile(config, params.file)
 
@@ -214,7 +276,7 @@ async function dispatch(config: ReverseConfig.Config, params: Params) {
       const fileType = run("file", ["-b", resolved])
       const header = run("readelf", ["-h", "-W", resolved])
       const sections = run("readelf", ["-l", "-W", resolved])
-      const hardening = Bun.which("checksec") ? run("checksec", ["--file", resolved]) : "(checksec not installed)"
+      const hardness = hardening(resolved)
       const hash = await sha256(resolved)
       return [
         `file: ${fileType}`,
@@ -225,7 +287,7 @@ async function dispatch(config: ReverseConfig.Config, params: Params) {
         "",
         sections,
         "",
-        `hardening:\n${hardening}`,
+        `hardening:\n${hardness}`,
       ].join("\n")
     }
     case "sections":
@@ -254,6 +316,10 @@ async function dispatch(config: ReverseConfig.Config, params: Params) {
     }
     case "emulate":
       return emulate(resolved, params)
+    case "entropy":
+      return entropyReport(resolved)
+    case "functions":
+      return functions(resolved)
     case "read_bytes": {
       const offset = params.offset ?? 0
       const length = Math.min(params.count ?? 256, 65536)
@@ -286,7 +352,7 @@ export const BinaryTool = Tool.define(
     const config = yield* ReverseConfig.Service
     return {
       description:
-        "Static analysis of ELF binaries (.so, .a, .o, executables): file info and hardening, sections, imports, exports, strings, disassembly, decompilation, cross-references, raw byte reads, byte-pattern search, byte patching of a copy, and register/memory emulation via radare2 ESIL. Read-only actions never modify the target; patch writes a copy under reverse.workDir and leaves the original unchanged.",
+        "Static analysis of ELF binaries (.so, .a, .o, executables): file info and hardening, sections, imports, exports, function list, strings, entropy, disassembly, decompilation, cross-references, raw byte reads, byte-pattern search, byte patching of a copy, and register/memory emulation via radare2 ESIL. Read-only actions never modify the target; patch writes a copy under reverse.workDir and leaves the original unchanged.",
       parameters: Parameters,
       jsonSchema: {
         type: "object",
@@ -295,7 +361,7 @@ export const BinaryTool = Tool.define(
             type: "string",
             enum: [...Actions],
             description:
-              "info: file type, size, hashes, ELF header and hardening; sections/imports/exports/strings: static lists; disasm/decompile/xrefs: code views; read_bytes: hex dump at offset; search_bytes: find a hex pattern; patch: write bytes into a copy; emulate: step radare2 ESIL and dump registers plus memory",
+              "info: file type, size, hashes, ELF header and hardening; sections/imports/exports/functions/strings/entropy: static lists; disasm/decompile/xrefs: code views; read_bytes: hex dump at offset; search_bytes: find a hex pattern; patch: write bytes into a copy; emulate: step radare2 ESIL and dump registers plus memory",
           },
           file: { type: "string", description: "Path to the ELF binary" },
           offset: { type: "number", description: "File offset in bytes for read_bytes and patch" },
