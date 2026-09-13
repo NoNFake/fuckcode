@@ -3,6 +3,9 @@ name: playbook-infra
 description: "Internal network pentest: PTES phase flow, servers, pivoting, lateral movement. Triggers - internal network, CIDR, multi-host."
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # Infrastructure Pentest Playbook
 
 Based on PTES (Penetration Testing Execution Standard).

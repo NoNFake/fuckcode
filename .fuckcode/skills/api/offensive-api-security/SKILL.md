@@ -3,6 +3,9 @@ name: offensive-api-security
 description: "API security testing: BOLA/IDOR, broken auth, BFLA, mass assignment, SSRF, gRPC, WebSocket. Triggers - OWASP API Top 10, BOLA, IDOR, gRPC."
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # Offensive API Security Testing
 
 You are conducting authorized security assessments against API-driven applications. This skill covers REST, gRPC, and WebSocket attack surfaces with emphasis on the OWASP API Security Top 10 2023. Every technique assumes you have written authorization and a defined scope. Your goal is to identify vulnerabilities that allow unauthorized data access, privilege escalation, or service disruption through API-layer attacks.

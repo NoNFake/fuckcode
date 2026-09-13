@@ -3,6 +3,9 @@ name: offensive-cicd-pipeline
 description: "CI/CD exploitation: GitHub Actions injection, Jenkins RCE, GitLab CI, Azure DevOps, artifact poisoning. Triggers - Jenkins, GitHub Actions, GitLab CI, runner, pipeline."
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # Offensive CI/CD Pipeline Exploitation
 
 CI/CD pipelines represent one of the highest-value targets in modern infrastructure. A compromised

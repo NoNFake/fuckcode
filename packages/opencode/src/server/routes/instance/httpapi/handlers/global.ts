@@ -5,6 +5,7 @@ import { EventV2 } from "@opencode-ai/core/event"
 import { Installation } from "@/installation"
 import { disposeAllInstancesAndEmitGlobalDisposed } from "@/server/global-lifecycle"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
+import semver from "semver"
 import { Effect, Queue } from "effect"
 import * as Stream from "effect/Stream"
 import { HttpServerResponse } from "effect/unstable/http"
@@ -86,6 +87,24 @@ export const globalHandlers = HttpApiBuilder.group(RootHttpApi, "global", (handl
       return true
     })
 
+    const update = Effect.fn("GlobalHttpApi.update")(function* () {
+      const latest = yield* installation.latest()
+      const available =
+        semver.valid(InstallationVersion) !== null && semver.valid(latest) !== null
+          ? semver.gt(latest, InstallationVersion)
+          : latest !== InstallationVersion
+      if (available) {
+        GlobalBus.emit("event", {
+          directory: "global",
+          payload: {
+            type: Installation.Event.UpdateAvailable.type,
+            properties: { version: latest },
+          },
+        })
+      }
+      return { version: InstallationVersion, latest, available }
+    })
+
     const upgrade = Effect.fn("GlobalHttpApi.upgrade")(function* (ctx: { payload: typeof GlobalUpgradeInput.Type }) {
       const method = yield* installation.method()
       if (method === "unknown") {
@@ -122,5 +141,6 @@ export const globalHandlers = HttpApiBuilder.group(RootHttpApi, "global", (handl
       .handle("configUpdate", configUpdate)
       .handle("dispose", dispose)
       .handle("upgrade", upgrade)
+      .handle("update", update)
   }),
 )

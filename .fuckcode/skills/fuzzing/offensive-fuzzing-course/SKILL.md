@@ -4,6 +4,9 @@ description: "Fuzzing curriculum: target selection, AFL++/libFuzzer, corpus, har
 tags: [exploitation, vuln_assess]
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # Week 2: Finding Vulnerabilities Through Fuzzing
 
 ## Metadata

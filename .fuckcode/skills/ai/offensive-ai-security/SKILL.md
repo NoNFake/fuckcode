@@ -4,6 +4,9 @@ description: "AI/LLM security: prompt injection, jailbreaking, model extraction,
 tags: [recon, exploitation]
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # AI Pentest
 
 ## Metadata

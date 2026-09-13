@@ -3,6 +3,9 @@ name: svc-dns
 description: "DNS attacks: zone transfer, subdomain takeover, cache poisoning. Triggers - port 53, AXFR, dangling CNAME."
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # DNS Attack Reference
 
 ## Zone Transfer (AXFR)

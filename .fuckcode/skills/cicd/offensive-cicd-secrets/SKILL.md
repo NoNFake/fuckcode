@@ -3,6 +3,9 @@ name: offensive-cicd-secrets
 description: "CI/CD secret extraction: env vars, Vault/KMS, runner tokens, OIDC, build logs, cache poisoning. Triggers - CI secrets, Vault, OIDC, runner token."
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # Offensive CI/CD Secrets Extraction
 
 Secrets in CI/CD environments are the primary objective for pipeline compromise. Every pipeline

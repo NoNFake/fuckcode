@@ -2014,6 +2014,32 @@ export type Config = {
     max_lines?: number
     max_bytes?: number
   }
+  pentest?: {
+    enabled?: boolean
+    scope?: {
+      /**
+       * Allowed domains for DNS whitelist
+       */
+      domains: Array<string>
+      /**
+       * Allowed CIDRs for network access
+       */
+      cidrs: Array<string>
+      ports?: Array<number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN">
+      children?: {
+        [key: string]: unknown
+      }
+    }
+    /**
+     * Sandbox timeout in milliseconds
+     */
+    sandboxTimeout?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    evidenceDir?: string
+    oob?: {
+      server?: string
+      token?: string
+    }
+  }
   compaction?: {
     auto?: boolean
     prune?: boolean
@@ -7388,6 +7414,35 @@ export type GlobalUpgradeResponses = {
 }
 
 export type GlobalUpgradeResponse = GlobalUpgradeResponses[keyof GlobalUpgradeResponses]
+
+export type GlobalUpdateData = {
+  body?: never
+  path?: never
+  query?: never
+  url: "/global/update"
+}
+
+export type GlobalUpdateErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type GlobalUpdateError = GlobalUpdateErrors[keyof GlobalUpdateErrors]
+
+export type GlobalUpdateResponses = {
+  /**
+   * Update check result
+   */
+  200: {
+    version: string
+    latest: string
+    available: boolean
+  }
+}
+
+export type GlobalUpdateResponse = GlobalUpdateResponses[keyof GlobalUpdateResponses]
 
 export type EventSubscribeData = {
   body?: never

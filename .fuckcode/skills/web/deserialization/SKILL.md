@@ -4,6 +4,9 @@ description: "Insecure deserialization to RCE: Java, PHP, .NET, Python, Node. Tr
 tags: [vuln_assess, exploitation]
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # Insecure Deserialization → RCE
 
 ## When this fires
@@ -26,7 +29,7 @@ phpggc Monolog/RCE1 system id
 # .NET — ysoserial.net -g TypeConfuseDelegate -f BinaryFormatter -c "cmd /c ..."
 # Python — pickle __reduce__ → os.system('id')  ;  Node — node-serialize _$$ND_FUNC$$_ IIFE
 ```
-**Proof required:** `id`/`uname` (RCE). If the classpath is unknown, confirm deserialization first with a benign OOB gadget (Java URLDNS → your listener), then find the working RCE gadget; log each attempted gadget via `record_vector attempt:` so you don't re-try dead chains.
+**Proof required:** `id`/`uname` (RCE). If the classpath is unknown, confirm deserialization first with a benign OOB gadget (Java URLDNS → your listener), then find the working RCE gadget; log each attempted gadget via `state_update` (action: append, key: notes) so you don't re-try dead chains.
 
 ## Tooling
 `ysoserial` (Java), `phpggc` (PHP), `ysoserial.net` (.NET), `gadgetinspector` for custom classpaths; `nuclei -tags deserialization`.

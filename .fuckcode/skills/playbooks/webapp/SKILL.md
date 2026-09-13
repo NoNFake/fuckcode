@@ -4,15 +4,18 @@ description: "Web app pentest router: recon, map, OWASP-class testing, proof, re
 tags: [vuln_assess, exploitation]
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # Web App Pentest — methodology + skill router
 
 This is the ORDER of operations and the map to the deep skills. Each vuln CLASS has a dedicated `web-<class>` skill with exact payloads + detect→exploit→PROVE — load the one matching the surface; don't test from this index.
 
 ## 1. Recon + active scan FIRST
-Fingerprint stack+version (whatweb/httpx, headers), CMS (wpscan/etc.), APIs (/swagger, /graphql, /.well-known). Then a content-matched `nuclei -u <t>` pass BEFORE exhaustive dir-fuzz (framework-runtime RCEs don't appear as routes) → `nuclei_parse`. Version + a known CVE → fetch & vet a public PoC (shared exploitation methodology).
+Fingerprint stack+version (whatweb/httpx, headers), CMS (wpscan/etc.), APIs (/swagger, /graphql, /.well-known). Then a content-matched `nuclei -u <t>` pass BEFORE exhaustive dir-fuzz (framework-runtime RCEs don't appear as routes) — run it via `pentest_shell`, output auto-parses. Version + a known CVE → fetch & vet a public PoC (shared exploitation methodology).
 
 ## 2. Map (hidden surface, AFTER the scan)
-`ffuf`/`gobuster` (→ `gobuster_parse`), vhosts (`ffuf -H Host:FUZZ`), params (`arjun`), auth endpoints (login/register/reset/OAuth), API routes. Review client-side JS for endpoints/secrets.
+`ffuf`/`gobuster` (run via `pentest_shell`), vhosts (`ffuf -H Host:FUZZ`), params (`arjun`), auth endpoints (login/register/reset/OAuth), API routes. Review client-side JS for endpoints/secrets.
 
 ## 3. Test by class → load the matching skill
 | Signal / surface | Load |
@@ -26,7 +29,7 @@ Fingerprint stack+version (whatweb/httpx, headers), CMS (wpscan/etc.), APIs (/sw
 | serialized blob (rO0/O:/VIEWSTATE/pickle) | **web-deserialization** |
 | object IDs, roles, JWT, admin funcs | **web-auth-bypass-idor** |
 | known framework+version CVE | shared exploitation methodology + searchsploit/nuclei |
-Also-check (no dedicated skill yet): XSS (`dalfox`, `xss_detect`), command injection (`;id`/`$(id)`), CSRF, CORS/security-headers, crypto/secrets-in-JS, business-logic/race conditions.
+Also-check (no dedicated skill yet): XSS (`dalfox`, `inject_probe`), command injection (`;id`/`$(id)`), CSRF, CORS/security-headers, crypto/secrets-in-JS, business-logic/race conditions.
 
 ## 4. PROVE + Report
-A finding is `suspected` until you reproduce concrete impact (dumped canary row / `id` / file bytes / cloud creds / cross-user data) — then `add_vuln` `confirmed` with the evidence. Never mark a host resolved/"safe" without a completed active scan. Report: reproduction steps + request/response evidence + CVSS + OWASP-WSTG mapping.
+A finding is `suspected` until you reproduce concrete impact (dumped canary row / `id` / file bytes / cloud creds / cross-user data) — then mark it confirmed via `state_update` with the evidence. Never mark a host resolved/"safe" without a completed active scan. Report: reproduction steps + request/response evidence + CVSS + OWASP-WSTG mapping.

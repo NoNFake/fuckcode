@@ -77,6 +77,15 @@ describe("global HttpApi", () => {
     }),
   )
 
+  it.live("reports an available update", () =>
+    Effect.gen(function* () {
+      const response = yield* HttpClientRequest.get(GlobalPaths.update).pipe(HttpClient.execute)
+
+      expect(response.status).toBe(200)
+      expect(yield* response.json).toMatchObject({ latest: "9.9.9", available: true })
+    }),
+  )
+
   it.live("rejects unsupported upgrade content types", () =>
     Effect.gen(function* () {
       const response = yield* HttpClientRequest.post(GlobalPaths.upgrade).pipe(

@@ -3,6 +3,9 @@ name: svc-database
 description: "Database attacks: auth bypass, UDF/xp_cmdshell RCE, file read/write, credential dump. Triggers - MySQL, PostgreSQL, MSSQL, Redis, MongoDB."
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # Database Attack Reference
 
 ## MySQL (3306)

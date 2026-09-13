@@ -86,6 +86,8 @@ import type {
   GlobalEventResponses,
   GlobalHealthErrors,
   GlobalHealthResponses,
+  GlobalUpdateErrors,
+  GlobalUpdateResponses,
   GlobalUpgradeErrors,
   GlobalUpgradeResponses,
   InstanceDisposeErrors,
@@ -1373,6 +1375,18 @@ export class Global extends HeyApiClient {
         ...options?.headers,
         ...params.headers,
       },
+    })
+  }
+
+  /**
+   * Check for updates
+   *
+   * Check whether a newer opencode release is available and notify clients.
+   */
+  public update<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
+    return (options?.client ?? this.client).get<GlobalUpdateResponses, GlobalUpdateErrors, ThrowOnError>({
+      url: "/global/update",
+      ...options,
     })
   }
 

@@ -4,6 +4,9 @@ description: "Find bugs by source review, taint analysis, dangerous functions, d
 tags: [vuln_assess, recon]
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # Bug Identification
 
 ## Metadata

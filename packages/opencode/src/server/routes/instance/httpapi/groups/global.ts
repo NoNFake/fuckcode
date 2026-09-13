@@ -65,12 +65,19 @@ const GlobalUpgradeResult = Schema.Union([
   }),
 ])
 
+export const GlobalUpdateResult = Schema.Struct({
+  version: Schema.String,
+  latest: Schema.String,
+  available: Schema.Boolean,
+})
+
 export const GlobalPaths = {
   health: "/global/health",
   event: "/global/event",
   config: "/global/config",
   dispose: "/global/dispose",
   upgrade: "/global/upgrade",
+  update: "/global/update",
 } as const
 
 export const GlobalApi = HttpApi.make("global").add(
@@ -132,6 +139,15 @@ export const GlobalApi = HttpApi.make("global").add(
           identifier: "global.upgrade",
           summary: "Upgrade opencode",
           description: "Upgrade opencode to the specified version.",
+        }),
+      ),
+      HttpApiEndpoint.get("update", GlobalPaths.update, {
+        success: described(GlobalUpdateResult, "Update check result"),
+      }).annotateMerge(
+        OpenApi.annotations({
+          identifier: "global.update",
+          summary: "Check for updates",
+          description: "Check whether a newer opencode release is available and notify clients.",
         }),
       ),
     )

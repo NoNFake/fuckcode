@@ -76,8 +76,22 @@ function TokenSaving(props: { api: TuiPluginApi }) {
 function Version(props: { api: TuiPluginApi }) {
   const theme = () => props.api.theme.current
 
+  const check = async () => {
+    props.api.kv.set("skipped_version", undefined)
+    const result = await props.api.client.global.update()
+    if (result.error || !result.data) {
+      props.api.ui.toast({ variant: "error", message: "Update check failed" })
+      return
+    }
+    if (result.data.available) return
+    props.api.ui.toast({
+      variant: "info",
+      message: `FuckCode v${result.data.version} is up to date`,
+    })
+  }
+
   return (
-    <box flexShrink={0}>
+    <box flexShrink={0} onMouseDown={check}>
       <text fg={theme().textMuted}>{props.api.app.version}</text>
     </box>
   )

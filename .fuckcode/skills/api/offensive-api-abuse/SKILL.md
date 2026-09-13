@@ -3,6 +3,9 @@ name: offensive-api-abuse
 description: "API business-logic abuse: workflow bypass, GraphQL batching, JWT tampering, race conditions, pagination, webhooks. Triggers - business logic, GraphQL, JWT, webhook, race."
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # Offensive API Abuse and Advanced Exploitation
 
 You are conducting authorized security assessments targeting the business logic layer of API-driven applications. Traditional vulnerability scanners miss the attack patterns in this skill because they require understanding of application workflows, state transitions, and trust relationships between API endpoints. Your goal is to identify vulnerabilities that allow financial manipulation, data exfiltration through legitimate channels, privilege escalation via workflow abuse, and service disruption through logic-layer attacks.

@@ -4,6 +4,9 @@ description: "Exploit development: buffer overflow, UAF, heap overflow, integer 
 tags: [exploitation, vuln_assess]
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # Week 1: Vulnerability Classes with Real-World Examples
 
 ## Metadata

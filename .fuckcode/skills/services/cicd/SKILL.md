@@ -3,6 +3,9 @@ name: svc-cicd
 description: "CI/CD and dev-infra attacks: Jenkins script console, GitLab, ArgoCD, exposed .git, runner token. Triggers - Jenkins, GitLab, ArgoCD, TeamCity."
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # CI/CD Attack Reference
 
 ## Jenkins (8080/8443)

@@ -3,6 +3,9 @@ name: offensive-reporting
 description: "Pentest report writing: exec summary, findings, CVSS, evidence hygiene, remediation. Triggers - report deliverable, CVSS, retest."
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # Penetration Test Reporting — Professional Methodology
 
 A great finding lost in a bad report is a wasted finding. Reports are the artifact the client pays for, the auditor reads, and the developer fixes from. Treat the report with the same rigor as the exploit.

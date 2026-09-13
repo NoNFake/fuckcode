@@ -3,6 +3,9 @@ name: svc-ftp
 description: "FTP attacks: anonymous access, writable dirs, version CVEs, credential attacks. Triggers - port 21, vsftpd, ProFTPD, anonymous."
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # FTP Attack Reference
 
 ## Enumeration

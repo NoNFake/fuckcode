@@ -3,6 +3,9 @@ name: svc-ssh
 description: "SSH attacks: version CVEs, auth-method and user enumeration, key issues, targeted brute. Triggers - port 22, regreSSHion, CVE-2018-15473."
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # SSH Attack Reference
 
 ## Version-Specific CVEs

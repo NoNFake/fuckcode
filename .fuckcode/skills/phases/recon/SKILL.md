@@ -4,6 +4,9 @@ tags: [recon]
 description: "Passive reconnaissance: OSINT, DNS, WHOIS, subdomain discovery. Triggers - RECON phase, OSINT, subdomain."
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # Passive Reconnaissance Checklist
 
 Work through each item. Mark completed in your state updates. Skip items not applicable to the target type.

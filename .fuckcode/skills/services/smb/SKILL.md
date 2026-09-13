@@ -3,6 +3,9 @@ name: svc-smb
 description: "SMB attacks: null sessions, share enumeration, NTLM relay, EternalBlue, signing checks. Triggers - 445/139, MS17-010, null session."
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # SMB Attack Reference
 
 ## Enumeration
@@ -86,4 +89,4 @@ crackmapexec smb <target> -u <user> -p <password> --spider <share> --pattern "pa
 - Always use quiet/filtered output flags. Only show successful results.
 - For netexec/crackmapexec: pipe through `grep '[+]'` for brute-force runs.
 - Redirect large output to files. Never paste >50 lines of raw tool output.
-- Use `cme_parse` for auto-processing netexec output.
+- Run netexec via `pentest_shell`; output auto-parses into findings.

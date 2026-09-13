@@ -3,6 +3,9 @@ name: playbook-cloud
 description: "Cloud pentest playbook: AWS/GCP/Azure misconfig and attack paths. Triggers - cloud creds, metadata 169.254.169.254, IAM."
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # Cloud Security Assessment Playbook
 
 ## AWS

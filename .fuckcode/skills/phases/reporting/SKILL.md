@@ -4,6 +4,9 @@ tags: [reporting]
 description: "Reporting phase: build structured pentest report from findings. Triggers - REPORTING phase, report deliverable."
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # Report Generation Guide
 
 ## Finding Format

@@ -3,6 +3,9 @@ name: offensive-fuzzing
 description: "Offensive fuzzing practice: target ID, harness, mutation, coverage, crash triage. Triggers - fuzz target, harness, Boofuzz, syzkaller."
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # Offensive Fuzzing
 
 ## Fuzzer Types

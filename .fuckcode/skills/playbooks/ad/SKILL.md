@@ -3,6 +3,9 @@ name: playbook-ad
 description: "Active Directory pentest: Kerberos, LDAP, GPO, ADCS, delegation, lateral movement. Triggers - domain controller, Kerberos, BloodHound, kerberoast."
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # Active Directory Pentest Playbook
 
 ## Prerequisites

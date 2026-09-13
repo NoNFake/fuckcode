@@ -4,6 +4,9 @@ description: "Turn a foothold into a reliable pivot: SOCKS tunnel, persistent sh
 tags: [exploitation, post_exploit]
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # Pivoting — reliable SOCKS + persistent shell
 
 ## When this fires

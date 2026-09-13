@@ -3,6 +3,9 @@ name: offensive-cloud
 description: "AWS/Azure/GCP attacks: credential harvesting, privesc, persistence, exfil, K8s-on-cloud. Triggers - IMDS, IAM, AssumeRole, S3, instance role."
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # Cloud (AWS / Azure / GCP) — Offensive Testing Methodology
 
 ## Quick Workflow

@@ -3,6 +3,9 @@ name: svc-docker-k8s
 description: "Docker/Kubernetes attacks: exposed API, container escape, RBAC, privileged pod, secret theft. Triggers - Docker 2375, K8s 6443, kubelet, docker.sock."
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # Docker & Kubernetes Attack Reference
 
 ## Docker API (2375/2376)

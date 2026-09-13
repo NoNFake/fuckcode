@@ -3,6 +3,9 @@ name: svc-mail
 description: "Mail attacks: open relay, VRFY/EXPN user enum, header injection, IMAP/POP3. Triggers - SMTP 25/465/587, Postfix, Exim, VRFY."
 ---
 
+## Rules of Engagement
+Only test systems you are authorized to assess. Confirm the written scope and rate limits before active commands. Prefer the least-invasive check that proves impact; stop on evidence of production impact.
+
 # Mail Server Attack Reference
 
 ## SMTP (25/465/587)
