@@ -32,6 +32,8 @@ Backends: `file` and `strings` are always required. ELF uses `readelf`, `objdump
 
 `emulate` runs radare2's ESIL VM: it maps a stack, optionally writes `hex` bytes at `write`, seeks to `address` (a symbol or hex), steps `count` instructions, then returns registers and a 128-byte dump at `dump` (default `rsp`). No process is executed.
 
+`strings` defaults to ASCII; pass `encoding=utf16le` for Windows binaries.
+
 Install external tools with the `ensure_tools` tool.
 
 ## MCP alternative

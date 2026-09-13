@@ -46,6 +46,9 @@ const Parameters = Schema.Struct({
   dump: Schema.optional(Schema.String).annotate({
     description: "Emulated memory address to dump after emulating (default: rsp)",
   }),
+  encoding: Schema.optional(Schema.Literals(["ascii", "utf16le"])).annotate({
+    description: "String encoding for the strings action (default: ascii). Use utf16le for Windows binaries",
+  }),
 })
 
 type Params = typeof Parameters.Type
@@ -352,8 +355,12 @@ async function dispatch(config: ReverseConfig.Config, params: Params) {
       return detectFormat(resolved) === "pe"
         ? run("rabin2", ["-E", resolved])
         : run("nm", ["-D", "--defined-only", resolved])
-    case "strings":
-      return run("strings", ["-a", "-t", "x", resolved])
+    case "strings": {
+      const args = ["-a", "-t", "x"]
+      if (params.encoding === "utf16le") args.push("-e", "l")
+      args.push(resolved)
+      return run("strings", args)
+    }
     case "disasm":
       return disasm(resolved, params, detectFormat(resolved))
     case "decompile": {
@@ -425,6 +432,11 @@ export const BinaryTool = Tool.define(
           output: { type: "string", description: "Output path for patch (default: reverse.workDir/<name>.patched)" },
           write: { type: "string", description: "Emulated memory address to write hex bytes to before emulating" },
           dump: { type: "string", description: "Emulated memory address to dump after emulating (default: rsp)" },
+          encoding: {
+            type: "string",
+            enum: ["ascii", "utf16le"],
+            description: "String encoding for the strings action (default: ascii). Use utf16le for Windows binaries",
+          },
         },
         required: ["action", "file"],
       },

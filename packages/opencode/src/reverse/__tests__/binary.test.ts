@@ -12,6 +12,7 @@ import { BinaryTool } from "../binary"
 import { loadFromConfig, makeService, pathAllowed, Service } from "../config"
 
 const marker = "FUCKCODE_REVERSE_MARKER"
+const wideMarker = "FUCKCODE_WIDE_MARKER"
 
 const fakeTruncate = Truncate.Service.of({
   cleanup: () => Effect.void,
@@ -93,7 +94,7 @@ beforeAll(() => {
     dll = path.join(dir, "fixture.dll")
     Bun.write(
       peSource,
-      `__declspec(dllexport) int greet(void) { return 42; }\n__declspec(dllexport) int add(int a, int b) { return a + b; }\nconst char marker[] = "${marker}";\n`,
+      `#include <wchar.h>\n__declspec(dllexport) int greet(void) { return 42; }\n__declspec(dllexport) int add(int a, int b) { return a + b; }\nconst char marker[] = "${marker}";\nconst wchar_t wmarker[] = L"${wideMarker}";\n`,
     )
     const pe = spawnSync("x86_64-w64-mingw32-gcc", ["-shared", "-O0", "-o", dll, peSource], { encoding: "utf-8" })
     if (pe.status !== 0) throw new Error(`mingw failed: ${pe.stderr}`)
@@ -186,6 +187,7 @@ describe("binary tool", () => {
     const tool = await makeTool()
     const info = await execute(tool, { action: "info", file: dll })
     expect(info.output).toContain("PE32")
+    expect((await execute(tool, { action: "strings", file: dll, encoding: "utf16le" })).output).toContain(wideMarker)
 
     if (!Bun.which("rabin2")) return
     expect((await execute(tool, { action: "sections", file: dll })).output).toContain(".text")
