@@ -146,6 +146,20 @@ describe("binary tool", () => {
     await expect(execute(tool, { action: "info", file: outside })).rejects.toThrow("outside reverse.allowedDirs")
     rmSync(outside, { force: true })
   })
+
+  it("rejects r2 targets that are not hex or symbols", async () => {
+    const tool = await makeTool()
+    await expect(execute(tool, { action: "emulate", file: so, address: "!sh", count: 1 })).rejects.toThrow(
+      "address must be a hex address or symbol name",
+    )
+  })
+
+  it.skipIf(!Bun.which("r2"))("emulates greet() and returns a register state", async () => {
+    const tool = await makeTool()
+    const result = await execute(tool, { action: "emulate", file: so, address: "sym.greet", count: 8 })
+    expect(result.output).toContain("rax = 0x0000002a")
+    expect(result.output).toContain("rsp")
+  })
 })
 
 describe("reverse config", () => {

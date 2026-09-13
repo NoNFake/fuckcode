@@ -24,11 +24,13 @@ Or set `FUCKCODE_REVERSE=1`. Registering the tools is gated on `reverse.enabled`
 
 ## Tools
 
-`binary` actions: `info`, `sections`, `imports`, `exports`, `strings`, `disasm`, `decompile`, `xrefs`, `read_bytes`, `search_bytes`, `patch`.
+`binary` actions: `info`, `sections`, `imports`, `exports`, `strings`, `disasm`, `decompile`, `xrefs`, `read_bytes`, `search_bytes`, `patch`, `emulate`.
 
 Permissions: read actions use the `reverse` action, `patch` uses `reverse_patch`.
 
-Backends: `file`, `readelf`, `objdump`, `nm`, `strings`, and optional `checksec` are required for the core actions. `disasm` prefers radare2 when present and falls back to objdump. `decompile` and `xrefs` require radare2 (and r2ghidra for decompilation).
+Backends: `file`, `readelf`, `objdump`, `nm`, `strings`, and optional `checksec` are required for the core actions. `disasm` prefers radare2 when present and falls back to objdump. `decompile`, `xrefs`, and `emulate` require radare2 (and r2ghidra for decompilation).
+
+`emulate` runs radare2's ESIL VM: it maps a stack, optionally writes `hex` bytes at `write`, seeks to `address` (a symbol or hex), steps `count` instructions, then returns registers and a 128-byte dump at `dump` (default `rsp`). No process is executed.
 
 Install external tools with the `ensure_tools` tool.
 

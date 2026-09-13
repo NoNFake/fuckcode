@@ -41,7 +41,16 @@ Use the `binary` tool. Read-only actions (everything except `patch`) never modif
 
 Use patching to neutralize a check, flip a branch, or force a code path, then compare behavior. Always keep the recorded original hash and the patch diff.
 
-## 5. Vulnerability patterns in ELF
+## 5. Emulation
+
+No process is executed, so emulation is safe on untrusted code and needs no VM.
+
+- `binary action=emulate file=<path> address=<symbol|0xaddr> count=<n> [write=<addr> hex=<bytes>] [dump=<addr>]`: initialize the radare2 ESIL VM, optionally write bytes into emulated memory, step instructions, then return registers and a memory dump.
+- Set arguments through memory when a calling convention is needed: write the argument values at the stack or a buffer, then step the function.
+- If ESIL stops on an unsupported instruction or a syscall, narrow the address range or inspect with disassembly instead.
+- Requires radare2.
+
+## 6. Vulnerability patterns in ELF
 
 - Unbounded copies: `strcpy`/`strcat`/`sprintf`/`gets` into fixed stack or heap buffers.
 - Integer issues: allocation size computed from a length field, then copied with a different length (signed/unsigned, truncation, overflow).
@@ -53,7 +62,7 @@ Use patching to neutralize a check, flip a branch, or force a code path, then co
 - Insecure deserialization and type confusion in parsers.
 - Missing bounds checks in protocol handlers (length field versus buffer capacity).
 
-## 6. Tooling
+## 7. Tooling
 
 - `ensure_tools` installs: radare2, rizin, binutils, checksec, binwalk, patchelf, yara.
 - Prefer binutils (`readelf`, `objdump`, `nm`, `strings`) for guaranteed availability; radare2 adds decompilation, xrefs, and richer disassembly.

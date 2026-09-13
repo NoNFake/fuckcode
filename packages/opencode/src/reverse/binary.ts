@@ -19,6 +19,7 @@ const Actions = [
   "read_bytes",
   "search_bytes",
   "patch",
+  "emulate",
 ] as const
 
 const Parameters = Schema.Struct({
@@ -32,10 +33,16 @@ const Parameters = Schema.Struct({
   }),
   count: Schema.optional(Schema.Number).annotate({ description: "Number of bytes to read or instructions to disassemble" }),
   hex: Schema.optional(Schema.String).annotate({
-    description: "Hex byte pattern: search pattern for search_bytes, replacement bytes for patch",
+    description: "Hex byte pattern: search pattern for search_bytes, replacement bytes for patch, memory bytes for emulate",
   }),
   output: Schema.optional(Schema.String).annotate({
     description: "Output path for patch (default: reverse.workDir/<name>.patched)",
+  }),
+  write: Schema.optional(Schema.String).annotate({
+    description: "Emulated memory address to write hex bytes to before emulating",
+  }),
+  dump: Schema.optional(Schema.String).annotate({
+    description: "Emulated memory address to dump after emulating (default: rsp)",
   }),
 })
 
@@ -87,6 +94,21 @@ function parseHex(hex: string): Buffer {
     throw new Error("hex must contain an even, non-zero number of hex digits")
   }
   return Buffer.from(cleaned, "hex")
+}
+
+const r2Target = /^(0x[0-9a-fA-F]+|[A-Za-z_][A-Za-z0-9_.$]*)$/
+
+// r2 command strings are not a shell, but r2 can still run system commands and
+// write files. Any value interpolated into a -c script must be a hex address or
+// symbol name, never free text.
+function assertR2Target(value: string, field: string) {
+  if (!r2Target.test(value)) throw new Error(`${field} must be a hex address or symbol name`)
+}
+
+function r2Address(params: Params) {
+  if (!params.address) return undefined
+  assertR2Target(params.address, "address")
+  return params.address
 }
 
 async function readBytes(file: string, offset: number, length: number) {
@@ -147,8 +169,9 @@ function disasm(file: string, params: Params) {
   const r2 = Bun.which("r2")
   if (r2) {
     const count = params.count ?? 40
-    const target = params.address ? `@ ${params.address}` : ""
-    return run(r2, ["-q", "-e", "scr.color=0", "-c", `aaa; pd ${count} ${target}`, "--", file])
+    const address = r2Address(params)
+    const target = address ? `@ ${address}` : ""
+    return run(r2, ["-q", "-e", "scr.color=0", "-e", "bin.relocs.apply=true", "-c", `aaa; pd ${count} ${target}`, file])
   }
   const start = params.address && /^0x[0-9a-fA-F]+$/.test(params.address) ? parseInt(params.address, 16) : undefined
   const count = params.count ?? 40
@@ -159,6 +182,28 @@ function disasm(file: string, params: Params) {
   args.push(file)
   const output = run("objdump", args)
   return start !== undefined ? output : output.split("\n").slice(0, count + 7).join("\n")
+}
+
+function emulate(file: string, params: Params) {
+  const address = params.address ? r2Address(params) : undefined
+  if (params.write) assertR2Target(params.write, "write")
+  if (params.dump) assertR2Target(params.dump, "dump")
+  const r2 = Bun.which("r2")
+  if (!r2) throw new Error("emulate requires radare2. Run ensure_tools to install it.")
+  const count = Math.min(Math.max(params.count ?? 20, 1), 1000)
+  if (params.write && !params.hex) throw new Error("emulate write requires hex bytes")
+  const bytes = params.write ? parseHex(params.hex ?? "").toString("hex") : undefined
+  const script = [
+    "aaa",
+    "aeim",
+    ...(params.write && bytes ? [`wx ${bytes} @ ${params.write}`] : []),
+    `s ${address ?? "entry0"}`,
+    "aeip",
+    ...Array.from({ length: count }, () => "aes"),
+    "aer",
+    `px 128 @ ${params.dump ?? "rsp"}`,
+  ].join("; ")
+  return run(r2, ["-q", "-e", "scr.color=0", "-e", "bin.relocs.apply=true", "-c", script, file], 120_000)
 }
 
 async function dispatch(config: ReverseConfig.Config, params: Params) {
@@ -196,15 +241,19 @@ async function dispatch(config: ReverseConfig.Config, params: Params) {
     case "decompile": {
       const r2 = Bun.which("r2")
       if (!r2) throw new Error("decompile requires radare2 with r2ghidra. Run ensure_tools to install radare2.")
-      const target = params.address ? `@ ${params.address}` : "@ entry0"
-      return run(r2, ["-q", "-e", "scr.color=0", "-c", `aaa; pdg ${target}`, "--", resolved])
+      const address = r2Address(params)
+      const target = address ? `@ ${address}` : "@ entry0"
+      return run(r2, ["-q", "-e", "scr.color=0", "-e", "bin.relocs.apply=true", "-c", `aaa; pdg ${target}`, resolved])
     }
     case "xrefs": {
       const r2 = Bun.which("r2")
       if (!r2) throw new Error("xrefs requires radare2. Run ensure_tools to install it.")
-      const target = params.address ? `@ ${params.address}` : "@ entry0"
-      return run(r2, ["-q", "-e", "scr.color=0", "-c", `aaa; axt ${target}`, "--", resolved])
+      const address = r2Address(params)
+      const target = address ? `@ ${address}` : "@ entry0"
+      return run(r2, ["-q", "-e", "scr.color=0", "-e", "bin.relocs.apply=true", "-c", `aaa; axt ${target}`, resolved])
     }
+    case "emulate":
+      return emulate(resolved, params)
     case "read_bytes": {
       const offset = params.offset ?? 0
       const length = Math.min(params.count ?? 256, 65536)
@@ -237,7 +286,7 @@ export const BinaryTool = Tool.define(
     const config = yield* ReverseConfig.Service
     return {
       description:
-        "Static analysis of ELF binaries (.so, .a, .o, executables): file info and hardening, sections, imports, exports, strings, disassembly, decompilation, cross-references, raw byte reads, byte-pattern search, and byte patching of a copy. Read-only actions never modify the target; patch writes a copy under reverse.workDir and leaves the original unchanged.",
+        "Static analysis of ELF binaries (.so, .a, .o, executables): file info and hardening, sections, imports, exports, strings, disassembly, decompilation, cross-references, raw byte reads, byte-pattern search, byte patching of a copy, and register/memory emulation via radare2 ESIL. Read-only actions never modify the target; patch writes a copy under reverse.workDir and leaves the original unchanged.",
       parameters: Parameters,
       jsonSchema: {
         type: "object",
@@ -246,14 +295,16 @@ export const BinaryTool = Tool.define(
             type: "string",
             enum: [...Actions],
             description:
-              "info: file type, size, hashes, ELF header and hardening; sections/imports/exports/strings: static lists; disasm/decompile/xrefs: code views; read_bytes: hex dump at offset; search_bytes: find a hex pattern; patch: write bytes into a copy",
+              "info: file type, size, hashes, ELF header and hardening; sections/imports/exports/strings: static lists; disasm/decompile/xrefs: code views; read_bytes: hex dump at offset; search_bytes: find a hex pattern; patch: write bytes into a copy; emulate: step radare2 ESIL and dump registers plus memory",
           },
           file: { type: "string", description: "Path to the ELF binary" },
           offset: { type: "number", description: "File offset in bytes for read_bytes and patch" },
-          address: { type: "string", description: "Virtual address or symbol for disasm, decompile, and xrefs" },
-          count: { type: "number", description: "Bytes to read or instructions to disassemble" },
-          hex: { type: "string", description: "Hex pattern for search_bytes or replacement bytes for patch" },
+          address: { type: "string", description: "Virtual address or symbol for disasm, decompile, xrefs, and the emulate start" },
+          count: { type: "number", description: "Bytes to read, instructions to disassemble, or instructions to emulate" },
+          hex: { type: "string", description: "Hex pattern for search_bytes, replacement bytes for patch, or memory bytes for emulate" },
           output: { type: "string", description: "Output path for patch (default: reverse.workDir/<name>.patched)" },
+          write: { type: "string", description: "Emulated memory address to write hex bytes to before emulating" },
+          dump: { type: "string", description: "Emulated memory address to dump after emulating (default: rsp)" },
         },
         required: ["action", "file"],
       },
