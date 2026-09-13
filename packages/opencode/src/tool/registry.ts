@@ -71,6 +71,8 @@ import { ScopeImportTool } from "../pentest/scope-import"
 import { PentestConfig } from "../pentest/config"
 import { Sandbox } from "../pentest/sandbox"
 import { Observability } from "../pentest/observability"
+import { ReverseConfig } from "../reverse/config"
+import { BinaryTool } from "../reverse/binary"
 
 export function webSearchEnabled(providerID: ProviderV2.ID, flags = { exa: false, parallel: false }) {
   return (
@@ -142,6 +144,13 @@ const layer = Layer.effect(
           return PentestConfig.loadFromConfig((c as any).pentest)
         }),
     })
+    const dynamicReverseConfig = ReverseConfig.Service.of({
+      get: () =>
+        Effect.gen(function* () {
+          const c = yield* config.get()
+          return ReverseConfig.loadFromConfig((c as any).reverse)
+        }),
+    })
     const dynamicSandbox = Sandbox.makeService(dynamicPentestConfig)
     const dynamicObs = Observability.makeService()
 
@@ -178,6 +187,9 @@ const layer = Layer.effect(
       Effect.provideService(PentestConfig.Service, dynamicPentestConfig),
     )
     const pentestFilenameBypass = yield* FilenameBypassTool
+    const reverseBinary = yield* BinaryTool.pipe(
+      Effect.provideService(ReverseConfig.Service, dynamicReverseConfig),
+    )
 
     const state = yield* InstanceState.make<State>(
       Effect.fn("ToolRegistry.state")(function* (ctx) {
@@ -272,6 +284,11 @@ const layer = Layer.effect(
           process.env.FUCKCODE_PENTEST === "1" ||
           process.env.FUCKCODE_PENTEST === "true" ||
           pentestConfig.enabled
+        const reverseConfig = ReverseConfig.loadFromConfig((cfg as any).reverse)
+        const reverseEnabled =
+          process.env.FUCKCODE_REVERSE === "1" ||
+          process.env.FUCKCODE_REVERSE === "true" ||
+          reverseConfig.enabled
 
         const tool = yield* Effect.all({
           invalid: Tool.init(invalid),
@@ -298,7 +315,6 @@ const layer = Layer.effect(
                 pentestReportGen: Tool.init(pentestReportGen),
                 pentestStateUpdate: Tool.init(pentestStateUpdate),
                 pentestKnowledgeUpdate: Tool.init(pentestKnowledgeUpdate),
-                pentestEnsureTools: Tool.init(pentestEnsureTools),
                 pentestInjectProbe: Tool.init(pentestInjectProbe),
                 pentestOsHook: Tool.init(pentestOsHook),
                 pentestOob: Tool.init(pentestOob),
@@ -309,6 +325,8 @@ const layer = Layer.effect(
                 pentestFilenameBypass: Tool.init(pentestFilenameBypass),
               }
             : {}),
+          ...(pentestEnabled || reverseEnabled ? { pentestEnsureTools: Tool.init(pentestEnsureTools) } : {}),
+          ...(reverseEnabled ? { reverseBinary: Tool.init(reverseBinary) } : {}),
         })
 
         return {
@@ -345,6 +363,7 @@ const layer = Layer.effect(
             ...(tool.pentestRecon ? [tool.pentestRecon] : []),
             ...(tool.pentestScopeImport ? [tool.pentestScopeImport] : []),
             ...(tool.pentestFilenameBypass ? [tool.pentestFilenameBypass] : []),
+            ...(tool.reverseBinary ? [tool.reverseBinary] : []),
           ],
           task: tool.task,
           read: tool.read,

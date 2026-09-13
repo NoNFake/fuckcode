@@ -1,0 +1,282 @@
+import { Effect, Schema } from "effect"
+import { spawnSync } from "child_process"
+import { createHash } from "crypto"
+import { createReadStream } from "fs"
+import { open, copyFile, mkdir, realpath, stat } from "fs/promises"
+import path from "path"
+import * as Tool from "../tool/tool"
+import { ReverseConfig } from "./config"
+
+const Actions = [
+  "info",
+  "sections",
+  "imports",
+  "exports",
+  "strings",
+  "disasm",
+  "decompile",
+  "xrefs",
+  "read_bytes",
+  "search_bytes",
+  "patch",
+] as const
+
+const Parameters = Schema.Struct({
+  action: Schema.Literals(Actions),
+  file: Schema.String.annotate({ description: "Path to the ELF binary (.so, .a, .o, or executable)" }),
+  offset: Schema.optional(Schema.Number).annotate({
+    description: "File offset in bytes for read_bytes",
+  }),
+  address: Schema.optional(Schema.String).annotate({
+    description: "Virtual address or symbol name for disasm, decompile, and xrefs",
+  }),
+  count: Schema.optional(Schema.Number).annotate({ description: "Number of bytes to read or instructions to disassemble" }),
+  hex: Schema.optional(Schema.String).annotate({
+    description: "Hex byte pattern: search pattern for search_bytes, replacement bytes for patch",
+  }),
+  output: Schema.optional(Schema.String).annotate({
+    description: "Output path for patch (default: reverse.workDir/<name>.patched)",
+  }),
+})
+
+type Params = typeof Parameters.Type
+
+function requireBinary(name: string) {
+  if (!Bun.which(name)) throw new Error(`Required tool '${name}' not found on PATH. Run ensure_tools to install it.`)
+}
+
+function run(binary: string, args: string[], timeoutMs = 30_000) {
+  requireBinary(binary)
+  return runOptional(binary, args, timeoutMs)
+}
+
+function runOptional(binary: string, args: string[], timeoutMs = 30_000) {
+  const result = spawnSync(binary, args, {
+    encoding: "utf-8",
+    timeout: timeoutMs,
+    maxBuffer: 16 * 1024 * 1024,
+    stdio: ["ignore", "pipe", "pipe"],
+  })
+  if (result.error) throw new Error(`${binary} failed: ${result.error.message}`)
+  const parts = [result.stdout ?? "", result.stderr ?? ""].filter((p) => p.trim().length > 0)
+  return parts.join("\n").trim() || "(no output)"
+}
+
+async function sha256(file: string) {
+  const hash = createHash("sha256")
+  for await (const chunk of createReadStream(file)) hash.update(chunk)
+  return hash.digest("hex")
+}
+
+async function resolveFile(config: ReverseConfig.Config, file: string) {
+  const resolved = await realpath(path.resolve(file))
+  if (!ReverseConfig.pathAllowed(config, resolved)) {
+    throw new Error(`Path is outside reverse.allowedDirs: ${resolved}`)
+  }
+  const info = await stat(resolved)
+  if (!info.isFile()) throw new Error(`Not a file: ${resolved}`)
+  if (info.size > config.maxFileSize) {
+    throw new Error(`File exceeds reverse.maxFileSize (${config.maxFileSize} bytes): ${resolved}`)
+  }
+  return { resolved, size: info.size }
+}
+
+function parseHex(hex: string): Buffer {
+  const cleaned = hex.replace(/[^0-9a-fA-F]/g, "")
+  if (cleaned.length === 0 || cleaned.length % 2 !== 0) {
+    throw new Error("hex must contain an even, non-zero number of hex digits")
+  }
+  return Buffer.from(cleaned, "hex")
+}
+
+async function readBytes(file: string, offset: number, length: number) {
+  const handle = await open(file, "r")
+  try {
+    const buffer = Buffer.alloc(length)
+    const { bytesRead } = await handle.read(buffer, 0, length, offset)
+    return buffer.subarray(0, bytesRead)
+  } finally {
+    await handle.close()
+  }
+}
+
+function formatHexDump(bytes: Buffer, offset: number) {
+  const lines: string[] = []
+  for (let i = 0; i < bytes.length; i += 16) {
+    const slice = bytes.subarray(i, i + 16)
+    const hex = [...slice].map((b) => b.toString(16).padStart(2, "0")).join(" ")
+    const ascii = [...slice].map((b) => (b >= 32 && b < 127 ? String.fromCharCode(b) : ".")).join("")
+    lines.push(`${(offset + i).toString(16).padStart(8, "0")}  ${hex.padEnd(47)}  ${ascii}`)
+  }
+  return lines.join("\n")
+}
+
+// ponytail: reads the whole file into memory; chunked scan if multi-GB analysis matters.
+async function searchBytes(file: string, pattern: Buffer) {
+  const buffer = Buffer.from(await Bun.file(file).arrayBuffer())
+  const hits: number[] = []
+  let index = buffer.indexOf(pattern)
+  while (index !== -1 && hits.length < 1000) {
+    hits.push(index)
+    index = buffer.indexOf(pattern, index + 1)
+  }
+  return hits
+}
+
+async function patchFile(config: ReverseConfig.Config, params: Params, file: string) {
+  if (!config.allowPatch) throw new Error("Patching is disabled. Set reverse.allowPatch=true to enable it.")
+  const pattern = parseHex(params.hex ?? "")
+  const offset = params.offset
+  if (offset === undefined || offset < 0) throw new Error("patch requires a non-negative offset")
+  const before = await sha256(file)
+  const target = path.resolve(params.output ?? path.join(config.workDir, `${path.basename(file)}.patched`))
+  await mkdir(path.dirname(target), { recursive: true })
+  await copyFile(file, target)
+  const handle = await open(target, "r+")
+  try {
+    const { bytesWritten } = await handle.write(pattern, 0, pattern.length, offset)
+    if (bytesWritten !== pattern.length) throw new Error(`Short write: ${bytesWritten}/${pattern.length} bytes`)
+  } finally {
+    await handle.close()
+  }
+  const after = await sha256(target)
+  return { target, before, after, offset, bytes: pattern.length }
+}
+
+function disasm(file: string, params: Params) {
+  const r2 = Bun.which("r2")
+  if (r2) {
+    const count = params.count ?? 40
+    const target = params.address ? `@ ${params.address}` : ""
+    return run(r2, ["-q", "-e", "scr.color=0", "-c", `aaa; pd ${count} ${target}`, "--", file])
+  }
+  const start = params.address && /^0x[0-9a-fA-F]+$/.test(params.address) ? parseInt(params.address, 16) : undefined
+  const count = params.count ?? 40
+  const args = ["-d", "-M", "intel"]
+  if (start !== undefined) {
+    args.push(`--start-address=${params.address}`, `--stop-address=0x${(start + count * 16).toString(16)}`)
+  }
+  args.push(file)
+  const output = run("objdump", args)
+  return start !== undefined ? output : output.split("\n").slice(0, count + 7).join("\n")
+}
+
+async function dispatch(config: ReverseConfig.Config, params: Params) {
+  const { resolved, size } = await resolveFile(config, params.file)
+
+  switch (params.action) {
+    case "info": {
+      const fileType = run("file", ["-b", resolved])
+      const header = run("readelf", ["-h", "-W", resolved])
+      const sections = run("readelf", ["-l", "-W", resolved])
+      const hardening = Bun.which("checksec") ? run("checksec", ["--file", resolved]) : "(checksec not installed)"
+      const hash = await sha256(resolved)
+      return [
+        `file: ${fileType}`,
+        `size: ${size} bytes`,
+        `sha256: ${hash}`,
+        "",
+        header,
+        "",
+        sections,
+        "",
+        `hardening:\n${hardening}`,
+      ].join("\n")
+    }
+    case "sections":
+      return run("readelf", ["-S", "-W", resolved])
+    case "imports":
+      return run("nm", ["-D", "--undefined-only", resolved])
+    case "exports":
+      return run("nm", ["-D", "--defined-only", resolved])
+    case "strings":
+      return run("strings", ["-a", "-t", "x", resolved])
+    case "disasm":
+      return disasm(resolved, params)
+    case "decompile": {
+      const r2 = Bun.which("r2")
+      if (!r2) throw new Error("decompile requires radare2 with r2ghidra. Run ensure_tools to install radare2.")
+      const target = params.address ? `@ ${params.address}` : "@ entry0"
+      return run(r2, ["-q", "-e", "scr.color=0", "-c", `aaa; pdg ${target}`, "--", resolved])
+    }
+    case "xrefs": {
+      const r2 = Bun.which("r2")
+      if (!r2) throw new Error("xrefs requires radare2. Run ensure_tools to install it.")
+      const target = params.address ? `@ ${params.address}` : "@ entry0"
+      return run(r2, ["-q", "-e", "scr.color=0", "-c", `aaa; axt ${target}`, "--", resolved])
+    }
+    case "read_bytes": {
+      const offset = params.offset ?? 0
+      const length = Math.min(params.count ?? 256, 65536)
+      if (offset < 0 || length <= 0) throw new Error("read_bytes requires a non-negative offset and positive count")
+      const bytes = await readBytes(resolved, offset, length)
+      return `read ${bytes.length} bytes at offset ${offset}\n\n${formatHexDump(bytes, offset)}`
+    }
+    case "search_bytes": {
+      const pattern = parseHex(params.hex ?? "")
+      const hits = await searchBytes(resolved, pattern)
+      if (hits.length === 0) return `Pattern not found: ${params.hex}`
+      return `Found ${hits.length} match(es):\n${hits.map((h) => `0x${h.toString(16)}`).join("\n")}`
+    }
+    case "patch": {
+      const result = await patchFile(config, params, resolved)
+      return [
+        `patched copy: ${result.target}`,
+        `bytes written: ${result.bytes} at offset ${result.offset}`,
+        `sha256 before: ${result.before}`,
+        `sha256 after:  ${result.after}`,
+        "original file unchanged",
+      ].join("\n")
+    }
+  }
+}
+
+export const BinaryTool = Tool.define(
+  "binary",
+  Effect.gen(function* () {
+    const config = yield* ReverseConfig.Service
+    return {
+      description:
+        "Static analysis of ELF binaries (.so, .a, .o, executables): file info and hardening, sections, imports, exports, strings, disassembly, decompilation, cross-references, raw byte reads, byte-pattern search, and byte patching of a copy. Read-only actions never modify the target; patch writes a copy under reverse.workDir and leaves the original unchanged.",
+      parameters: Parameters,
+      jsonSchema: {
+        type: "object",
+        properties: {
+          action: {
+            type: "string",
+            enum: [...Actions],
+            description:
+              "info: file type, size, hashes, ELF header and hardening; sections/imports/exports/strings: static lists; disasm/decompile/xrefs: code views; read_bytes: hex dump at offset; search_bytes: find a hex pattern; patch: write bytes into a copy",
+          },
+          file: { type: "string", description: "Path to the ELF binary" },
+          offset: { type: "number", description: "File offset in bytes for read_bytes and patch" },
+          address: { type: "string", description: "Virtual address or symbol for disasm, decompile, and xrefs" },
+          count: { type: "number", description: "Bytes to read or instructions to disassemble" },
+          hex: { type: "string", description: "Hex pattern for search_bytes or replacement bytes for patch" },
+          output: { type: "string", description: "Output path for patch (default: reverse.workDir/<name>.patched)" },
+        },
+        required: ["action", "file"],
+      },
+      execute: (params: Params, ctx: Tool.Context) =>
+        Effect.gen(function* () {
+          const cfg = yield* config.get()
+          const patch = params.action === "patch"
+          yield* ctx.ask({
+            permission: patch ? "reverse_patch" : "reverse",
+            patterns: [params.file],
+            always: patch ? [] : ["*"],
+            metadata: { action: params.action, file: params.file },
+          })
+          const output = yield* Effect.tryPromise({
+            try: () => dispatch(cfg, params),
+            catch: (error) => (error instanceof Error ? error : new Error(String(error))),
+          }).pipe(Effect.orDie)
+          return {
+            title: `${params.action}: ${path.basename(params.file)}`,
+            metadata: { action: params.action, file: params.file } as Record<string, unknown>,
+            output,
+          }
+        }).pipe(Effect.orDie),
+    }
+  }),
+)

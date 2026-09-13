@@ -173,6 +173,23 @@ export const Info = Schema.Struct({
       ).annotate({ description: "Out-of-band interaction testing via interactsh" }),
     }),
   ).annotate({ description: "Pentest sandbox configuration for network-isolated command execution" }),
+  reverse: Schema.optional(
+    Schema.Struct({
+      enabled: Schema.optional(Schema.Boolean).annotate({ description: "Enable binary reverse-engineering tools" }),
+      allowedDirs: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
+        description: "Directories the reverse-engineering tools may read binaries from (empty allows any path)",
+      }),
+      allowPatch: Schema.optional(Schema.Boolean).annotate({
+        description: "Allow writing patched copies of binaries into the reverse work directory",
+      }),
+      workDir: Schema.optional(Schema.String).annotate({
+        description: "Directory for patched copies and analysis artifacts (default: data/reverse-work)",
+      }),
+      maxFileSize: Schema.optional(PositiveInt).annotate({
+        description: "Maximum binary size in bytes the tools will accept (default: 268435456)",
+      }),
+    }),
+  ).annotate({ description: "Binary reverse-engineering configuration for static analysis of ELF files" }),
   compaction: Schema.optional(
     Schema.Struct({
       auto: Schema.optional(Schema.Boolean).annotate({

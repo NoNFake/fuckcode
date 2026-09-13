@@ -1,0 +1,68 @@
+---
+name: reverse-static
+tags: [reverse, binary, elf, vulnerability]
+description: "Static reverse engineering of ELF binaries (.so, .a, .o, executables): triage, disassembly, byte patching, and vulnerability hunting. Triggers - reverse engineering, binary analysis, .so, .dll, disassembly, decompile, patch bytes, ELF."
+---
+
+## Rules of Engagement
+
+Analyze only binaries you own or are authorized to assess. Static analysis never executes the target, but patched copies and extracted strings may contain sensitive data. Keep artifacts inside the configured reverse work directory.
+
+# Static Reverse Engineering Checklist
+
+Use the `binary` tool. Read-only actions (everything except `patch`) never modify the target.
+
+## 1. Triage
+
+- `binary action=info file=<path>`: file type, size, sha256, ELF header, hardening.
+- Record `sha256` in state before any patching. That hash is the chain-of-custody anchor.
+- Check hardening: NX, PIE, RELRO, stack canary, FORTIFY. Missing NX or PIE widens exploitation options.
+- `binary action=sections file=<path>`: writable, executable, and unusual sections.
+- `binary action=strings file=<path>`: paths, URLs, keys, format strings, error messages, version banners.
+
+## 2. Symbols and linkage
+
+- `binary action=imports file=<path>`: undefined dynamic symbols reveal called APIs (network, exec, crypto, `system`, `strcpy`, `sprintf`).
+- `binary action=exports file=<path>`: exported functions define the attack surface of a shared library.
+- Correlate imports with risky sinks: `strcpy`, `strcat`, `sprintf`, `memcpy` with attacker-controlled length, `system`, `popen`, `execve`, `dlopen`.
+
+## 3. Code review
+
+- `binary action=disasm file=<path> address=<symbol|0xaddr> count=<n>`: disassembly. radare2 is used when installed, otherwise objdump.
+- `binary action=xrefs file=<path> address=<symbol>`: who calls an address (radare2).
+- `binary action=decompile file=<path> address=<symbol>`: pseudo-C via r2ghidra (radare2 + pdg).
+- Trace input flow from entry points (exported functions, `main`, callbacks, `read`/`recv` sites) toward risky sinks.
+
+## 4. Byte-level work
+
+- `binary action=read_bytes file=<path> offset=<n> count=<n>`: hex dump at a file offset.
+- `binary action=search_bytes file=<path> hex=<hexbytes>`: find a byte pattern; returns file offsets.
+- `binary action=patch file=<path> offset=<n> hex=<hexbytes> [output=<path>]`: writes bytes into a copy under the reverse work directory. The original is never modified. Requires `reverse.allowPatch=true`.
+
+Use patching to neutralize a check, flip a branch, or force a code path, then compare behavior. Always keep the recorded original hash and the patch diff.
+
+## 5. Vulnerability patterns in ELF
+
+- Unbounded copies: `strcpy`/`strcat`/`sprintf`/`gets` into fixed stack or heap buffers.
+- Integer issues: allocation size computed from a length field, then copied with a different length (signed/unsigned, truncation, overflow).
+- Off-by-one in loop bounds or terminator writes.
+- Format string: user data passed as the format argument.
+- Use-after-free and double-free in `free`/`realloc` paths, especially on error handling.
+- Command injection: `system`/`popen`/`exec*` with constructed strings.
+- Path traversal in file open paths.
+- Insecure deserialization and type confusion in parsers.
+- Missing bounds checks in protocol handlers (length field versus buffer capacity).
+
+## 6. Tooling
+
+- `ensure_tools` installs: radare2, rizin, binutils, checksec, binwalk, patchelf, yara.
+- Prefer binutils (`readelf`, `objdump`, `nm`, `strings`) for guaranteed availability; radare2 adds decompilation, xrefs, and richer disassembly.
+- Ghidra headless and Frida are not part of the static MVP. Real dynamic execution (debugging, memory writes) requires an isolated VM or container; do not run untrusted binaries on the host.
+
+## Phase Completion Criteria
+
+Move to exploitation only when:
+- The binary hash, hardening, and attack surface are recorded.
+- Candidate sinks are identified with addresses.
+- A concrete input path reaches at least one candidate sink.
+- Reproduction or a patched-copy experiment confirms the behavior.
