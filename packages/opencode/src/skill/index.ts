@@ -176,11 +176,19 @@ const scan = Effect.fnUntraced(function* (
 export async function materializeEmbeddedSkills(): Promise<string> {
   const { EMBEDDED_SKILLS } = await import("./embedded.gen")
   const root = path.join(Global.Path.cache, "skills-embedded")
+  const expected = new Set(Object.keys(EMBEDDED_SKILLS).map((relative) => path.resolve(root, relative)))
   for (const [relative, content] of Object.entries(EMBEDDED_SKILLS)) {
     const target = path.join(root, relative)
     if (fs.existsSync(target) && fs.readFileSync(target, "utf-8") === content) continue
     fs.mkdirSync(path.dirname(target), { recursive: true })
     fs.writeFileSync(target, content)
+  }
+  // Prune skills removed from the catalog; otherwise a deleted skill stays active forever.
+  const stale = await Glob.scan("**/SKILL.md", { cwd: root, absolute: true, include: "file", dot: true }).catch(
+    () => [] as string[],
+  )
+  for (const file of stale) {
+    if (!expected.has(path.resolve(file))) fs.rmSync(file)
   }
   return root
 }

@@ -14,7 +14,7 @@ Only test systems you are authorized to assess. Confirm the written scope and ra
 nc -nv <target> 25
 nmap --script smtp-commands,smtp-enum-users,smtp-open-relay -p 25 <target>
 
-# User enumeration via VRFY
+# User enumeration via VRFY (usually disabled on modern MTAs; fall back to RCPT TO)
 telnet <target> 25
 VRFY root
 VRFY admin
@@ -73,6 +73,5 @@ a4 FETCH 1 BODY[]
 ```
 
 ## Webmail
-- OWA (Outlook Web Access): `/owa/`, `/ecp/` — brute force, spray
-- Roundcube: check version for known CVEs
-- SquirrelMail: `/squirrelmail/` — old versions have RCE
+- OWA: `/owa/`, `/ecp/` — enumerate version, then look up the version's CVEs; password spray with lockout awareness.
+- Roundcube / SquirrelMail: fingerprint version at `/roundcube/` and `/squirrelmail/`, then version CVE lookup.

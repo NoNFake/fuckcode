@@ -1,6 +1,6 @@
 ---
 name: svc-dns
-description: "DNS attacks: zone transfer, subdomain takeover, cache poisoning. Triggers - port 53, AXFR, dangling CNAME."
+description: "DNS attacks: zone transfer, subdomain takeover, dangling CNAME, DNSSEC, open resolver. Triggers - port 53, AXFR, dangling CNAME."
 ---
 
 ## Rules of Engagement
@@ -15,22 +15,11 @@ host -t AXFR <domain> <ns_server>
 dnsrecon -d <domain> -a
 ```
 
-## DNS Enumeration
+## Enumeration
 ```bash
-# Record types
-dig <domain> ANY +noall +answer
-dig <domain> A +short
-dig <domain> AAAA +short
-dig <domain> MX +short
-dig <domain> NS +short
-dig <domain> TXT +short
-dig <domain> SOA +short
-dig <domain> SRV +short
-
-# Reverse DNS for IP range
-dnsrecon -r <cidr>
-
-# Brute force subdomains
+dig <domain> A +short; dig <domain> AAAA +short; dig <domain> MX +short
+dig <domain> NS +short; dig <domain> TXT +short; dig <domain> SOA +short; dig <domain> SRV +short
+dnsrecon -r <cidr>                       # reverse DNS for a range
 dnsrecon -d <domain> -D /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt -t brt
 dnsenum <domain>
 fierce --domain <domain>
@@ -38,26 +27,22 @@ fierce --domain <domain>
 
 ## Subdomain Takeover
 ```bash
-# Check for dangling CNAME records
-dig CNAME <subdomain>
-# If CNAME points to unclaimed resource (S3, Heroku, GitHub Pages, Azure) → takeover
-
-# Automated check
-subjack -w subdomains.txt -t 20 -o takeover_results.txt
+dig CNAME <subdomain>                    # dangling CNAME to unclaimed S3/Heroku/GitHub Pages/Azure = candidate
+dnsreaper subdomain --domain <domain>
 nuclei -t takeovers/ -l subdomains.txt
 ```
 
-## DNS Cache Poisoning
+## Resolver Checks
 ```bash
-# Check if recursion is open
-dig @<target> example.com +recurse
-
-# Test cache snooping (non-recursive query for cached records)
-dig @<target> <popular_domain> +norecurse
+dig @<target> example.com +recurse        # open resolver?
+dig @<target> <popular_domain> +norecurse # cache snooping via non-recursive query
 ```
 
-## DNS Tunneling Detection
+## DNSSEC
 ```bash
-# Unusually long subdomains or high query volume to single domain
-# Tools: iodine, dnscat2 for establishing DNS tunnels
+dig <domain> DNSKEY +dnssec
+dig <domain> DS @<parent_ns>
 ```
+
+## Tunneling (detection)
+Long labels, unusual TXT, high query volume to one domain. `iodine`/`dnscat2` establish tunnels; test only when explicitly in scope.

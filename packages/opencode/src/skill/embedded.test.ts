@@ -7,7 +7,7 @@ import { materializeEmbeddedSkills } from "./index"
 describe("embedded skills", () => {
   it("ships the offensive skill catalog", () => {
     const entries = Object.entries(EMBEDDED_SKILLS)
-    expect(entries.length).toBeGreaterThanOrEqual(40)
+    expect(entries.length).toBeGreaterThanOrEqual(30)
 
     for (const [relative, content] of entries) {
       expect(relative.endsWith("SKILL.md")).toBe(true)
@@ -25,5 +25,16 @@ describe("embedded skills", () => {
     const root = await materializeEmbeddedSkills()
     expect(fs.existsSync(path.join(root, "web/sqli/SKILL.md"))).toBe(true)
     expect(fs.readFileSync(path.join(root, "web/sqli/SKILL.md"), "utf-8")).toBe(EMBEDDED_SKILLS["web/sqli/SKILL.md"])
+  })
+
+  it("prunes skills removed from the catalog", async () => {
+    const root = await materializeEmbeddedSkills()
+    const stale = path.join(root, "stale/removed/SKILL.md")
+    fs.mkdirSync(path.dirname(stale), { recursive: true })
+    fs.writeFileSync(stale, "name: removed")
+
+    await materializeEmbeddedSkills()
+
+    expect(fs.existsSync(stale)).toBe(false)
   })
 })

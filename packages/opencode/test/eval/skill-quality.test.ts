@@ -68,6 +68,22 @@ describe("eval: skill quality", () => {
     expect(missing).toEqual([])
   })
 
+  test("skills drop converted-course boilerplate", () => {
+    const bad = bodies()
+      .filter((s) => /^## (Metadata|Trigger Phrases|Instructions for Claude|Full Methodology)$/m.test(s.content))
+      .map((s) => s.name)
+    console.log(`METRIC skill_boilerplate=${bad.length}`)
+    expect(bad).toEqual([])
+  })
+
+  test("skills do not pipe remote scripts into a shell", () => {
+    const bad = bodies()
+      .filter((s) => /\|\s*(sh|bash)\b/.test(s.content))
+      .map((s) => s.name)
+    console.log(`METRIC skill_pipe_to_shell=${bad.length}`)
+    expect(bad).toEqual([])
+  })
+
   test("skill bodies stay within the aggregate token budget", () => {
     const list = bodies()
     const measured = list.map((s) => ({ name: s.name, tokens: Token.estimate(s.content) }))
