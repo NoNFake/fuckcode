@@ -22,3 +22,21 @@ Release notes in this repository are generated from git history, not hand-writte
 - `script/version.ts` attaches `UPCOMING_CHANGELOG.md` to the GitHub release at publish time.
 
 ## [Unreleased]
+
+## [1.4.5] - 2026-09-19
+
+### Added
+
+- `binary` tool for reverse engineering: `emulate` runs instructions in radare2's ESIL VM, `entropy` reports per-section entropy, `functions` lists ELF functions, `patch` accepts assembly through rasm2, and hardening reports no longer require `checksec`.
+- Reverse engineering tools load only when the reverse config is enabled, with allowed-directory validation.
+- Update check in the TUI: the footer reports when a newer FuckCode release is available.
+
+### Changed
+
+- Embedded skill catalog trimmed from 40 to 30 entries; stale skills are pruned when materialized, reducing prompt size.
+- Skill checks reject boilerplate content and remote scripts piped into a shell.
+- Synced with upstream OpenCode v1.18.31, including clearer TUI startup authentication errors and refreshed provider dependencies.
+
+### Fixed
+
+- Remote authentication failures during TUI startup now surface an actionable error instead of a generic failure.
