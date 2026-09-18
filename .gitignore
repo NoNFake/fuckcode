@@ -5,6 +5,7 @@ node_modules/
 .direnv/
 .worktrees/
 .sst/
+test-binary/
 
 # Build & TypeScript Outputs
 dist/

@@ -23,11 +23,19 @@ function flag(name: string): string | undefined {
   return index >= 0 ? process.argv[index + 1] : undefined
 }
 
+type Tokens = {
+  input: number
+  output: number
+  cacheRead: number
+  cacheWrite: number
+}
+
 type Result = {
   tools: string[]
   text: string
   output: string
   cost: number
+  tokens: Tokens
   seconds: number
   error?: string
 }
@@ -199,6 +207,7 @@ async function runScenario(scenario: Scenario): Promise<Result> {
   const text: string[] = []
   const output: string[] = []
   let cost = 0
+  const tokens: Tokens = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
   for (const line of stdout.split("\n")) {
     if (!line.trim()) continue
     let event: any
@@ -213,6 +222,12 @@ async function runScenario(scenario: Scenario): Promise<Result> {
       if (typeof part.state?.output === "string") output.push(part.state.output)
     }
     if (event.type === "text" && typeof part?.text === "string") text.push(part.text)
+    if (event.type === "step_finish" && part?.type === "step-finish" && part.tokens) {
+      tokens.input += part.tokens.input ?? 0
+      tokens.output += (part.tokens.output ?? 0) + (part.tokens.reasoning ?? 0)
+      tokens.cacheRead += part.tokens.cache?.read ?? 0
+      tokens.cacheWrite += part.tokens.cache?.write ?? 0
+    }
     if (typeof part?.cost === "number") cost += part.cost
   }
 
@@ -221,6 +236,7 @@ async function runScenario(scenario: Scenario): Promise<Result> {
     text: text.join("\n"),
     output: output.join("\n"),
     cost,
+    tokens,
     seconds: (performance.now() - start) / 1000,
     error: stderr.trim() ? stderr.trim().split("\n").at(-1) : undefined,
   }
@@ -230,15 +246,20 @@ const only = flag("only")
 const repeats = Number(flag("repeats") ?? 1)
 const selected = scenarios.filter((scenario) => !only || scenario.id === only)
 
-console.log(`model=${model} scenarios=${selected.length} repeats=${repeats}`)
+console.log(`model=${model} token_saving=${Bun.env.FUCKCODE_TOKEN_SAVING ?? "unset"} scenarios=${selected.length} repeats=${repeats}`)
 let passed = 0
 let total = 0
+const totals: Tokens = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
 for (const scenario of selected) {
   for (let run = 1; run <= repeats; run++) {
     const result = await runScenario(scenario)
     const score = scenario.check(result)
     total++
     if (score.pass) passed++
+    totals.input += result.tokens.input
+    totals.output += result.tokens.output
+    totals.cacheRead += result.tokens.cacheRead
+    totals.cacheWrite += result.tokens.cacheWrite
     const row = [
       scenario.id,
       run,
@@ -246,9 +267,15 @@ for (const scenario of selected) {
       result.tools.join("|"),
       result.seconds.toFixed(1),
       result.cost.toFixed(4),
+      result.tokens.input,
+      result.tokens.output,
+      result.tokens.cacheRead,
+      result.tokens.cacheWrite,
       score.note,
     ]
     console.log(`RESULT ${row.map((value) => `"${String(value).replaceAll('"', "'")}"`).join(",")}`)
   }
 }
-console.log(`METRIC skill_eval_pass=${passed} skill_eval_total=${total}`)
+console.log(
+  `METRIC skill_eval_pass=${passed} skill_eval_total=${total} tokens_input=${totals.input} tokens_output=${totals.output} cache_read=${totals.cacheRead} cache_write=${totals.cacheWrite}`,
+)
