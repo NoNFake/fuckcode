@@ -1,6 +1,14 @@
 import type { SessionV1 } from "@opencode-ai/core/v1/session"
 
-export { parseGitHubRemote } from "@/util/repository"
+import { Repository } from "@opencode-ai/core/repository"
+
+export function parseGitHubRemote(input: string) {
+  const cleaned = input.trim().replace(/^git\+/, "").replace(/#.*$/, "").replace(/\/+$/, "")
+  if (!cleaned.includes("://") && !/^(?:[^@/\s]+@)?github\.com:/.test(cleaned)) return null
+  const reference = Repository.parse(cleaned)
+  if (!reference || reference.host !== "github.com" || reference.segments.length !== 2) return null
+  return { owner: reference.segments[0], repo: reference.segments[1] }
+}
 
 /**
  * Extracts displayable text from assistant response parts.

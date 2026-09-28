@@ -4,7 +4,6 @@ import { realpathSync } from "fs"
 import { dirname, isAbsolute, join, resolve as pathResolve, win32 } from "path"
 import { Readable } from "stream"
 import { pipeline } from "stream/promises"
-import { Glob } from "@opencode-ai/core/util/glob"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { fileURLToPath } from "url"
 
@@ -97,10 +96,6 @@ export async function writeStream(
   }
 }
 
-export async function mimeType(p: string): Promise<string> {
-  return Bun.file(p).type || "application/octet-stream"
-}
-
 /**
  * On Windows, normalize a path to its canonical casing using the filesystem.
  * This is needed because Windows paths are case-insensitive but LSP servers
@@ -157,10 +152,6 @@ export function windowsPath(p: string): string {
       .replace(/^\/mnt\/([a-zA-Z])(?:\/|$)/, (_, drive) => `${drive.toUpperCase()}:/`)
   )
 }
-export function overlaps(a: string, b: string) {
-  return FSUtil.overlaps(a, b)
-}
-
 export function contains(parent: string, child: string) {
   return FSUtil.contains(parent, child)
 }
@@ -217,29 +208,6 @@ export async function* up(options: { targets: string[]; start: string; stop?: st
     if (parent === current) break
     current = parent
   }
-}
-
-export async function globUp(pattern: string, start: string, stop?: string) {
-  let current = start
-  const result = []
-  while (true) {
-    try {
-      const matches = await Glob.scan(pattern, {
-        cwd: current,
-        absolute: true,
-        include: "file",
-        dot: true,
-      })
-      result.push(...matches)
-    } catch {
-      // Skip invalid glob patterns
-    }
-    if (stop === current) break
-    const parent = dirname(current)
-    if (parent === current) break
-    current = parent
-  }
-  return result
 }
 
 export * as Filesystem from "./filesystem"

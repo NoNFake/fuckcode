@@ -2,7 +2,6 @@ import { createMemo, createEffect, on, onCleanup, For, Show } from "solid-js"
 import type { JSX } from "solid-js"
 import { useSync } from "@/context/sync"
 import { checksum } from "@opencode-ai/core/util/encode"
-import { findLast } from "@opencode-ai/core/util/array"
 import { same } from "@/utils/same"
 import { Icon } from "@opencode-ai/ui/icon"
 import { Button } from "@opencode-ai/ui/button"
@@ -157,7 +156,7 @@ export function SessionContextTab() {
   })
 
   const systemPrompt = createMemo(() => {
-    const msg = findLast(visibleUserMessages(), (m) => !!m.system)
+    const msg = visibleUserMessages().findLast((m) => !!m.system)
     const system = msg?.system
     if (!system) return
     const trimmed = system.trim()
