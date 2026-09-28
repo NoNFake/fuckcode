@@ -14,7 +14,23 @@ FuckCode is a fork of [OpenCode](https://github.com/anomalyco/opencode) built fo
 - **Pentest module**: sandboxed execution, scope enforcement, evidence store, structured parsing, and report generation (details below).
 - **Red and black theme**: high-contrast palette with project and global config discovery for `fuckcode.json` and `fuckcode.jsonc`.
 
-## Quick start
+## Install
+
+macOS and Linux:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/NoNFake/fuckcode/dev/install | bash
+```
+
+Windows (PowerShell):
+
+```powershell
+irm https://raw.githubusercontent.com/NoNFake/fuckcode/dev/install.ps1 | iex
+```
+
+The installer downloads the release for your platform and adds `fuckcode` to PATH. Options: `--version <x.y.z>` pins a specific release, `--binary <path>` installs a local build, `--no-modify-path` skips shell config edits.
+
+## Build from source
 
 FuckCode requires [Bun](https://bun.sh):
 
