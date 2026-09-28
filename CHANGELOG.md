@@ -25,6 +25,10 @@ Release notes in this repository are generated from git history, not hand-writte
 
 ## [1.4.6] - 2026-09-29
 
+### Added
+
+- Source builds on Android (Termux): `lightningcss` is pinned to a release that ships Android arm64 binaries.
+
 ### Changed
 
 - Synced with upstream OpenCode v1.18.33: Cloudflare AI Gateway models honor provider timeouts, MCP browser launcher failures surface correctly, `debug config` redacts credentials, Gemini thinking defaults were updated, TogetherAI streams report usage, and Bedrock tool images are kept except for Claude and Nova. OpenAI Codex allows GPT-6 Sol and Luna.
