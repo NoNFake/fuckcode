@@ -6,7 +6,7 @@ import os from "node:os"
 import path from "node:path"
 import { createMemo, For, Show } from "solid-js"
 import { useTuiConfig } from "../config"
-import { DEFAULT_BACKGROUND_BASE64 } from "./default-background"
+import defaultBackgroundPath from "./default-background.jpg" with { type: "file" }
 
 interface Chunk {
   text: string
@@ -33,7 +33,7 @@ const CANDIDATES = [
 let defaultBuffer: Buffer | undefined
 function getDefaultBackgroundBuffer(): Buffer {
   if (!defaultBuffer) {
-    defaultBuffer = Buffer.from(DEFAULT_BACKGROUND_BASE64, "base64")
+    defaultBuffer = readFileSync(defaultBackgroundPath)
   }
   return defaultBuffer
 }

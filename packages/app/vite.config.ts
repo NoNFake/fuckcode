@@ -28,6 +28,7 @@ export default defineConfig({
   },
   build: {
     target: "esnext",
-    sourcemap: true,
+    // ponytail: sourcemaps only for Sentry upload; drop for plain builds (48MB dist)
+    sourcemap: !!sentry,
   },
 })
