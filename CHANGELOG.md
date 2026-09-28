@@ -23,6 +23,13 @@ Release notes in this repository are generated from git history, not hand-writte
 
 ## [Unreleased]
 
+## [1.4.6] - 2026-09-29
+
+### Changed
+
+- Synced with upstream OpenCode v1.18.33: Cloudflare AI Gateway models honor provider timeouts, MCP browser launcher failures surface correctly, `debug config` redacts credentials, Gemini thinking defaults were updated, TogetherAI streams report usage, and Bedrock tool images are kept except for Claude and Nova. OpenAI Codex allows GPT-6 Sol and Luna.
+- TUI no longer loads the decorative background image by default, which also shortens startup.
+
 ## [1.4.5] - 2026-09-19
 
 ### Added
