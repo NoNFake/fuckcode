@@ -12,3 +12,8 @@ declare module "*.wasm" {
   const file: string
   export default file
 }
+
+declare module "*.jpg" {
+  const path: string
+  export default path
+}

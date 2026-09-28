@@ -137,10 +137,6 @@ export const TuiThreadCommand = cmd({
         type: "number",
         describe: "cap visible mini replay to the newest N messages",
       })
-      .option("demo", {
-        type: "boolean",
-        hidden: true,
-      })
       .option("token-saving", {
         alias: ["eco"],
         type: "boolean",
@@ -175,7 +171,6 @@ export const TuiThreadCommand = cmd({
         prompt: args.prompt,
         replay: noReplay ? false : undefined,
         replayLimit: args.replayLimit,
-        demo: args.demo,
       })
       return
     }
@@ -183,7 +178,6 @@ export const TuiThreadCommand = cmd({
     const unsupported = [
       ["--no-replay", noReplay],
       ["--replay-limit", args.replayLimit !== undefined],
-      ["--demo", args.demo !== undefined],
     ].find((entry) => entry[1])?.[0]
     if (unsupported) {
       UI.error(`${unsupported} requires --mini`)
