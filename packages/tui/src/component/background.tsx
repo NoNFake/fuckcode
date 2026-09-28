@@ -160,15 +160,15 @@ function parseAnsiChunks(ansi: string, dim: number): Chunk[][] {
   return result
 }
 
-export function hasBackgroundImage(): boolean {
-  return isChafaAvailable()
+export function hasBackgroundImage(enabled: boolean): boolean {
+  return enabled && isChafaAvailable()
 }
 
 export function Background() {
   const dimensions = useTerminalDimensions()
   const tuiConfig = useTuiConfig()
 
-  if (tuiConfig.background_enabled === false || !isChafaAvailable()) {
+  if (!hasBackgroundImage(tuiConfig.background_enabled === true)) {
     return null
   }
 

@@ -1152,7 +1152,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
       width={dimensions().width}
       height={dimensions().height}
       flexDirection="column"
-      backgroundColor={hasBackgroundImage() ? undefined : theme.background}
+      backgroundColor={hasBackgroundImage(tuiConfig.background_enabled === true) ? undefined : theme.background}
       onMouseDown={(evt) => {
         if (!Flag.OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) return
         if (evt.button !== MouseButton.RIGHT) return
