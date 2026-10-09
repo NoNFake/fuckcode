@@ -65,3 +65,4 @@ Session.vim
 # OS Artifacts
 .DS_Store
 Thumbs.db
+/artifacts/
