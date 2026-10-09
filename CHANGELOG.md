@@ -23,6 +23,30 @@ Release notes in this repository are generated from git history, not hand-writte
 
 ## [Unreleased]
 
+## [1.4.7] - 2026-10-09
+
+### Added
+
+- Pentest exploit chain library and forge: named multi-step chains with CVE and remediation metadata.
+- Pentest recon steps for ProjectDiscovery tools and nmap.
+
+### Changed
+
+- Pentest evidence and exploit chains are stored under `~/.fuckcode/` (`pentest-evidence`, `chains`) instead of the opencode data directory. Existing data is not migrated.
+- Pentest sandbox DNS upstream is configurable with `pentest.dnsUpstream` (default `1.1.1.1`).
+- Synced with upstream OpenCode v1.18.35: free Zen models proxy to the new inference backend, Haiku 5.5 and Sonnet 5.5 are listed in Zen and Go model tables, Mistral Large 4 and Exo Free are added to Zen, monthly inference spend is captured, and the OpenAI `ultrafast` service tier is accepted.
+
+### Fixed
+
+- TUI question prompt submits on Confirm after the custom answer editor was opened.
+- Pentest sandbox isolation works without root: the `unshare` fallback runs in an unprivileged user namespace.
+- Pentest sandbox kills the whole sandboxed process group on timeout or cancel, not only the wrapper.
+- Pentest sandbox reports spawn failures instead of crashing the process.
+- Pentest sandbox network rules load: the blocked-traffic log prefix is quoted correctly.
+- Sandbox CI fails when network isolation cannot be tested, instead of passing silently.
+- Stats attribute Exo usage to an unknown provider and hide models listed in a secret.
+- xAI tool-result images are sent correctly (`@ai-sdk/xai` 3.0.139).
+
 ## [1.4.6] - 2026-09-29
 
 ### Added
@@ -51,3 +75,5 @@ Release notes in this repository are generated from git history, not hand-writte
 ### Fixed
 
 - Remote authentication failures during TUI startup now surface an actionable error instead of a generic failure.
+
+[1.4.7]: https://github.com/NoNFake/fuckcode/compare/1.4.6...1.4.7
