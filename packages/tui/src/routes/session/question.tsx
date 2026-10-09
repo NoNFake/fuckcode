@@ -62,6 +62,7 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
   }
 
   function pick(answer: string, custom: boolean = false) {
+    setStore("editing", false)
     const answers = [...store.answers]
     answers[store.tab] = [answer]
     setStore("answers", answers)
@@ -98,6 +99,7 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
   }
 
   function selectTab(index: number) {
+    setStore("editing", false)
     setStore("tab", index)
     setStore("selected", 0)
   }
@@ -213,7 +215,7 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
 
     return {
       mode: QUESTION_MODE,
-      enabled: !store.editing,
+      enabled: !store.editing || confirm(),
       commands: [
         {
           name: "app.exit",
