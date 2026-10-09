@@ -222,7 +222,8 @@ export namespace FSUtil {
 
   // Pure helpers that don't need Effect (path manipulation, sync operations)
   export function mimeType(p: string): string {
-    return Bun.file(p).type || "application/octet-stream"
+    // Bun appends ";charset=utf-8" to text types; callers and tests expect the bare type.
+    return Bun.file(p).type.split(";")[0] || "application/octet-stream"
   }
 
   export function normalizePath(p: string): string {
