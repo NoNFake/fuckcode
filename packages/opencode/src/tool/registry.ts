@@ -68,6 +68,7 @@ import { ScanImportTool } from "../pentest/scan-import"
 import { SessionTool } from "../pentest/session"
 import { ReconTool } from "../pentest/recon"
 import { ScopeImportTool } from "../pentest/scope-import"
+import { ChainTool } from "../pentest/chains"
 import { PentestConfig } from "../pentest/config"
 import { Sandbox } from "../pentest/sandbox"
 import { Observability } from "../pentest/observability"
@@ -186,10 +187,9 @@ const layer = Layer.effect(
     const pentestScopeImport = yield* ScopeImportTool.pipe(
       Effect.provideService(PentestConfig.Service, dynamicPentestConfig),
     )
+    const pentestChain = yield* ChainTool.pipe(Effect.provideService(PentestConfig.Service, dynamicPentestConfig))
     const pentestFilenameBypass = yield* FilenameBypassTool
-    const reverseBinary = yield* BinaryTool.pipe(
-      Effect.provideService(ReverseConfig.Service, dynamicReverseConfig),
-    )
+    const reverseBinary = yield* BinaryTool.pipe(Effect.provideService(ReverseConfig.Service, dynamicReverseConfig))
 
     const state = yield* InstanceState.make<State>(
       Effect.fn("ToolRegistry.state")(function* (ctx) {
@@ -281,14 +281,10 @@ const layer = Layer.effect(
 
         const pentestConfig = PentestConfig.loadFromConfig((cfg as any).pentest)
         const pentestEnabled =
-          process.env.FUCKCODE_PENTEST === "1" ||
-          process.env.FUCKCODE_PENTEST === "true" ||
-          pentestConfig.enabled
+          process.env.FUCKCODE_PENTEST === "1" || process.env.FUCKCODE_PENTEST === "true" || pentestConfig.enabled
         const reverseConfig = ReverseConfig.loadFromConfig((cfg as any).reverse)
         const reverseEnabled =
-          process.env.FUCKCODE_REVERSE === "1" ||
-          process.env.FUCKCODE_REVERSE === "true" ||
-          reverseConfig.enabled
+          process.env.FUCKCODE_REVERSE === "1" || process.env.FUCKCODE_REVERSE === "true" || reverseConfig.enabled
 
         const tool = yield* Effect.all({
           invalid: Tool.init(invalid),
@@ -322,6 +318,7 @@ const layer = Layer.effect(
                 pentestSession: Tool.init(pentestSession),
                 pentestRecon: Tool.init(pentestRecon),
                 pentestScopeImport: Tool.init(pentestScopeImport),
+                pentestChain: Tool.init(pentestChain),
                 pentestFilenameBypass: Tool.init(pentestFilenameBypass),
               }
             : {}),
@@ -362,6 +359,7 @@ const layer = Layer.effect(
             ...(tool.pentestSession ? [tool.pentestSession] : []),
             ...(tool.pentestRecon ? [tool.pentestRecon] : []),
             ...(tool.pentestScopeImport ? [tool.pentestScopeImport] : []),
+            ...(tool.pentestChain ? [tool.pentestChain] : []),
             ...(tool.pentestFilenameBypass ? [tool.pentestFilenameBypass] : []),
             ...(tool.reverseBinary ? [tool.reverseBinary] : []),
           ],
