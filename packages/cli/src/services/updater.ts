@@ -46,7 +46,7 @@ const decodeVpPackages = Schema.decodeUnknownOption(
 )
 
 const installNames: Record<Method, string> = {
-  curl: "The OpenCode installer",
+  curl: "The FuckCode installer",
   npm: "npm",
   pnpm: "pnpm",
   bun: "Bun",
@@ -142,7 +142,6 @@ const make = Effect.gen(function* () {
   const appProcess = yield* AppProcess.Service
   const flock = yield* EffectFlock.Service
   const installedVersion = yield* Ref.make(OPENCODE_VERSION)
-  const channel = OPENCODE_CHANNEL.replace(/[^a-zA-Z0-9._-]/g, "-")
   const executable = yield* fs.realPath(process.execPath).pipe(Effect.orElseSucceed(() => process.execPath))
   const installedPackage = yield* Effect.gen(function* () {
     const directory = path.dirname(path.dirname(executable))
@@ -162,7 +161,7 @@ const make = Effect.gen(function* () {
   const installedWinget = /[\\/]winget[\\/]packages[\\/]anomaly\.opencode_/i.test(executable)
 
   const readPolicy = Effect.fnUntraced(function* () {
-    const values = yield* Effect.forEach(["config.json", "opencode.json", "opencode.jsonc"], (name) =>
+    const values = yield* Effect.forEach(["config.json", "opencode.json", "opencode.jsonc", "fuckcode.json", "fuckcode.jsonc"], (name) =>
       fs.readFileString(path.join(global.config, name)).pipe(
         Effect.map(decodePolicy),
         Effect.orElseSucceed(() => undefined),
@@ -189,9 +188,9 @@ const make = Effect.gen(function* () {
 
   const curlPath = path.resolve(
     global.home,
-    ".opencode",
+    ".local",
     "bin",
-    process.platform === "win32" ? "opencode.exe" : "opencode",
+    process.platform === "win32" ? "fuckcode.exe" : "fuckcode",
   )
   const curlBinary = yield* fs.realPath(curlPath).pipe(Effect.orElseSucceed(() => curlPath))
 
@@ -273,7 +272,6 @@ const make = Effect.gen(function* () {
   }
 
   const release = Effect.fnUntraced(function* (method?: Method) {
-    const distribution = method === "brew" ? "homebrew" : "npm"
     // Homebrew Core builds its formula on its own schedule, so the tap release does not describe it.
     const core = method === "brew" && installedFormula === "opencode"
     const response = yield* Effect.tryPromise({
@@ -281,7 +279,7 @@ const make = Effect.gen(function* () {
         fetch(
           core
             ? "https://formulae.brew.sh/api/formula/opencode.json"
-            : `https://opencode.ai/update/api/${encodeURIComponent(channel)}/${encodeURIComponent(OPENCODE_ARTIFACT)}/${distribution}?current=${encodeURIComponent(OPENCODE_VERSION)}`,
+            : "https://api.github.com/repos/NoNFake/fuckcode/releases/latest",
           {
             signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]),
           },
@@ -304,7 +302,12 @@ const make = Effect.gen(function* () {
           retry: "Try again in a few minutes.",
         }),
       )
-    const data: { version?: string; metadata?: { package?: string }; versions?: { stable?: string } } =
+    const data: {
+      tag_name?: string
+      version?: string
+      metadata?: { package?: string }
+      versions?: { stable?: string }
+    } =
       yield* Effect.tryPromise({
         try: () => response.json(),
         catch: (cause) =>
@@ -317,8 +320,8 @@ const make = Effect.gen(function* () {
             { cause },
           ),
       })
-    const version = core ? data.versions?.stable : data.version
-    const packageName = core ? "opencode" : data.metadata?.package
+    const version = core ? data.versions?.stable : (data.version ?? data.tag_name?.replace(/^v/, ""))
+    const packageName = core ? "opencode" : (data.metadata?.package ?? "@opencode/cli")
     if (!version || !packageName)
       return yield* Effect.fail(
         new UpgradeError({
@@ -479,9 +482,15 @@ const make = Effect.gen(function* () {
           const installer = path.join(directory, "install")
           yield* runUpgrade({
             method,
-            command: ["curl", "-fsSL", "-o", installer, "https://opencode.ai/v2/install"],
-            displayCommand: ["curl", "-fsSL", "https://opencode.ai/v2/install"],
-            title: "Could not download the OpenCode installer",
+            command: [
+              "curl",
+              "-fsSL",
+              "-o",
+              installer,
+              "https://raw.githubusercontent.com/NoNFake/fuckcode/dev/install",
+            ],
+            displayCommand: ["curl", "-fsSL", "https://raw.githubusercontent.com/NoNFake/fuckcode/dev/install"],
+            title: "Could not download the FuckCode installer",
             retry: "Check your network, then run opencode upgrade again.",
           })
           return yield* retaining(
