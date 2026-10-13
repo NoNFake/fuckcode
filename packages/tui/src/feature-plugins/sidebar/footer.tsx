@@ -111,7 +111,7 @@ function SidebarFooter(props: { context: Plugin.Context; sessionID: string }) {
       </Show>
       <text fg={props.context.theme.text.muted}>
         <span style={{ fg: props.context.theme.text.feedback.success.base }}>•</span>{" "}
-        <span style={{ fg: props.context.theme.text.action.primary.base }}>
+        <span style={{ fg: props.context.theme.text.feedback.error.base }}>
           <b>Fuck</b>
         </span>
         <span style={{ fg: props.context.theme.text.base }}>
@@ -119,7 +119,7 @@ function SidebarFooter(props: { context: Plugin.Context; sessionID: string }) {
         </span>{" "}
         <span>{props.context.app.version}</span>
         <span style={{ fg: props.context.theme.text.base }}> / </span>
-        <span style={{ fg: props.context.theme.text.action.primary.base }}>[sec-edition]</span>
+        <span style={{ fg: props.context.theme.text.feedback.error.base }}>[sec-edition]</span>
       </text>
     </box>
   )

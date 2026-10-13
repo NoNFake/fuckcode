@@ -195,7 +195,7 @@ export function DialogEco(props: { sessionID?: string }) {
       <box paddingTop={1} flexDirection="row" justifyContent="space-between">
         <text fg={theme.text.muted}>Click or select to toggle mode</text>
         <text
-          fg={theme.text.action.primary.base}
+          fg={theme.text.feedback.error.base}
           onMouseUp={() => {
             const next = !enabled()
             updateSaving((draft) => {
