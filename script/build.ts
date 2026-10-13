@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { $ } from "bun"
+import { cp, mkdir, readdir, rm } from "fs/promises"
 import path from "path"
 import { fileURLToPath } from "url"
 
@@ -8,121 +9,47 @@ const rootDir = fileURLToPath(new URL("..", import.meta.url))
 process.chdir(rootDir)
 
 const args = process.argv.slice(2)
+const all = args.includes("--all")
+const skipInstall = args.includes("--skip-install")
 
-function printHelp() {
-  console.log(`
-Использование: bun run script/build.ts [опции]
+const distDir = path.join(rootDir, "dist")
+const cliDir = path.join(rootDir, "packages", "cli")
+const staging = path.join(distDir, ".staging")
 
-Опции:
-  --version, -v <версия>    Указать версию билда (напр., --version 1.18.25)
-  --channel, -c <канал>     Указать канал (latest, dev, local, beta; по умолчанию: latest, если версия задана)
-  --all, -a                 Собрать для всех платформ (по умолчанию: только для текущей платформы)
-  --single, -s              Собрать только для текущей платформы (по умолчанию)
-  --skip-ui                 Пропустить сборку встроенного Web UI (быстрее)
-  --skip-install            Пропустить установку зависимостей для сборки
-  --sourcemaps              Генерировать sourcemap файлы
-  --help, -h                Показать эту справку
+await rm(distDir, { recursive: true, force: true })
+await mkdir(staging, { recursive: true })
 
-Примеры:
-  bun run script/build.ts
-  bun run script/build.ts --version 1.18.25
-  bun run script/build.ts --version 1.18.25 --skip-ui
-  bun run script/build.ts --all --version 1.18.25
-`)
-  process.exit(0)
-}
+const buildArgs = [`--outdir=${distDir}`]
+if (!all) buildArgs.push("--single")
+if (skipInstall) buildArgs.push("--skip-install")
+console.log(`=== build ${all ? "all platforms" : "current platform"} (version ${process.env.OPENCODE_VERSION ?? "auto"}) ===`)
+await $`bun run script/build.ts ${buildArgs}`.cwd(cliDir)
 
-if (args.includes("--help") || args.includes("-h")) {
-  printHelp()
-}
-
-let version: string | undefined = process.env.OPENCODE_VERSION
-let channel: string | undefined = process.env.OPENCODE_CHANNEL
-let isAll = false
-let skipUi = false
-let skipInstall = false
-let sourcemaps = false
-let archive = false
-
-for (let i = 0; i < args.length; i++) {
-  const arg = args[i]
-  if (arg === "--version" || arg === "-v") {
-    version = args[++i]
-  } else if (arg.startsWith("--version=")) {
-    version = arg.split("=")[1]
-  } else if (arg === "--channel" || arg === "-c") {
-    channel = args[++i]
-  } else if (arg.startsWith("--channel=")) {
-    channel = arg.split("=")[1]
-  } else if (arg === "--all" || arg === "-a") {
-    isAll = true
-    archive = true
-  } else if (arg === "--single" || arg === "-s") {
-    isAll = false
-  } else if (arg === "--archive") {
-    archive = true
-  } else if (arg === "--skip-ui") {
-    skipUi = true
-  } else if (arg === "--skip-install") {
-    skipInstall = true
-  } else if (arg === "--sourcemaps") {
-    sourcemaps = true
+const entries = await readdir(distDir, { withFileTypes: true })
+let packaged = 0
+for (const entry of entries) {
+  if (!entry.isDirectory() || !entry.name.startsWith("cli-")) continue
+  const suffix = entry.name.slice("cli-".length)
+  const isWindows = suffix.startsWith("windows")
+  const source = path.join(distDir, entry.name, "bin", isWindows ? "opencode.exe" : "opencode")
+  if (!(await Bun.file(source).exists())) continue
+  const inner = isWindows ? "fuckcode.exe" : "fuckcode"
+  const staged = path.join(staging, inner)
+  await cp(source, staged)
+  if (!isWindows) await $`chmod 755 ${staged}`
+  if (suffix.startsWith("linux")) {
+    await $`tar -czf ${path.join(distDir, `fuckcode-${suffix}.tar.gz`)} -C ${staging} ${inner}`
+  } else {
+    await $`zip -jq ${path.join(distDir, `fuckcode-${suffix}.zip`)} ${staged}`
   }
+  await rm(staged)
+  packaged++
+}
+await rm(staging, { recursive: true, force: true })
+
+const archives = (await readdir(distDir)).filter((name) => name.endsWith(".tar.gz") || name.endsWith(".zip")).sort()
+if (archives.length > 0) {
+  await $`sh -c ${`cd ${distDir} && sha256sum ${archives.join(" ")} > sha256.txt`}`
 }
 
-const opencodeDir = path.join(rootDir, "packages", "opencode")
-const buildArgs: string[] = []
-
-if (!isAll) {
-  buildArgs.push("--single")
-}
-if (archive) {
-  buildArgs.push("--archive")
-}
-if (skipUi) {
-  buildArgs.push("--skip-embed-web-ui")
-}
-if (skipInstall) {
-  buildArgs.push("--skip-install")
-}
-if (sourcemaps) {
-  buildArgs.push("--sourcemaps")
-}
-
-const env: Record<string, string> = {
-  ...process.env,
-}
-
-if (version) {
-  env.OPENCODE_VERSION = version
-  if (!channel) {
-    env.OPENCODE_CHANNEL = "latest"
-  }
-}
-
-if (channel) {
-  env.OPENCODE_CHANNEL = channel
-}
-
-console.log("=== Сборка OpenCode / FuckCode ===")
-console.log(`Режим: ${isAll ? "Все платформы" : "Текущая платформа (--single)"}`)
-console.log(`Версия: ${version ?? "автоматически из git/ветки"}`)
-console.log(`Канал: ${env.OPENCODE_CHANNEL ?? "автоматически"}`)
-if (skipUi) console.log("Web UI: пропущен (--skip-ui)")
-console.log("")
-
-const proc = Bun.spawn({
-  cmd: ["bun", "run", "script/build.ts", ...buildArgs],
-  cwd: opencodeDir,
-  env,
-  stdio: ["inherit", "inherit", "inherit"],
-})
-
-const exitCode = await proc.exited
-if (exitCode !== 0) {
-  console.error(`\n❌ Сборка завершилась с ошибкой (код ${exitCode})`)
-  process.exit(exitCode)
-}
-
-console.log("\n✅ Сборка успешно завершена!")
-console.log(`Бинарные файлы находятся в: ${path.join(opencodeDir, "dist")}`)
+console.log(`=== packaged ${packaged} release assets into ${distDir} ===`)

@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/package.json",
   "name": "opencode",
   "description": "Autonomous CLI security auditing and coding assistant",
-  "version": "2.0.28",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "packageManager": "bun@1.4.2",
@@ -34,7 +34,9 @@
     "sync": "bash script/sync-upstream.sh",
     "random": "echo 'Random script'",
     "sso": "aws sso login --sso-session=opencode --no-browser",
-    "test": "echo 'do not run tests from root' && exit 1"
+    "test": "echo 'do not run tests from root' && exit 1",
+    "build": "bun run script/build.ts",
+    "build:all": "bun run script/build.ts --all"
   },
   "workspaces": {
     "packages": [

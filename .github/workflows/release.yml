@@ -39,14 +39,13 @@ jobs:
         env:
           OPENCODE_VERSION: ${{ steps.version.outputs.value }}
           OPENCODE_CHANNEL: latest
-          BINARY_NAME: fuckcode
 
       - name: Publish release
         run: |
           gh release create "v${{ steps.version.outputs.value }}" \
-            ./packages/opencode/dist/*.zip \
-            ./packages/opencode/dist/*.tar.gz \
-            ./packages/opencode/dist/sha256.txt \
+            ./dist/*.tar.gz \
+            ./dist/*.zip \
+            ./dist/sha256.txt \
             --title "v${{ steps.version.outputs.value }}" \
             --generate-notes \
             --repo "${{ github.repository }}"

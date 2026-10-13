@@ -23,6 +23,29 @@ Release notes in this repository are generated from git history, not hand-writte
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-10-13
+
+### Added
+
+- Migrated FuckCode to the OpenCode 2.0 core: rewritten session engine, CLI, TUI and plugin system.
+- Pentest tool suite rebuilt on the 2.0 tool API: `pentest_shell`, `recon`, `inject_probe`, `chain`, `oob`, `os_hook`, `ensure_tools`, `filename_bypass`, `knowledge_update`, `read_evidence`, `report_gen`, `scan_import`, `scope_import`, `session`, `state_update`. Tools load when `FUCKCODE_PENTEST=1` or `pentest.enabled` is true.
+- `binary` reverse-engineering tool on the 2.0 tool API: info, sections, imports, exports, functions, strings, entropy, disassembly, decompilation, cross-references, byte search, patching a copy, and ESIL emulation. Loads when `FUCKCODE_REVERSE=1` or `reverse.enabled` is true.
+- Eco mode: `token_saving` config section, `/eco` dialog and footer/sidebar indicators, smaller read limits, tool-output truncation thresholds, and pruning of stale tool results in prompt history.
+- llama.cpp local provider: models are discovered from the server's `/v1/models`, the model dialog offers "Set llama.cpp Server URL...", and `fuckcode auth login llamacpp` saves the URL.
+- 32 pentest skills ship embedded in the binary; `/report` and `/reflect` commands; `reflector` agent for post-engagement reflection.
+- Unverified-claims report dialog: the prompt footer shows a warning that opens references without matching tool results.
+
+### Changed
+
+- Config discovery accepts `fuckcode.json`, `fuckcode.jsonc` and `.fuckcode/` directories alongside the `opencode` names; new global config files are created as `fuckcode.jsonc`.
+- CLI is branded `fuckcode` and release archives are named `fuckcode-<os>-<arch>[-baseline][-musl]` (`.tar.gz` on Linux, `.zip` elsewhere) with a `sha256.txt` checksum file.
+- The red FuckCode accent palette moved to the 2.0 theme format (accent, interactive, red, orange, cyan, blue, purple hues).
+- Pentest and reverse settings are read live from the `pentest` and `reverse` config sections.
+
+### Removed
+
+- Upstream CI workflows and translated README files that the fork does not use.
+
 ## [1.4.7] - 2026-10-09
 
 ### Added
