@@ -1,5 +1,0 @@
-Fast regex content search. Returns file paths and matching lines with line numbers.
-
-- include filters files, for example "*.js" or "*.{ts,tsx}".
-- To count matches, use the Bash tool with `rg` directly, not `grep`.
-- For open-ended searches needing multiple rounds, use the Task tool.

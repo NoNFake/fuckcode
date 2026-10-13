@@ -1,4 +1,4 @@
-export * as Token from "./token"
+export * as Token from "./token.js"
 
 import type { countTokens as countTokensFn } from "gpt-tokenizer"
 

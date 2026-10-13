@@ -1,5 +1,0 @@
-Ask the user a question during execution to gather preferences, clarify instructions, or choose a direction.
-
-- custom is on by default and adds a "Type your own answer" option; do not add "Other" or catch-all options.
-- Answers are arrays of labels; set multiple: true to allow more than one.
-- To recommend an option, put it first and append "(Recommended)" to its label.

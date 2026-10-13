@@ -5,7 +5,7 @@ import { existsSync, readFileSync } from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { createMemo, For, Show } from "solid-js"
-import { useTuiConfig } from "../config"
+import { useConfig } from "../config"
 import defaultBackgroundPath from "./default-background.jpg" with { type: "file" }
 
 interface Chunk {
@@ -166,7 +166,7 @@ export function hasBackgroundImage(enabled: boolean): boolean {
 
 export function Background() {
   const dimensions = useTerminalDimensions()
-  const tuiConfig = useTuiConfig()
+  const tuiConfig = useConfig().data
 
   if (!hasBackgroundImage(tuiConfig.background_enabled === true)) {
     return null

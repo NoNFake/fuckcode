@@ -15,7 +15,6 @@ export function IconArrowDown(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
     </svg>
   )
 }
-
 export function IconCheckCircle(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -30,7 +29,6 @@ export function IconCheckCircle(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
     </svg>
   )
 }
-
 export function IconChevronDown(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -45,7 +43,6 @@ export function IconChevronDown(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
     </svg>
   )
 }
-
 export function IconChevronRight(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -60,7 +57,6 @@ export function IconChevronRight(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
     </svg>
   )
 }
-
 export function IconClipboard(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -75,7 +71,6 @@ export function IconClipboard(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
     </svg>
   )
 }
-
 export function IconCommandLine(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -90,7 +85,6 @@ export function IconCommandLine(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
     </svg>
   )
 }
-
 export function IconDocumentMagnifyingGlass(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -105,7 +99,6 @@ export function IconDocumentMagnifyingGlass(props: JSX.SvgSVGAttributes<SVGSVGEl
     </svg>
   )
 }
-
 export function IconDocumentPlus(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -120,7 +113,6 @@ export function IconDocumentPlus(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
     </svg>
   )
 }
-
 export function IconDocument(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -135,7 +127,6 @@ export function IconDocument(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
     </svg>
   )
 }
-
 export function IconGlobeAlt(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -150,7 +141,6 @@ export function IconGlobeAlt(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
     </svg>
   )
 }
-
 export function IconHashtag(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -165,7 +155,6 @@ export function IconHashtag(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
     </svg>
   )
 }
-
 export function IconMagnifyingGlass(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -180,7 +169,6 @@ export function IconMagnifyingGlass(props: JSX.SvgSVGAttributes<SVGSVGElement>) 
     </svg>
   )
 }
-
 export function IconPaperClip(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -195,7 +183,6 @@ export function IconPaperClip(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
     </svg>
   )
 }
-
 export function IconPencilSquare(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -210,22 +197,6 @@ export function IconPencilSquare(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
     </svg>
   )
 }
-
-export function IconQueueList(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path
-        shape-rendering="geometricPrecision"
-        d="M3.75 12H20.25M3.75 15.75H20.25M3.75 19.5H20.25M5.625 4.5H18.375C19.4105 4.5 20.25 5.33947 20.25 6.375C20.25 7.41053 19.4105 8.25 18.375 8.25H5.625C4.58947 8.25 3.75 7.41053 3.75 6.375C3.75 5.33947 4.58947 4.5 5.625 4.5Z"
-        stroke="currentColor"
-        stroke-width="1.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-    </svg>
-  )
-}
-
 export function IconRectangleStack(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -240,7 +211,6 @@ export function IconRectangleStack(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
     </svg>
   )
 }
-
 export function IconSparkles(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -269,7 +239,6 @@ export function IconSparkles(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
     </svg>
   )
 }
-
 export function IconUserCircle(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

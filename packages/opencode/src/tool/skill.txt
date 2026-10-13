@@ -1,1 +1,0 @@
-Load a skill whose name matches one in the system prompt. Injects its instructions and resources into the conversation; the output may reference scripts and files in the skill directory.

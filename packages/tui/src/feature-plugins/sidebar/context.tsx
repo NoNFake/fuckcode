@@ -1,126 +1,70 @@
-import type { AssistantMessage } from "@opencode-ai/sdk/v2"
-import type { TuiPlugin, TuiPluginApi } from "@opencode-ai/plugin/tui"
-import type { BuiltinTuiPlugin } from "../builtins"
+import { Plugin } from "@opencode/plugin/tui"
 import { createMemo, Show } from "solid-js"
+import { contextUsage } from "../../util/session"
 import { DialogEco } from "../../component/dialog-eco"
-import { DialogVerify } from "../../component/dialog-verify"
-import { useDialog } from "../../ui/dialog"
-import { EcoMetrics } from "@opencode-ai/core/util/eco-metrics"
-import { verify } from "../../util/verify"
-
-const id = "internal:sidebar-context"
+import { EcoMetrics } from "@opencode/core/util/eco-metrics"
 
 const money = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
 })
 
-function View(props: { api: TuiPluginApi; session_id: string }) {
-  const dialog = useDialog()
-  const theme = () => props.api.theme.current
-  const msg = createMemo(() => props.api.state.session.messages(props.session_id))
-  const session = createMemo(() => props.api.state.session.get(props.session_id))
-  const cost = createMemo(() => session()?.cost ?? 0)
-  const tokenSavingEnabled = createMemo(() => props.api.kv.get("token_saving_enabled", true))
-  const metrics = createMemo(() => {
-    let cacheRead = 0
-    let contextCut = 0
-    for (const item of msg()) {
-      if (item.role === "assistant") {
-        cacheRead += item.tokens?.cache?.read ?? 0
-      }
-      const parts = "parts" in item && Array.isArray((item as any).parts)
-        ? (item as any).parts
-        : (props.api.state.part(item.id) ?? [])
-      for (const part of parts) {
-        contextCut += EcoMetrics.extractTruncationSaved(part)
-      }
-    }
-    return { cacheRead, contextCut }
-  })
+export function SidebarContext(props: { context: Plugin.Context; sessionID: string }) {
+  const theme = props.context.theme
+  const msg = createMemo(() => props.context.data.session.message.list(props.sessionID))
+  const session = createMemo(() => props.context.data.session.get(props.sessionID))
+  const cost = createMemo(() => props.context.data.session.cost(props.sessionID))
 
-  const verifyReport = createMemo(() =>
-    verify({
-      messages: msg(),
-      partsOf: (message) =>
-        "parts" in (message as any) && Array.isArray((message as any).parts)
-          ? (message as any).parts
-          : (props.api.state.part((message as any).id) ?? []),
-    }),
+  const state = createMemo(() =>
+    contextUsage(msg(), props.context.data.location.model.list(session()?.location), session()?.revert?.messageID),
   )
-  const verifyRisk = createMemo(() => verifyReport().unverified.length + verifyReport().notFound)
-
-  const state = createMemo(() => {
-    const last = msg().findLast((item): item is AssistantMessage => item.role === "assistant" && item.tokens.output > 0)
-    if (!last) {
-      return {
-        tokens: 0,
-        percent: null,
-      }
+  const saved = createMemo(() => {
+    let total = 0
+    for (const message of msg()) {
+      if (message.type !== "assistant") continue
+      for (const part of message.content) total += EcoMetrics.extractTruncationSaved(part)
     }
-
-    const tokens =
-      last.tokens.input + last.tokens.output + last.tokens.reasoning + last.tokens.cache.read + last.tokens.cache.write
-    const model = props.api.state.provider.find((item) => item.id === last.providerID)?.models[last.modelID]
-    return {
-      tokens,
-      percent: model?.limit.context ? Math.round((tokens / model.limit.context) * 100) : null,
-    }
+    return total
   })
 
   return (
-    <box>
-      <text fg={theme().text}>
-        <b>Context</b>
-      </text>
-      <text fg={theme().textMuted}>{state().tokens.toLocaleString()} tokens</text>
-      <text fg={state().percent !== null && state().percent! >= 80 ? theme().error : theme().textMuted}>
-        {state().percent ?? 0}% used
-      </text>
-      <text fg={theme().textMuted}>{money.format(cost())} spent</text>
-      <Show when={tokenSavingEnabled()}>
-        <text
-          fg={theme().success}
-          onMouseUp={() => dialog.replace(() => <DialogEco sessionID={props.session_id} />)}
-        >
-          ◈ eco{" "}
-          <Show
-            when={metrics().contextCut > 0 || metrics().cacheRead > 0}
-            fallback={<span>active</span>}
-          >
-            <span style={{ fg: theme().textMuted }}>
-              ({[
-                metrics().contextCut > 0 ? `cut -${metrics().contextCut >= 1000 ? `${(metrics().contextCut / 1000).toFixed(1)}k` : metrics().contextCut}` : "",
-                metrics().cacheRead > 0 ? `cache ${metrics().cacheRead >= 1000 ? `${(metrics().cacheRead / 1000).toFixed(1)}k` : metrics().cacheRead}` : "",
-              ].filter(Boolean).join(" · ")})
-            </span>
-          </Show>
+    <Show when={state() || cost() > 0}>
+      <box>
+        <text fg={theme.text.base}>
+          <b>Context</b>
         </text>
-      </Show>
-      <text
-        fg={verifyRisk() > 0 ? theme().warning : theme().textMuted}
-        onMouseUp={() => dialog.replace(() => <DialogVerify report={verifyReport()} />)}
-      >
-        [!] verify {verifyRisk()}
-      </text>
-    </box>
+        <Show when={state()}>
+          {(value) => (
+            <>
+              <text fg={theme.text.muted}>{value().tokens.toLocaleString()} tokens</text>
+              <Show when={value().percent !== undefined}>
+                <text fg={theme.text.muted}>{value().percent}% used</text>
+              </Show>
+            </>
+          )}
+        </Show>
+        <Show when={cost() > 0}>
+          <text fg={theme.text.muted}>{money.format(cost())} spent</text>
+        </Show>
+        <Show when={saved() > 0}>
+          <text
+            fg={theme.text.feedback.success.base}
+            onMouseUp={() => props.context.ui.dialog.show(() => <DialogEco sessionID={props.sessionID} />)}
+          >
+            ◈ eco (-{saved().toLocaleString()} tokens)
+          </text>
+        </Show>
+      </box>
+    </Show>
   )
 }
 
-const tui: TuiPlugin = async (api) => {
-  api.slots.register({
-    order: 100,
-    slots: {
-      sidebar_content(_ctx, props) {
-        return <View api={api} session_id={props.session_id} />
-      },
-    },
-  })
-}
-
-const plugin: BuiltinTuiPlugin = {
-  id,
-  tui,
-}
-
-export default plugin
+export default Plugin.define({
+  id: "opencode.sidebar.context",
+  setup(context) {
+    context.ui.slot({
+      append: "sidebar.content",
+      render: (props) => <SidebarContext context={context} sessionID={props.sessionID} />,
+    })
+  },
+})

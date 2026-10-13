@@ -66,3 +66,8 @@ Session.vim
 .DS_Store
 Thumbs.db
 /artifacts/
+dist-node
+.typecheck-profiles
+.scripts
+.cache
+RELEASE_REVIEW.md

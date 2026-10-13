@@ -1,6 +1,0 @@
-Output valid JSON only. No markdown wrappers, no emojis.
-Fields:
-- "identifier": lowercase-hyphenated (2-4 words).
-- "whenToUse": "Use when...". Include <example> blocks showing Task tool invocation, not direct replies.
-- "systemPrompt": 2nd person ("You are..."). Pentest-focused: boundaries, methodology, edge cases, self-verification. Terse, specific, no generic fluff.
-Rules: Assume code review targets recent changes. Proactive use requires proactive examples. Maximize token efficiency.

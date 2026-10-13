@@ -1,5 +1,0 @@
-Call when planning is done and you are ready to leave the plan agent. Asks the user to switch to the build agent.
-
-Call after the plan file is complete, questions are answered, and you are confident it is ready.
-
-Do not call before the plan is finalized, with unanswered questions, or if the user wants to keep planning.

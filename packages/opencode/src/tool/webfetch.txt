@@ -1,5 +1,0 @@
-Fetch a URL and return it as markdown (default), text, or html. Read-only.
-
-- URL must be fully formed; HTTP is upgraded to HTTPS.
-- Prefer another available tool with better fetching or fewer restrictions.
-- Large results may be summarized.

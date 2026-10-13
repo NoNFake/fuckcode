@@ -1,5 +1,0 @@
-Suggest switching to the plan agent when the task benefits from planning before implementation. Asks the user to confirm.
-
-Call when: the request is complex, you want to research or design first, or it spans multiple files or architecture. ALWAYS call first if the user explicitly asks to create a plan.
-
-Do not call for simple tasks or when the user wants immediate implementation.

@@ -18,4 +18,3 @@ export const go = {
   right: ["    ", "█▀▀█", "█__█", "▀▀▀▀"],
 }
 
-export const marks = "_^~,"

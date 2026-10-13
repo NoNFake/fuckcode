@@ -1,5 +1,0 @@
-Code intelligence via LSP. Every operation needs filePath, line, and character (both 1-based).
-
-Operations: goToDefinition, findReferences, hover, documentSymbol, workspaceSymbol, goToImplementation, prepareCallHierarchy, incomingCalls, outgoingCalls.
-
-workspaceSymbol also takes query (empty returns all); filePath only selects the server. Errors if no LSP server is configured for the file type.

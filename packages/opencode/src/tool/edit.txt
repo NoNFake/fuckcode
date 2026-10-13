@@ -1,6 +1,0 @@
-Exact string replacement in a file. Read the file first or the tool errors.
-
-- Preserve the exact indentation shown after Read's `line: ` prefix. Never include the prefix in oldString or newString.
-- oldString must be unique; add surrounding context or use replaceAll.
-- Fails if oldString is missing or matches multiple times.
-- Prefer editing existing files. Do not create files unless required.

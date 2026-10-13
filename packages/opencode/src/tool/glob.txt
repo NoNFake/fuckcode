@@ -1,5 +1,0 @@
-Fast file pattern matching. Supports patterns like "**/*.js" or "src/**/*.ts"; returns matching paths.
-
-- Use to find files by name pattern.
-- For open-ended searches needing multiple rounds, use the Task tool.
-- Batch speculative searches in one response.

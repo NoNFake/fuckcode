@@ -2,7 +2,7 @@ export * as TokenSavingState from "./token-saving-state"
 
 import fs from "fs"
 import path from "path"
-import { Global } from "./global"
+import { Global } from "@opencode/util/global"
 
 // The TUI runs in the CLI process while tools run in the worker, so a plain
 // env var cannot carry the live toggle. Both sides share this state file.

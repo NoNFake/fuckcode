@@ -2,7 +2,7 @@
 set -e
 
 UPSTREAM_URL="https://github.com/anomalyco/opencode.git"
-UPSTREAM_BRANCH="v1"
+UPSTREAM_BRANCH="dev"
 
 if ! git remote | grep -q "^upstream$"; then
     echo "add remote upstream..."

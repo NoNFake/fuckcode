@@ -1,5 +1,0 @@
-Write a file to the local filesystem. Overwrites an existing file at that path.
-
-- Read an existing file first with the Read tool, or this fails.
-- Prefer editing existing files; do not create files unless required.
-- Do not create documentation (*.md, README) unless explicitly requested.

@@ -1,3 +1,0 @@
-Real-time web search with content scraping from the most relevant results. Use for information past the knowledge cutoff. Supports result count, domain filtering, live crawl mode ('fallback' or 'preferred'), and search type ('auto', 'fast', 'deep').
-
-The current year is {{year}}. Include it when searching recent topics, for example "AI news {{year}}".

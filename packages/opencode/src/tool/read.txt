@@ -1,8 +1,0 @@
-Read a file or directory. Errors if the path does not exist.
-
-- filePath must be absolute.
-- Returns up to 400 lines from the start; use offset (1-indexed) for later sections.
-- Use grep to find content in large files, glob to resolve unknown paths.
-- Lines are returned as `<line>: <content>`; directories list one entry per line with `/` for subdirectories. Lines over 2000 characters are truncated.
-- Read multiple files in parallel. Avoid tiny slices; read a larger window.
-- Image and PDF files are returned as attachments.

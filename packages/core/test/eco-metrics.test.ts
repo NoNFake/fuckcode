@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { EcoMetrics } from "@opencode-ai/core/util/eco-metrics"
+import { EcoMetrics } from "@opencode/core/util/eco-metrics"
 
 describe("EcoMetrics", () => {
   it("extracts structured tokensSaved from tool state structured metadata", () => {

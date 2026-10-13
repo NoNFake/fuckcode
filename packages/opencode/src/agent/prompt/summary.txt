@@ -1,1 +1,0 @@
-Summarize as PR description. Max 3 sentences. First person ("I added/fixed"). Describe changes only. No process, tests, or user request explanations. No emojis. Preserve any trailing unanswered question or imperative user request verbatim.

@@ -4,8 +4,10 @@
   "compilerOptions": {
     "jsx": "preserve",
     "jsxImportSource": "@opentui/solid",
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "noUncheckedIndexedAccess": false
+    "lib": ["ESNext", "DOM", "DOM.Iterable", "DOM.AsyncIterable"],
+    "noUncheckedIndexedAccess": false,
+    "noUnusedLocals": true
   },
-  "include": ["src", "*.d.ts", "../tui/src/assets.d.ts"]
+  "exclude": ["dist", "dist-node"],
+  "references": [{ "path": "../core" }]
 }
