@@ -3,7 +3,7 @@ export * as Config from "./config.js"
 import { Schema } from "effect"
 import { ephemeral, inventory } from "./event.js"
 import { Permission } from "./permission.js"
-import { AbsolutePath, optional } from "./schema.js"
+import { AbsolutePath, optional, PositiveInt } from "./schema.js"
 import { ConfigAgent } from "./config/agent.js"
 import { ConfigMedia } from "./config/media.js"
 import { ConfigCompaction } from "./config/compaction.js"
@@ -82,6 +82,48 @@ export class Info extends Schema.Class<Info>("Config.Info")({
   compaction: ConfigCompaction.Info.pipe(optional).annotate({
     description: "Conversation compaction behavior",
   }),
+  pentest: Schema.Struct({
+    enabled: Schema.Boolean.pipe(optional).annotate({ description: "Enable pentest sandbox mode" }),
+    scope: Schema.Struct({
+      domains: Schema.Array(Schema.String).pipe(optional).annotate({
+        description: "Allowed domains for DNS whitelist",
+      }),
+      cidrs: Schema.Array(Schema.String).pipe(optional).annotate({ description: "Allowed CIDRs for network access" }),
+      ports: Schema.Array(Schema.Number).pipe(optional).annotate({
+        description: "Allowed target ports enforced by the sandbox and target checks",
+      }),
+      children: Schema.Record(Schema.String, Schema.Unknown).pipe(optional).annotate({
+        description: "Named child scopes for sub-targets",
+      }),
+    }).pipe(optional).annotate({ description: "Target scope for network isolation" }),
+    sandboxTimeout: Schema.Number.pipe(optional).annotate({ description: "Sandbox timeout in milliseconds" }),
+    evidenceDir: Schema.String.pipe(optional).annotate({ description: "Directory for evidence storage" }),
+    oob: Schema.Struct({
+      server: Schema.String.pipe(optional).annotate({
+        description: "Comma-separated interactsh servers (default: public oast.pro and friends)",
+      }),
+      token: Schema.String.pipe(optional).annotate({ description: "Auth token for a protected interactsh server" }),
+    }).pipe(optional).annotate({ description: "Out-of-band interaction testing via interactsh" }),
+  })
+    .pipe(optional)
+    .annotate({ description: "Pentest sandbox configuration for network-isolated command execution" }),
+  reverse: Schema.Struct({
+    enabled: Schema.Boolean.pipe(optional).annotate({ description: "Enable binary reverse-engineering tools" }),
+    allowedDirs: Schema.Array(Schema.String).pipe(optional).annotate({
+      description: "Directories the reverse-engineering tools may read binaries from (empty allows any path)",
+    }),
+    allowPatch: Schema.Boolean.pipe(optional).annotate({
+      description: "Allow writing patched copies of binaries into the reverse work directory",
+    }),
+    workDir: Schema.String.pipe(optional).annotate({
+      description: "Directory for patched copies and analysis artifacts (default: data/reverse-work)",
+    }),
+    maxFileSize: PositiveInt.pipe(optional).annotate({
+      description: "Maximum binary size in bytes the tools will accept (default: 268435456)",
+    }),
+  })
+    .pipe(optional)
+    .annotate({ description: "Binary reverse-engineering configuration for static analysis of ELF files" }),
   token_saving: ConfigTokenSaving.Info.pipe(optional).annotate({
     description: "Token saving and prompt assembly optimizations",
   }),

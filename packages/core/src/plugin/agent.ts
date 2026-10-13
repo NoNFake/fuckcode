@@ -61,6 +61,16 @@ Your output must be:
 "@App.tsx add dark mode toggle" -> Dark mode toggle in App
 </examples>`
 
+const PROMPT_REFLECTOR = `You are the Reflector agent for post-engagement self-improvement.
+Analyze the current session or engagement history:
+1. Extract key outcomes, successes, and failed hypotheses.
+2. Identify tool effectiveness (which tools worked reliably vs failed or hung).
+3. Detect false positive patterns (what appeared to be a vulnerability but was not, and why).
+4. Distill durable rules and operational lessons learned.
+5. Use the knowledge_update tool to record findings into ~/.fuckcode/knowledge/global.json.
+6. When novel techniques, specific workflows, or custom command sequences succeed, save an auto-generated reusable skill into ~/.fuckcode/skills/user/learned/<name>/SKILL.md.
+Be concise, factual, and evidence-driven. No filler words or emojis.`
+
 const PROMPT_SUMMARY = `Summarize what was done in this conversation. Write like a pull request description.
 
 Rules:
@@ -88,6 +98,18 @@ export const Plugin = define({
         item.name = Agent.Name.make("General")
         item.description =
           "General-purpose agent for researching complex questions and executing multi-step tasks. Use this agent to execute multiple units of work in parallel."
+        item.mode = "subagent"
+        item.permissions.push(
+          { action: "question", resource: "*", effect: "deny" },
+          { action: "subagent", resource: "*", effect: "deny" },
+        )
+      })
+
+      editor.update(Agent.ID.make("reflector"), (item) => {
+        item.name = Agent.Name.make("Reflector")
+        item.description =
+          "Post-engagement reflection agent. Analyzes session outcomes, tool effectiveness, false positives, records lessons into the knowledge store, and generates learned skills from novel techniques."
+        item.system = PROMPT_REFLECTOR
         item.mode = "subagent"
         item.permissions.push(
           { action: "question", resource: "*", effect: "deny" },

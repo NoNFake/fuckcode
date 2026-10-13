@@ -5,6 +5,7 @@ import type { Plugin } from "@opencode/plugin/effect/plugin"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { PentestConfig } from "../pentest/config.js"
 import { PentestToolsPlugin } from "../pentest/tools.js"
+import { PentestSkillsPlugin } from "../pentest/skills.js"
 import { Observability } from "../pentest/observability.js"
 import { Sandbox } from "../pentest/sandbox.js"
 import { ReverseConfig } from "../reverse/config.js"
@@ -282,6 +283,7 @@ const post = [
   ConfigWebSearchPlugin.Plugin,
   ConfigPolicyPlugin.Plugin,
   PentestToolsPlugin,
+  PentestSkillsPlugin,
   ReverseToolsPlugin,
 ] as const satisfies readonly InternalPlugin[]
 

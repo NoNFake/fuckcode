@@ -52,6 +52,38 @@ export const Plugin = define({
             })
             .pipe(Effect.asVoid),
       })
+      editor.add({
+        name: "report",
+        description: "Generate a pentest report",
+        execute: (input) =>
+          ctx.session
+            .prompt({
+              ...input.prompt,
+              sessionID: input.sessionID,
+              text: append(
+                "Generate a comprehensive penetration testing report in markdown and JSON format using the report_gen tool. Summarize all findings, evidence chain, compromised assets, and key milestones.",
+                input.prompt.text,
+              ),
+              delivery: input.delivery,
+            })
+            .pipe(Effect.asVoid),
+      })
+      editor.add({
+        name: "reflect",
+        description: "Analyze session outcomes, record insights, and generate learned skills",
+        execute: (input) =>
+          ctx.session
+            .prompt({
+              ...input.prompt,
+              sessionID: input.sessionID,
+              text: append(
+                "Analyze the engagement session: evaluate tool effectiveness, document false positives, distill learned rules into ~/.fuckcode/knowledge/global.json, and generate reusable skills if novel techniques were discovered.",
+                input.prompt.text,
+              ),
+              delivery: input.delivery,
+            })
+            .pipe(Effect.asVoid),
+      })
       for (const prompt of loaded.prompts) {
         editor.add({
           name: mcpCommandName(prompt.server, prompt.name),
