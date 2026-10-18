@@ -23,6 +23,31 @@ Release notes in this repository are generated from git history, not hand-writte
 
 ## [Unreleased]
 
+### Changed
+
+- Synced with upstream OpenCode dev (2.0.32). The upstream dialog redesign and the `opencode2` theme stay behind the `new-designs` experiment; theme `opencode` keeps its 2.0.0 palette by default.
+- PowerShell installations are recognized by `fuckcode upgrade`, so they update in place.
+
+### Fixed
+
+- The knowledge store keeps the newest learned rules and false-positive patterns once a list is full; new entries were silently dropped before.
+- The eco toggle applies immediately; it previously took effect only after a restart.
+- Crash-recovery job records expire after 7 days instead of accumulating forever.
+- Long-running tools are no longer interrupted as "inactivity" while the session still emits events.
+- Failed or partial downloads no longer look like successful installs; the installer fails loudly on empty archives and uses a private temp directory.
+- The release workflow can be re-run and fails when a build output or archive is missing; `script/release.ts` triggers the fork's `release.yml` with an explicit version.
+- TUI footer hints keep their normal contrast while a dialog is open, and the resize listener warning no longer appears in settings.
+
+### Security
+
+- Pentest scope is enforced in the sandbox for domain-only engagements: outbound traffic is denied by default, only addresses resolved through the scope resolver are allowed, `ip6` traffic is filtered, and the resolver itself stays reachable. Bare hostnames and IPv6 literals can no longer leave scope.
+- `upgrade --method curl` fetches the installer from the release tag instead of the `dev` branch, and both installers verify the download against the published `sha256.txt`.
+- `report_gen` refuses to write outside the working directory; `binary patch` obeys `reverse.allowedDirs` and never overwrites the original file.
+
+### Removed
+
+- Unused dependencies in `gui-extensions`, `desktop` and `session-ui`, and three unused `session-ui` component exports.
+
 ## [2.0.0] - 2026-10-13
 
 ### Added
