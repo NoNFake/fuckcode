@@ -2,6 +2,8 @@ import { Plugin } from "@opencode/plugin/tui"
 import { createMemo, createSignal, Match, Show, Switch } from "solid-js"
 import { contextUsage, formatContextUsage } from "../../util/session"
 import { useTerminalDimensions } from "@opentui/solid"
+import { TextAttributes } from "@opentui/core"
+import { useInteractivity } from "../../context/interactivity"
 import { stringWidth } from "../../util/string-width"
 import { DialogEco } from "../../component/dialog-eco"
 import { DialogVerify } from "../../component/dialog-verify"
@@ -51,6 +53,8 @@ export function PromptFooter(props: {
     ].filter((item): item is string => Boolean(item))
   })
   const live = createMemo(() => Boolean(subagents() || shells()))
+  // Prompt hints read as disabled while the session does not own input, e.g. while a side panel is focused.
+  const interactive = useInteractivity()
   const saved = createMemo(() => {
     if (!props.sessionID) return 0
     let total = 0
@@ -118,8 +122,13 @@ export function PromptFooter(props: {
             </box>
           </Match>
           <Match when={props.showDetails && layout().shortcuts}>
-            <text fg={props.context.theme.text.base} flexShrink={0}>
-              {shortcut("agent.cycle")} <span style={{ fg: props.context.theme.text.muted }}>agents</span>
+            <text
+              fg={interactive() ? props.context.theme.text.base : props.context.theme.text.action.primary.disabled}
+              attributes={interactive() ? 0 : TextAttributes.DIM}
+              flexShrink={0}
+            >
+              {shortcut("agent.cycle")}{" "}
+              <span style={interactive() ? { fg: props.context.theme.text.muted } : {}}>agents</span>
             </text>
           </Match>
         </Switch>
@@ -159,8 +168,14 @@ export function PromptFooter(props: {
           </text>
         </Show>
         <Show when={props.showDetails && layout().shortcuts}>
-          <text fg={props.context.theme.text.base} wrapMode="none" flexShrink={0}>
-            {shortcut("command.palette.show")} <span style={{ fg: props.context.theme.text.muted }}>commands</span>
+          <text
+            fg={interactive() ? props.context.theme.text.base : props.context.theme.text.action.primary.disabled}
+            attributes={interactive() ? 0 : TextAttributes.DIM}
+            wrapMode="none"
+            flexShrink={0}
+          >
+            {shortcut("command.palette.show")}{" "}
+            <span style={interactive() ? { fg: props.context.theme.text.muted } : {}}>commands</span>
           </text>
         </Show>
       </Match>

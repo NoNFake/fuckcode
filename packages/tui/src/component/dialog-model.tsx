@@ -14,6 +14,7 @@ import { useConnected } from "./use-connected"
 import { useData } from "../context/data"
 import { modelPreferenceKey } from "../model-preference"
 import { useLocation } from "../context/location"
+import { useNewDesigns } from "../config"
 import { useToast } from "../ui/toast"
 
 const CONFIG_NAMES = ["opencode.json", "opencode.jsonc", "fuckcode.json", "fuckcode.jsonc"]
@@ -41,6 +42,7 @@ function saveLlamacppURL(url: string) {
 
 export function DialogModel(props: { providerID?: string }) {
   const local = useLocal()
+  const newDesigns = useNewDesigns()
   const data = useData()
   const dialog = useDialog()
   const toast = useToast()
@@ -205,11 +207,19 @@ export function DialogModel(props: { providerID?: string }) {
 
   return (
     <DialogSelect<ReturnType<typeof options>[number]["value"]>
+      searchInTitle
+      titlePlaceholder="Search models"
       options={options()}
       actions={[
         {
           command: "model.dialog.provider",
-          title: connected() ? "Connect an integration" : "View all integrations",
+          title: newDesigns()
+            ? connected()
+              ? "connect integration"
+              : "view all integrations"
+            : connected()
+              ? "Connect an integration"
+              : "View all integrations",
           selection: "none",
           onTrigger() {
             dialog.replace(() => (
@@ -221,7 +231,7 @@ export function DialogModel(props: { providerID?: string }) {
         },
         {
           command: "model.dialog.favorite",
-          title: "Favorite",
+          title: newDesigns() ? "favorite" : "Favorite",
           hidden: !connected(),
           onTrigger: (option) => {
             local.model.toggleFavorite(option.value as { providerID: string; modelID: string })
