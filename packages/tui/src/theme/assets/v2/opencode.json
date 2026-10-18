@@ -10,7 +10,8 @@
     ],
     "text": {
       "base": "$hue.neutral.200",
-      "muted": "$hue.neutral.400",
+      "muted": "$hue.neutral.300",
+      "faint": "$hue.neutral.400",
       "action": {
         "primary": {
           "base": "$text.base",
