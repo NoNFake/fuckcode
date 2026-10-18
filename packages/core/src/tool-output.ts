@@ -10,6 +10,7 @@ import { Identifier } from "@opencode/schema/identifier"
 import { FileRetention } from "./file-retention.js"
 import { State } from "./state.js"
 import { EcoMetrics } from "./util/eco-metrics.js"
+import { TokenSavingState } from "./token-saving-state.js"
 
 export const MAX_LINES = 2_000
 export const MAX_BYTES = 50 * 1024 // 50 KiB
@@ -65,10 +66,17 @@ const layer = Layer.effect(
       }),
     })
 
+    let lastLive: boolean | undefined
     const truncate = Effect.fnUntraced(function* (result: Result) {
       if (result.metadata?.truncated !== undefined) return result
       const content = result.content
       const text = content.flatMap((item) => (item.type === "text" ? [item.text] : [])).join("\n")
+      // The TUI toggle writes a state file another process reads; reload when it changes so caps apply live.
+      const live = TokenSavingState.read()
+      if (live !== lastLive) {
+        lastLive = live
+        yield* state.reload()
+      }
       const limits = state.get()
       const lines = text.split("\n")
       if (text.endsWith("\n")) lines.pop()
@@ -118,7 +126,7 @@ const layer = Layer.effect(
       return {
         ...result,
         content: bounded,
-        metadata: { ...result.metadata, truncated: true, outputPath: file },
+        metadata: { ...result.metadata, truncated: true, outputPath: file, tokensSaved: savedTokens },
       }
     })
 

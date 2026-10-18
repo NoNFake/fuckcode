@@ -168,7 +168,8 @@ function route() {
 
 const write = Effect.fn("cli.service-config.write")(function* (value: Info) {
   const { fs, configFile } = yield* paths
-  const temp = configFile + ".tmp"
+  // Unique per writer: concurrent writers to one temp name could persist each other's content.
+  const temp = `${configFile}.${randomBytes(4).toString("hex")}.tmp`
   yield* fs.makeDirectory(path.dirname(configFile), { recursive: true })
   yield* fs.writeFileString(temp, JSON.stringify(value, null, 2) + "\n", { mode: 0o600 })
   yield* fs.rename(temp, configFile)

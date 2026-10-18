@@ -186,13 +186,16 @@ const make = Effect.gen(function* () {
       )
   })
 
-  const curlPath = path.resolve(
-    global.home,
-    ".local",
-    "bin",
-    process.platform === "win32" ? "fuckcode.exe" : "fuckcode",
+  const curlCandidates = [
+    path.resolve(global.home, ".local", "bin", process.platform === "win32" ? "fuckcode.exe" : "fuckcode"),
+    ...(process.platform === "win32" && process.env.LOCALAPPDATA !== undefined
+      ? [path.resolve(process.env.LOCALAPPDATA, "Programs", "fuckcode", "bin", "fuckcode.exe")]
+      : []),
+  ]
+  const curlBinaries = yield* Effect.forEach(curlCandidates, (candidate) =>
+    fs.realPath(candidate).pipe(Effect.orElseSucceed(() => candidate)),
   )
-  const curlBinary = yield* fs.realPath(curlPath).pipe(Effect.orElseSucceed(() => curlPath))
+  const isCurlBinary = (candidate: string) => curlBinaries.includes(candidate)
 
   // On Windows a bare `bash` may be the WSL launcher, which cannot run the installer against Windows paths.
   const installerBash = Effect.fnUntraced(function* () {
@@ -211,7 +214,7 @@ const make = Effect.gen(function* () {
   })
 
   const method = Effect.fnUntraced(function* () {
-    if (executable === curlBinary) return "curl"
+    if (isCurlBinary(executable)) return "curl"
     if (installedFormula) return "brew"
     if (installedWinget) return "winget"
     if (!installedPackage) return
@@ -381,7 +384,7 @@ const make = Effect.gen(function* () {
     // Only the installed binary is at stake; source checkouts run inside bun or node.
     const owned =
       method === "curl"
-        ? executable === curlBinary
+        ? isCurlBinary(executable)
         : method === "winget"
           ? installedWinget
           : installedPackage !== undefined
@@ -487,9 +490,9 @@ const make = Effect.gen(function* () {
               "-fsSL",
               "-o",
               installer,
-              "https://raw.githubusercontent.com/NoNFake/fuckcode/dev/install",
+              "https://raw.githubusercontent.com/NoNFake/fuckcode/v${version}/install",
             ],
-            displayCommand: ["curl", "-fsSL", "https://raw.githubusercontent.com/NoNFake/fuckcode/dev/install"],
+            displayCommand: ["curl", "-fsSL", "https://raw.githubusercontent.com/NoNFake/fuckcode/v${version}/install"],
             title: "Could not download the FuckCode installer",
             retry: "Check your network, then run opencode upgrade again.",
           })

@@ -14,6 +14,17 @@ $TempZip = Join-Path $env:TEMP ([IO.Path]::GetRandomFileName() + ".zip")
 
 try {
     Invoke-WebRequest -Uri $Url -OutFile $TempZip -UseBasicParsing
+
+    $ShaUrl = $Url.Substring(0, $Url.LastIndexOf('/')) + "/sha256.txt"
+    $Expected = (Invoke-WebRequest -Uri $ShaUrl -UseBasicParsing).Content -split "`n" |
+        Where-Object { $_ -match [regex]::Escape($Filename) } |
+        ForEach-Object { ($_ -split '\s+')[0] } |
+        Select-Object -First 1
+    $Actual = (Get-FileHash -Path $TempZip -Algorithm SHA256).Hash
+    if (-not $Expected -or $Actual -ne $Expected.ToUpper()) {
+        throw "Checksum verification failed for $Filename"
+    }
+
     New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
     Expand-Archive -Path $TempZip -DestinationPath $InstallDir -Force
 

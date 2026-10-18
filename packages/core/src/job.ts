@@ -1,6 +1,6 @@
 export * as Job from "./job.js"
 
-import { Array, Cause, Clock, Context, Deferred, Effect, Exit, Layer, Schema, Scope, SynchronizedRef } from "effect"
+import { Cause, Clock, Context, Deferred, Effect, Exit, Layer, Result, Schema, Scope, SynchronizedRef } from "effect"
 import { makeGlobalNode } from "@opencode/util/effect/app-node"
 import { KV } from "./kv.js"
 import { SessionMessage } from "./session/message.js"
@@ -27,6 +27,7 @@ const Background = Schema.Struct({
   status: Schema.Literals(["running", "completed", "error", "cancelled"]),
   output: Schema.optionalKey(Schema.String),
   error: Schema.optionalKey(Schema.String),
+  createdAt: Schema.optionalKey(Schema.Number),
 })
 
 export type Background = typeof Background.Type
@@ -35,6 +36,8 @@ export type Status = Background["status"]
 
 const decodeBackground = Schema.decodeUnknownResult(Background)
 const backgroundPrefix = "job.background/"
+// Crash-recovery records have no session-delete hook; expire them instead of growing forever.
+const STALE_BACKGROUND_MS = 7 * 24 * 60 * 60 * 1000
 const COMPLETED_LIMIT = 25
 
 export type Info = {
@@ -443,7 +446,16 @@ export const make = Effect.gen(function* () {
     let after: string | undefined
     do {
       const page = yield* kv.scan({ prefix: backgroundPrefix, after })
-      recovered.push(...Array.filterMap(page.entries, (entry) => decodeBackground(entry.value)))
+      for (const entry of page.entries) {
+        const decoded = decodeBackground(entry.value)
+        if (Result.isFailure(decoded)) continue
+        const background = decoded.success
+        if (background.createdAt !== undefined && background.createdAt < Date.now() - STALE_BACKGROUND_MS) {
+          yield* kv.remove(entry.key)
+          continue
+        }
+        recovered.push(background)
+      }
       after = page.next
     } while (after)
     return recovered

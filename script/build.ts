@@ -32,7 +32,7 @@ for (const entry of entries) {
   const suffix = entry.name.slice("cli-".length)
   const isWindows = suffix.startsWith("windows")
   const source = path.join(distDir, entry.name, "bin", isWindows ? "opencode.exe" : "opencode")
-  if (!(await Bun.file(source).exists())) continue
+  if (!(await Bun.file(source).exists())) throw new Error(`missing build output: ${source}`)
   const inner = isWindows ? "fuckcode.exe" : "fuckcode"
   const staged = path.join(staging, inner)
   await cp(source, staged)
@@ -48,8 +48,7 @@ for (const entry of entries) {
 await rm(staging, { recursive: true, force: true })
 
 const archives = (await readdir(distDir)).filter((name) => name.endsWith(".tar.gz") || name.endsWith(".zip")).sort()
-if (archives.length > 0) {
-  await $`sh -c ${`cd ${distDir} && sha256sum ${archives.join(" ")} > sha256.txt`}`
-}
+if (archives.length === 0) throw new Error(`no release assets were packaged into ${distDir}`)
+await $`sh -c ${`cd ${distDir} && sha256sum ${archives.join(" ")} > sha256.txt`}`
 
 console.log(`=== packaged ${packaged} release assets into ${distDir} ===`)

@@ -192,6 +192,10 @@ async function patchFile(config: ReverseConfig.Config, params: Params, file: str
   if (offset === undefined || offset < 0) throw new Error("patch requires a non-negative offset")
   const before = await sha256(file)
   const target = path.resolve(params.output ?? path.join(config.workDir, `${path.basename(file)}.patched`))
+  if (target === file) throw new Error("patch output must differ from the original file")
+  if (!ReverseConfig.pathAllowed(config, target)) {
+    throw new Error(`Path is outside reverse.allowedDirs: ${target}`)
+  }
   await mkdir(path.dirname(target), { recursive: true })
   await copyFile(file, target)
   const handle = await open(target, "r+")

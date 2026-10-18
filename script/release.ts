@@ -39,14 +39,10 @@ Options:
   process.exit(0)
 }
 
-const input = ["major", "minor", "patch"].includes(version)
-  ? ["-f", `bump=${version}`]
-  : /^\d+\.\d+\.\d+(?:[-.][0-9A-Za-z.-]+)?$/.test(version)
-    ? ["-f", `version=${version}`]
-    : undefined
+const input = /^\d+\.\d+\.\d+(?:[-.][0-9A-Za-z.-]+)?$/.test(version) ? ["-f", `version=${version}`] : undefined
 
 if (!input || positionals.length > 1 || (!values.print && (values.from || values.to !== "HEAD"))) {
-  console.error("Usage: ./script/release.ts [major|minor|patch|version]")
+  console.error("Usage: ./script/release.ts <version>")
   console.error("       ./script/release.ts --print [--from <tag>] [--to <ref>]")
   process.exit(1)
 }
@@ -102,7 +98,7 @@ if (answer?.trim().toLowerCase() !== "y" && answer?.trim().toLowerCase() !== "ye
   process.exit(0)
 }
 
-await $`gh workflow run publish.yml --ref dev ${input} -f release_notes=${releaseNotes}`
+await $`gh workflow run release.yml --ref dev ${input}`
 console.log(`Triggered the ${version} release`)
 
 async function generateReview(base: string, head: string) {

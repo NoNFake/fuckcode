@@ -297,12 +297,22 @@ download_with_progress() {
 
 download_and_install() {
     print_message info "\n${MUTED}Installing ${NC}fuckcode ${MUTED}version: ${NC}$specific_version"
-    local tmp_dir="${TMPDIR:-/tmp}/fuckcode_install_$$"
-    mkdir -p "$tmp_dir"
+    local tmp_dir
+    tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/fuckcode_install.XXXXXX")
+    trap 'rm -rf "$tmp_dir"' EXIT
 
     if [[ "$os" == "windows" ]] || ! [ -t 2 ] || ! download_with_progress "$url" "$tmp_dir/$filename"; then
-        curl -# -L -o "$tmp_dir/$filename" "$url"
+        curl -fL -# -o "$tmp_dir/$filename" "$url" || {
+            echo -e "${RED}Error: download failed: $url${NC}"
+            exit 1
+        }
     fi
+
+    if [ ! -s "$tmp_dir/$filename" ]; then
+        echo -e "${RED}Error: downloaded archive is empty: $filename${NC}"
+        exit 1
+    fi
+    verify_checksum "$tmp_dir/$filename"
 
     if [ "$os" = "linux" ]; then
         tar -xzf "$tmp_dir/$filename" -C "$tmp_dir"
@@ -314,9 +324,33 @@ download_and_install() {
         mv "$tmp_dir/fuckcode" "$INSTALL_DIR"
     elif [ -f "$tmp_dir/opencode" ]; then
         mv "$tmp_dir/opencode" "${INSTALL_DIR}/fuckcode"
+    else
+        echo -e "${RED}Error: archive $filename contains no fuckcode binary${NC}"
+        exit 1
     fi
     chmod 755 "${INSTALL_DIR}/fuckcode"
-    rm -rf "$tmp_dir"
+}
+
+verify_checksum() {
+    local archive="$1"
+    local expected actual
+    expected=$(curl -fsSL "${url%/*}/sha256.txt" 2>/dev/null | awk -v name="$filename" '$2 == name { print $1 }')
+    if [ -z "$expected" ]; then
+        echo -e "${RED}Error: no published checksum for $filename${NC}"
+        exit 1
+    fi
+    if command -v sha256sum >/dev/null 2>&1; then
+        actual=$(sha256sum "$archive" | awk '{ print $1 }')
+    elif command -v shasum >/dev/null 2>&1; then
+        actual=$(shasum -a 256 "$archive" | awk '{ print $1 }')
+    else
+        echo -e "${RED}Error: sha256sum or shasum is required to verify the download.${NC}"
+        exit 1
+    fi
+    if [ "$actual" != "$expected" ]; then
+        echo -e "${RED}Error: checksum mismatch for $filename${NC}"
+        exit 1
+    fi
 }
 
 install_from_binary() {

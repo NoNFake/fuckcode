@@ -42,6 +42,7 @@ jobs:
 
       - name: Publish release
         run: |
+          gh release view "v${{ steps.version.outputs.value }}" --repo "${{ github.repository }}" >/dev/null 2>&1 ||
           gh release create "v${{ steps.version.outputs.value }}" \
             ./dist/*.tar.gz \
             ./dist/*.zip \
