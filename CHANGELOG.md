@@ -23,6 +23,8 @@ Release notes in this repository are generated from git history, not hand-writte
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-10-18
+
 ### Changed
 
 - Synced with upstream OpenCode dev (2.0.32). The upstream dialog redesign and the `opencode2` theme stay behind the `new-designs` experiment; theme `opencode` keeps its 2.0.0 palette by default.
