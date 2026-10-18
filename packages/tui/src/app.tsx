@@ -273,7 +273,9 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
           (renderer) => Effect.sync(() => destroyRenderer(renderer)),
         )
       })
-      renderer.setMaxListeners(15)
+      // One resize listener per mounted useTerminalDimensions(); the settings screen exceeds 15.
+      // The cap stays finite so a real listener leak still shows up.
+      renderer.setMaxListeners(32)
       const clipboard = yield* Effect.acquireRelease(
         Effect.sync(() => createTuiClipboard(renderer)),
         (clipboard) =>
