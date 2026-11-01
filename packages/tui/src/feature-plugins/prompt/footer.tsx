@@ -4,6 +4,7 @@ import { contextUsage } from "../../util/session"
 import { useTerminalDimensions } from "@opentui/solid"
 import { stringWidth } from "../../util/string-width"
 import { useUsageLimits } from "../../component/usage"
+import { goMeters } from "../../util/usage-limits"
 import { DialogEco } from "../../component/dialog-eco"
 import { DialogVerify } from "../../component/dialog-verify"
 import { EcoMetrics } from "@opencode/core/util/eco-metrics"
@@ -49,13 +50,12 @@ export function PromptFooter(props: {
     )
     const cost = props.context.data.session.cost(props.sessionID)
     const go = limits.info()?.go
-    const meter = (value: { percent: number }) => `${Math.round(value.percent)}%`
     return [
       usage
         ? `Context ${usage.tokens.toLocaleString()}${usage.percent === undefined ? "" : ` · ${usage.percent}% used`}`
         : undefined,
       cost > 0 ? money.format(cost) : undefined,
-      go ? `Go day ${meter(go.rolling)} · week ${meter(go.weekly)} · month ${meter(go.monthly)}` : undefined,
+      go ? `OpenCode Go: ${goMeters(go)}` : undefined,
     ].filter((item): item is string => Boolean(item))
   })
   const live = createMemo(() => Boolean(subagents() || shells()))

@@ -1,4 +1,4 @@
-import type { UsageLimitsBudget, UsageLimitsInfo } from "@opencode/client"
+import type { UsageLimitsBudget, UsageLimitsGo, UsageLimitsInfo } from "@opencode/client"
 
 /** A model as the usage limits read it: its OpenCode IDs, its price and context window, and its provider. */
 export type LimitedModel = {
@@ -68,6 +68,11 @@ export function usageLevel(usage: ModelUsage, model: LimitedModel): UsageLevel {
   if (usage.left < request) return "out"
   if (usage.left < request * 3) return "low"
   return "plenty"
+}
+
+/** OpenCode Go meters as `rolling·weekly·monthly`, e.g. `46%·18%·9%`. */
+export function goMeters(go: UsageLimitsGo) {
+  return [go.rolling, go.weekly, go.monthly].map((meter) => `${Math.round(meter.percent)}%`).join("·")
 }
 
 /** Dollars as limits read: whole amounts without cents, and a sliver as "<$0.01" rather than "$0.00". */

@@ -1,8 +1,11 @@
 import { Plugin } from "@opencode/plugin/tui"
-import { createMemo, Match, Show, Switch } from "solid-js"
+import { createEffect, createMemo, Match, Show, Switch } from "solid-js"
 import { useTerminalDimensions } from "@opentui/solid"
 import { usePlugin } from "../../plugin/context"
 import { Slot } from "../../plugin/render"
+import { useLocal } from "../../context/local"
+import { useUsageLimits } from "../../component/usage"
+import { goMeters } from "../../util/usage-limits"
 
 export function homeFooterVisibility(width: number) {
   return {
@@ -31,8 +34,7 @@ function Mcp(props: { context: Plugin.Context }) {
             <Match when={true}>
               <span
                 style={{
-                  fg:
-                    count() > 0 ? props.context.theme.text.feedback.success.base : props.context.theme.text.muted,
+                  fg: count() > 0 ? props.context.theme.text.feedback.success.base : props.context.theme.text.muted,
                 }}
               >
                 ⊙{" "}
@@ -94,6 +96,25 @@ function TokenSaving(props: { context: Plugin.Context }) {
   )
 }
 
+function GoUsage(props: { context: Plugin.Context }) {
+  const local = useLocal()
+  const limits = useUsageLimits()
+  createEffect(() => {
+    const selected = local.model.current()
+    if (selected?.providerID === "opencode-go" && limits.info() === undefined) limits.load()
+  })
+  const go = () => limits.info()?.go
+  return (
+    <Show when={go()}>
+      {(meters) => (
+        <box flexShrink={0}>
+          <text fg={props.context.theme.text.muted}>OpenCode Go: {goMeters(meters())}</text>
+        </box>
+      )}
+    </Show>
+  )
+}
+
 function View(props: { context: Plugin.Context }) {
   const dimensions = useTerminalDimensions()
   const visibility = createMemo(() => homeFooterVisibility(dimensions().width))
@@ -112,6 +133,7 @@ function View(props: { context: Plugin.Context }) {
       >
         <Mcp context={props.context} />
         <Plugins context={props.context} />
+        <GoUsage context={props.context} />
         <Slot path="home.footer.status" />
         <box flexGrow={1} />
         <TokenSaving context={props.context} />

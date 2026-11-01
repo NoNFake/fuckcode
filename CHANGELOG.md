@@ -25,7 +25,8 @@ Release notes in this repository are generated from git history, not hand-writte
 
 ### Added
 
-- The prompt footer shows the session's context tokens and percent used, its spend, and OpenCode Go day, week and month usage on one line.
+- The prompt footer shows the session's context tokens and percent used, its spend, and OpenCode Go usage on one line.
+- The home screen footer and the prompt footer show OpenCode Go usage as `OpenCode Go: rolling·weekly·monthly`.
 
 ### Fixed
 
