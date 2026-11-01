@@ -31,6 +31,7 @@ Release notes in this repository are generated from git history, not hand-writte
 ### Fixed
 
 - `fuckcode upgrade` downloads the installer for the target version; it requested a literal `${version}` URL and failed with HTTP 404.
+- OpenCode Go usage no longer stays hidden when the server reports a different canonical location than the one requested.
 
 ## [2.0.2] - 2026-11-01
 

@@ -117,7 +117,8 @@ test("home screen shows OpenCode Go usage", async () => {
       if (url.pathname === "/api/provider")
         return json({ location, data: [{ id: "opencode-go", integrationID: "opencode", name: "OpenCode Go" }] })
       if (url.pathname === "/api/model") return json({ location, data: [model] })
-      if (url.pathname === "/api/experimental/usage/limits") return json({ location, data: limits })
+      if (url.pathname === "/api/experimental/usage/limits")
+        return json({ location: { ...location, directory: `${directory}/canonical` }, data: limits })
       return undefined
     },
   })
