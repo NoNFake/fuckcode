@@ -28,7 +28,7 @@ import {
 } from "./model-options"
 import { DialogUsage, useUsageLimits } from "./usage"
 import { formatDollars, usageLevel } from "../util/usage-limits"
-import { intelligenceScore, strongIntelligenceScore } from "./model-intelligence"
+import { intelligenceLevel, intelligenceScore } from "./model-intelligence"
 import { useTheme } from "../context/theme"
 
 const CONFIG_NAMES = ["opencode.json", "opencode.jsonc", "fuckcode.json", "fuckcode.jsonc"]
@@ -123,16 +123,19 @@ function DialogConnectedModels(props: {
     value !== undefined &&
     local.model.favorite().some((item) => item.providerID === value.providerID && item.modelID === value.modelID)
   // Right-hand slot: the favorite marker under new designs, then price and the Artificial Analysis
-  // index, green once the model is in the frontier tier.
+  // index colored by tier (green >= 40, orange 25-39, red < 25).
   const trailing = (model: ModelInfo, favorite: boolean) => {
     const score = intelligenceScore(model)
     const price = modelPrice(model)
+    const level = score === undefined ? undefined : intelligenceLevel(score)
     const scoreColor =
-      score === undefined
-        ? undefined
-        : score >= strongIntelligenceScore
-          ? theme.text.feedback.success.base
-          : theme.text.muted
+      level === "high"
+        ? theme.text.feedback.success.base
+        : level === "medium"
+          ? theme.text.feedback.warning.base
+          : level === "low"
+            ? theme.text.feedback.error.base
+            : undefined
     if (price === "" && score === undefined) return newDesigns() && favorite ? <FavoriteMarker /> : undefined
     const content = (
       <>
@@ -182,7 +185,7 @@ function DialogConnectedModels(props: {
             description: provider?.name ?? model.providerID,
             category,
             footer: trailing(model, isFavorite(item)),
-            detail: newDesigns() ? () => <ModelDetail model={model} usage={usage(model)} /> : undefined,
+            detail: () => <ModelDetail model={model} usage={usage(model)} />,
             onSelect: () => {
               props.onSelect(model.providerID, model.id)
             },
@@ -218,7 +221,7 @@ function DialogConnectedModels(props: {
             category: connected() ? (freeGroup(model) ? "Free" : (provider?.name ?? model.providerID)) : undefined,
             footer: trailing(model, favorite),
             free: isFreeModel(model),
-            detail: newDesigns() ? () => <ModelDetail model={model} usage={usage(model)} /> : undefined,
+            detail: () => <ModelDetail model={model} usage={usage(model)} />,
             onSelect() {
               props.onSelect(model.providerID, model.id)
             },

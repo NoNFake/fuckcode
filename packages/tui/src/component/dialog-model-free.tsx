@@ -6,6 +6,8 @@ import { useLocation } from "../context/location"
 import { modelPreferenceKey } from "../model-preference"
 import { DialogSelect } from "../ui/dialog-select"
 import { FavoriteMarker, ModelDetail, isFreeModel, prioritizeFavorites } from "./model-options"
+import { intelligenceLevel, intelligenceScore } from "./model-intelligence"
+import { useTheme } from "../context/theme"
 
 /** Model picker for users without a connected provider, under the "new-designs" experiment. */
 export function DialogFreeModels(props: {
@@ -15,6 +17,7 @@ export function DialogFreeModels(props: {
   const local = useLocal()
   const data = useData()
   const location = useLocation()
+  const theme = useTheme().surface("dialog")
   const [query, setQuery] = createSignal("")
   // Favoriting does not reorder the list until the dialog is reopened.
   const favoritePriority = new Set(local.model.favorite().map(modelPreferenceKey))
@@ -28,10 +31,31 @@ export function DialogFreeModels(props: {
       .filter((model) => model.status !== "deprecated" && isFreeModel(model))
       .map((model) => {
         const value = { providerID: model.providerID, modelID: model.id }
+        const score = intelligenceScore(model)
+        const level = score === undefined ? undefined : intelligenceLevel(score)
+        const color =
+          level === "high"
+            ? theme.text.feedback.success.base
+            : level === "medium"
+              ? theme.text.feedback.warning.base
+              : level === "low"
+                ? theme.text.feedback.error.base
+                : undefined
+        const badge = score === undefined ? undefined : <span style={{ fg: color }}>AA {score}</span>
+        const fav = isFavorite(value)
         return {
           value,
           title: model.name,
-          footer: isFavorite(value) ? <FavoriteMarker /> : undefined,
+          footer:
+            fav && badge ? (
+              <>
+                <FavoriteMarker /> {badge}
+              </>
+            ) : fav ? (
+              <FavoriteMarker />
+            ) : (
+              badge
+            ),
           detail: () => <ModelDetail model={model} price={false} />,
           onSelect: () => props.onSelect(model.providerID, model.id),
         }
