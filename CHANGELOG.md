@@ -23,6 +23,24 @@ Release notes in this repository are generated from git history, not hand-writte
 
 ## [Unreleased]
 
+## [2.0.2] - 2026-11-01
+
+### Added
+
+- The model picker shows each model's Artificial Analysis Intelligence Index score, green for frontier models, orange for mid-tier and red for low-tier.
+- The model picker shows each model's price on every row, not only on the highlighted model.
+- The prompt footer shows OpenCode Go usage as rolling, weekly and monthly percentages.
+
+### Changed
+
+- Synced with upstream OpenCode dev (2.2.5): session and model code, the tool loop, the request pipeline and the usage limits moved to upstream's structure.
+- The model detail bar (price, modalities, context and reasoning) is always shown in the model picker; it no longer needs the `new-designs` experiment.
+
+### Fixed
+
+- Windows managed-service ports move out of the ranges Windows and WSL reserve, so the service no longer fails as "in use" while nothing listens on it.
+- Concurrent writers of the service configuration no longer overwrite each other's temporary file.
+
 ## [2.0.1] - 2026-10-18
 
 ### Changed
