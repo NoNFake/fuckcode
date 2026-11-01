@@ -23,6 +23,10 @@ Release notes in this repository are generated from git history, not hand-writte
 
 ## [Unreleased]
 
+### Fixed
+
+- `fuckcode upgrade` downloads the installer for the target version; it requested a literal `${version}` URL and failed with HTTP 404.
+
 ## [2.0.2] - 2026-11-01
 
 ### Added

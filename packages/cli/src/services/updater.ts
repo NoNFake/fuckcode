@@ -490,9 +490,9 @@ const make = Effect.gen(function* () {
               "-fsSL",
               "-o",
               installer,
-              "https://raw.githubusercontent.com/NoNFake/fuckcode/v${version}/install",
+              `https://raw.githubusercontent.com/NoNFake/fuckcode/v${version}/install`,
             ],
-            displayCommand: ["curl", "-fsSL", "https://raw.githubusercontent.com/NoNFake/fuckcode/v${version}/install"],
+            displayCommand: ["curl", "-fsSL", `https://raw.githubusercontent.com/NoNFake/fuckcode/v${version}/install`],
             title: "Could not download the FuckCode installer",
             retry: "Check your network, then run opencode upgrade again.",
           })
