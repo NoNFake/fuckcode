@@ -45,3 +45,6 @@ const scores = new Map(Object.entries(snapshot).map(([name, score]) => [normaliz
 export function intelligenceScore(model: { readonly id: string; readonly name: string }) {
   return scores.get(normalize(model.name)) ?? scores.get(normalize(model.id))
 }
+
+/** The index runs to about 60; 40 and up is the current frontier tier. */
+export const strongIntelligenceScore = 40

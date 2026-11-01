@@ -18,10 +18,18 @@ import { useLocation } from "../context/location"
 import { useNewDesigns } from "../config"
 import { useToast } from "../ui/toast"
 import { DialogFreeModels } from "./dialog-model-free"
-import { FavoriteMarker, ModelDetail, isFreeModel, prioritizeFavorites, sortModelOptions } from "./model-options"
+import {
+  FavoriteMarker,
+  ModelDetail,
+  isFreeModel,
+  modelPrice,
+  prioritizeFavorites,
+  sortModelOptions,
+} from "./model-options"
 import { DialogUsage, useUsageLimits } from "./usage"
 import { formatDollars, usageLevel } from "../util/usage-limits"
-import { intelligenceScore } from "./model-intelligence"
+import { intelligenceScore, strongIntelligenceScore } from "./model-intelligence"
+import { useTheme } from "../context/theme"
 
 const CONFIG_NAMES = ["opencode.json", "opencode.jsonc", "fuckcode.json", "fuckcode.jsonc"]
 
@@ -90,6 +98,7 @@ function DialogConnectedModels(props: {
 }) {
   const local = useLocal()
   const newDesigns = useNewDesigns()
+  const theme = useTheme().surface("dialog")
   const data = useData()
   const toast = useToast()
   const location = useLocation()
@@ -113,22 +122,31 @@ function DialogConnectedModels(props: {
   const isFavorite = (value: { providerID: string; modelID: string } | undefined) =>
     value !== undefined &&
     local.model.favorite().some((item) => item.providerID === value.providerID && item.modelID === value.modelID)
-  // The trailing slot marks favorites under new designs; otherwise it notes free models. The
-  // Artificial Analysis index joins it when the model has a published score.
+  // Right-hand slot: the favorite marker under new designs, then price and the Artificial Analysis
+  // index, green once the model is in the frontier tier.
   const trailing = (model: ModelInfo, favorite: boolean) => {
     const score = intelligenceScore(model)
-    const badge = score === undefined ? undefined : `AA ${score}`
-    if (newDesigns()) {
-      if (!favorite) return badge
-      return (
-        <>
-          <FavoriteMarker />
-          {badge === undefined ? undefined : ` ${badge}`}
-        </>
-      )
-    }
-    return (
-      [isFreeModel(model) ? "Free" : undefined, badge].filter((item) => item !== undefined).join(" · ") || undefined
+    const price = modelPrice(model)
+    const scoreColor =
+      score === undefined
+        ? undefined
+        : score >= strongIntelligenceScore
+          ? theme.text.feedback.success.base
+          : theme.text.muted
+    if (price === "" && score === undefined) return newDesigns() && favorite ? <FavoriteMarker /> : undefined
+    const content = (
+      <>
+        {price === "" ? undefined : <span style={{ fg: theme.text.muted }}>{price}</span>}
+        {price !== "" && score !== undefined ? <span style={{ fg: theme.text.muted }}> · </span> : undefined}
+        {score === undefined ? undefined : <span style={{ fg: scoreColor }}>AA {score}</span>}
+      </>
+    )
+    return newDesigns() && favorite ? (
+      <>
+        <FavoriteMarker /> {content}
+      </>
+    ) : (
+      content
     )
   }
   // OpenCode's own free models get their own group at the end of the list instead of joining "OpenCode".

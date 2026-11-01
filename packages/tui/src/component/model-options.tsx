@@ -45,6 +45,13 @@ export function FavoriteMarker() {
   return <span style={{ fg: theme.text.formfield.selected }}>*</span>
 }
 
+export function modelPrice(model: ModelInfo) {
+  if (isFreeModel(model)) return "Free"
+  const cost = model.cost[0]
+  if (!cost) return ""
+  return `$${dollars(cost.input)}/$${dollars(cost.output)}`
+}
+
 /**
  * Price, input modalities, context window and reasoning support for the selected model, after what its usage limits
  * leave when `usage` says so.
@@ -55,12 +62,7 @@ export function ModelDetail(props: {
   usage?: { readonly text: string; readonly danger?: boolean }
 }) {
   const theme = useTheme().surface("dialog")
-  const price = () => {
-    if (isFreeModel(props.model)) return "Free"
-    const cost = props.model.cost[0]
-    if (!cost) return ""
-    return `$${dollars(cost.input)}/$${dollars(cost.output)}`
-  }
+  const price = () => (props.price === false ? "" : modelPrice(props.model))
   const facts = () =>
     [
       props.model.capabilities.input.map(modality).join(", "),
