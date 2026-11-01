@@ -1,6 +1,6 @@
 import { Plugin } from "@opencode/plugin/tui"
 import { createMemo, createSignal, Match, Show, Switch } from "solid-js"
-import { contextUsage, formatContextUsage } from "../../util/session"
+import { contextUsage } from "../../util/session"
 import { useTerminalDimensions } from "@opentui/solid"
 import { stringWidth } from "../../util/string-width"
 import { useUsageLimits } from "../../component/usage"
@@ -49,12 +49,13 @@ export function PromptFooter(props: {
     )
     const cost = props.context.data.session.cost(props.sessionID)
     const go = limits.info()?.go
+    const meter = (value: { percent: number }) => `${Math.round(value.percent)}%`
     return [
-      go
-        ? `Go ${Math.round(go.rolling.percent)}% · ${Math.round(go.weekly.percent)}% · ${Math.round(go.monthly.percent)}%`
+      usage
+        ? `Context ${usage.tokens.toLocaleString()}${usage.percent === undefined ? "" : ` · ${usage.percent}% used`}`
         : undefined,
-      usage ? formatContextUsage(usage.tokens, usage.percent) : undefined,
       cost > 0 ? money.format(cost) : undefined,
+      go ? `Go day ${meter(go.rolling)} · week ${meter(go.weekly)} · month ${meter(go.monthly)}` : undefined,
     ].filter((item): item is string => Boolean(item))
   })
   const live = createMemo(() => Boolean(subagents() || shells()))
@@ -135,8 +136,7 @@ export function PromptFooter(props: {
           </Match>
           <Match when={props.showDetails && layout().shortcuts}>
             <text fg={props.context.theme.text.base} flexShrink={0}>
-              {shortcut("agent.cycle")}{" "}
-              <span style={{ fg: props.context.theme.text.muted }}>agents</span>
+              {shortcut("agent.cycle")} <span style={{ fg: props.context.theme.text.muted }}>agents</span>
             </text>
           </Match>
         </Switch>
@@ -161,10 +161,7 @@ export function PromptFooter(props: {
                   report={verify({
                     messages: props.context.data.session.message.list(props.sessionID ?? ""),
                     partsOf: (message) =>
-                      message &&
-                      typeof message === "object" &&
-                      "content" in message &&
-                      Array.isArray(message.content)
+                      message && typeof message === "object" && "content" in message && Array.isArray(message.content)
                         ? message.content
                         : [],
                   })}
@@ -177,8 +174,7 @@ export function PromptFooter(props: {
         </Show>
         <Show when={props.showDetails && layout().shortcuts}>
           <text fg={props.context.theme.text.base} wrapMode="none" flexShrink={0}>
-            {shortcut("command.palette.show")}{" "}
-            <span style={{ fg: props.context.theme.text.muted }}>commands</span>
+            {shortcut("command.palette.show")} <span style={{ fg: props.context.theme.text.muted }}>commands</span>
           </text>
         </Show>
       </Match>

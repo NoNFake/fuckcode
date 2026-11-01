@@ -23,6 +23,10 @@ Release notes in this repository are generated from git history, not hand-writte
 
 ## [Unreleased]
 
+### Added
+
+- The prompt footer shows the session's context tokens and percent used, its spend, and OpenCode Go day, week and month usage on one line.
+
 ### Fixed
 
 - `fuckcode upgrade` downloads the installer for the target version; it requested a literal `${version}` URL and failed with HTTP 404.

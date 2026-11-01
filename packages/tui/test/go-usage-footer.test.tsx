@@ -5,7 +5,7 @@ import { directory, json } from "./fixture/tui-client"
 
 const location = { directory, project: { id: "proj_test", directory, canonical: directory } }
 
-test("footer shows OpenCode Go rolling, weekly, and monthly usage", async () => {
+test("footer shows context, spend, and OpenCode Go day, week, and month usage", async () => {
   await using state = await tmpdir()
   const session = {
     id: "ses_go_usage",
@@ -14,7 +14,7 @@ test("footer shows OpenCode Go rolling, weekly, and monthly usage", async () => 
     title: "Go usage",
     agent: "build",
     model: { providerID: "opencode-go", id: "kimi-k2.6" },
-    cost: 0,
+    cost: 8.01,
     tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
     time: { created: 1, updated: 1 },
   }
@@ -33,7 +33,23 @@ test("footer shows OpenCode Go rolling, weekly, and monthly usage", async () => 
     fetch: (url) => {
       if (url.pathname === "/api/session") return json({ data: [session], cursor: {} })
       if (url.pathname === `/api/session/${session.id}`) return json({ data: session })
-      if (url.pathname === `/api/session/${session.id}/message`) return json({ data: [], cursor: {} })
+      if (url.pathname === `/api/session/${session.id}/message`)
+        return json({
+          data: [
+            {
+              id: "msg_answer",
+              type: "assistant",
+              agent: "build",
+              model: session.model,
+              content: [{ type: "text", text: "Done." }],
+              finish: "stop",
+              tokens: { input: 300_000, output: 39_952, reasoning: 0, cache: { read: 0, write: 0 } },
+              cost: 8.01,
+              time: { created: 2, completed: 3 },
+            },
+          ],
+          cursor: {},
+        })
       if ([`/api/session/${session.id}/inbox`, `/api/session/${session.id}/permission`].includes(url.pathname))
         return json({ data: [] })
       if (url.pathname === "/api/agent")
@@ -53,7 +69,7 @@ test("footer shows OpenCode Go rolling, weekly, and monthly usage", async () => 
               enabled: true,
               cost: [{ input: 1, output: 5, cache: { read: 0, write: 0 } }],
               capabilities: { input: ["text"], output: ["text"], reasoning: false, toolCall: true, attachment: false },
-              limit: { context: 200_000, output: 32_000 },
+              limit: { context: 1_000_000, output: 32_000 },
               variants: [],
               time: { released: 1 },
             },
@@ -65,5 +81,7 @@ test("footer shows OpenCode Go rolling, weekly, and monthly usage", async () => 
   })
 
   await setup.ready
-  await setup.waitForFrame((frame) => /Go 16% · 6% · 3%/.test(frame))
+  await setup.waitForFrame((frame) =>
+    frame.includes("Context 339,952 · 34% used · $8.01 · Go day 16% · week 6% · month 3%"),
+  )
 })
