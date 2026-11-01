@@ -1574,11 +1574,12 @@ export function Prompt(props: PromptProps) {
     },
   )
   // What the workspace's limits leave for the selected model, once it is running low. Only OpenCode Console limits
-  // models, so only a model it serves loads them.
+  // models, so only a model it serves loads them. OpenCode Go also reports its meters in the footer.
   const limits = useUsageLimits()
   createEffect(() => {
     const selected = local.model.current()
-    if (selected && limits.served(selected.providerID) && limits.info() === undefined) limits.load()
+    const meters = selected?.providerID === "opencode-go"
+    if (selected && (meters || limits.served(selected.providerID)) && limits.info() === undefined) limits.load()
   })
   const limit = createMemo(() => {
     const selected = local.model.current()

@@ -18,9 +18,18 @@ import { useLocation } from "../context/location"
 import { useNewDesigns } from "../config"
 import { useToast } from "../ui/toast"
 import { DialogFreeModels } from "./dialog-model-free"
-import { FavoriteMarker, ModelDetail, isFreeModel, prioritizeFavorites, sortModelOptions } from "./model-options"
+import {
+  FavoriteMarker,
+  ModelDetail,
+  isFreeModel,
+  modelPrice,
+  prioritizeFavorites,
+  sortModelOptions,
+} from "./model-options"
 import { DialogUsage, useUsageLimits } from "./usage"
 import { formatDollars, usageLevel } from "../util/usage-limits"
+import { intelligenceLevel, intelligenceScore } from "./model-intelligence"
+import { useTheme } from "../context/theme"
 
 const CONFIG_NAMES = ["opencode.json", "opencode.jsonc", "fuckcode.json", "fuckcode.jsonc"]
 
@@ -89,6 +98,7 @@ function DialogConnectedModels(props: {
 }) {
   const local = useLocal()
   const newDesigns = useNewDesigns()
+  const theme = useTheme().surface("dialog")
   const data = useData()
   const toast = useToast()
   const location = useLocation()
@@ -112,10 +122,35 @@ function DialogConnectedModels(props: {
   const isFavorite = (value: { providerID: string; modelID: string } | undefined) =>
     value !== undefined &&
     local.model.favorite().some((item) => item.providerID === value.providerID && item.modelID === value.modelID)
-  // Under new designs the detail row shows the price, so the trailing slot only marks favorites.
+  // Right-hand slot: the favorite marker under new designs, then price and the Artificial Analysis
+  // index colored by tier (green >= 40, orange 25-39, red < 25).
   const trailing = (model: ModelInfo, favorite: boolean) => {
-    if (newDesigns()) return favorite ? <FavoriteMarker /> : undefined
-    return isFreeModel(model) ? "Free" : undefined
+    const score = intelligenceScore(model)
+    const price = modelPrice(model)
+    const level = score === undefined ? undefined : intelligenceLevel(score)
+    const scoreColor =
+      level === "high"
+        ? theme.text.feedback.success.base
+        : level === "medium"
+          ? theme.text.feedback.warning.base
+          : level === "low"
+            ? theme.text.feedback.error.base
+            : undefined
+    if (price === "" && score === undefined) return newDesigns() && favorite ? <FavoriteMarker /> : undefined
+    const content = (
+      <>
+        {price === "" ? undefined : <span style={{ fg: theme.text.muted }}>{price}</span>}
+        {price !== "" && score !== undefined ? <span style={{ fg: theme.text.muted }}> · </span> : undefined}
+        {score === undefined ? undefined : <span style={{ fg: scoreColor }}>AA {score}</span>}
+      </>
+    )
+    return newDesigns() && favorite ? (
+      <>
+        <FavoriteMarker /> {content}
+      </>
+    ) : (
+      content
+    )
   }
   // OpenCode's own free models get their own group at the end of the list instead of joining "OpenCode".
   const freeGroup = (model: ModelInfo) =>
@@ -150,7 +185,7 @@ function DialogConnectedModels(props: {
             description: provider?.name ?? model.providerID,
             category,
             footer: trailing(model, isFavorite(item)),
-            detail: newDesigns() ? () => <ModelDetail model={model} usage={usage(model)} /> : undefined,
+            detail: () => <ModelDetail model={model} usage={usage(model)} />,
             onSelect: () => {
               props.onSelect(model.providerID, model.id)
             },
@@ -186,7 +221,7 @@ function DialogConnectedModels(props: {
             category: connected() ? (freeGroup(model) ? "Free" : (provider?.name ?? model.providerID)) : undefined,
             footer: trailing(model, favorite),
             free: isFreeModel(model),
-            detail: newDesigns() ? () => <ModelDetail model={model} usage={usage(model)} /> : undefined,
+            detail: () => <ModelDetail model={model} usage={usage(model)} />,
             onSelect() {
               props.onSelect(model.providerID, model.id)
             },

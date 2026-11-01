@@ -2,6 +2,7 @@ import type { ModelInfo } from "@opencode/client"
 import { For, Show } from "solid-js"
 import { useTheme } from "../context/theme"
 import { modelPreferenceKey } from "../model-preference"
+import { intelligenceLevel, intelligenceScore } from "./model-intelligence"
 
 export function prioritizeFavorites<T extends { value: { providerID: string; modelID: string } }>(
   options: T[],
@@ -45,6 +46,13 @@ export function FavoriteMarker() {
   return <span style={{ fg: theme.text.formfield.selected }}>*</span>
 }
 
+export function modelPrice(model: ModelInfo) {
+  if (isFreeModel(model)) return "Free"
+  const cost = model.cost[0]
+  if (!cost) return ""
+  return `$${dollars(cost.input)}/$${dollars(cost.output)}`
+}
+
 /**
  * Price, input modalities, context window and reasoning support for the selected model, after what its usage limits
  * leave when `usage` says so.
@@ -55,20 +63,38 @@ export function ModelDetail(props: {
   usage?: { readonly text: string; readonly danger?: boolean }
 }) {
   const theme = useTheme().surface("dialog")
-  const price = () => {
-    if (isFreeModel(props.model)) return "Free"
-    const cost = props.model.cost[0]
-    if (!cost) return ""
-    return `$${dollars(cost.input)}/$${dollars(cost.output)}`
-  }
+  const price = () => (props.price === false ? "" : modelPrice(props.model))
   const facts = () =>
     [
       props.model.capabilities.input.map(modality).join(", "),
       tokens(props.model.limit.context),
       ...(props.model.variants.length > 0 ? ["Reasoning"] : []),
     ].filter(Boolean)
+  const score = () => intelligenceScore(props.model)
+  const scoreBadge = () => {
+    const value = score()
+    if (value === undefined) return undefined
+    const level = intelligenceLevel(value)
+    const color =
+      level === "high"
+        ? theme.text.feedback.success.base
+        : level === "medium"
+          ? theme.text.feedback.warning.base
+          : theme.text.feedback.error.base
+    return <span style={{ fg: color }}>AA {value}</span>
+  }
   const list = (items: string[]) => (
     <text fg={theme.text.muted} wrapMode="none" flexShrink={0}>
+      <Show when={scoreBadge()}>
+        {(badge) => (
+          <>
+            {badge()}
+            <Show when={items.length > 0}>
+              <span style={{ fg: theme.hue.neutral[400] }}> · </span>
+            </Show>
+          </>
+        )}
+      </Show>
       <For each={items}>
         {(fact, index) => (
           <>

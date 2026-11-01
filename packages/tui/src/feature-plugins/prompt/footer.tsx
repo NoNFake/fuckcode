@@ -3,6 +3,7 @@ import { createMemo, createSignal, Match, Show, Switch } from "solid-js"
 import { contextUsage, formatContextUsage } from "../../util/session"
 import { useTerminalDimensions } from "@opentui/solid"
 import { stringWidth } from "../../util/string-width"
+import { useUsageLimits } from "../../component/usage"
 import { DialogEco } from "../../component/dialog-eco"
 import { DialogVerify } from "../../component/dialog-verify"
 import { EcoMetrics } from "@opencode/core/util/eco-metrics"
@@ -21,6 +22,7 @@ export function PromptFooter(props: {
   showDetails: boolean
 }) {
   const dimensions = useTerminalDimensions()
+  const limits = useUsageLimits()
   const [liveHovered, setLiveHovered] = createSignal(false)
   const subagents = createMemo(() => {
     if (!props.sessionID) return 0
@@ -46,7 +48,11 @@ export function PromptFooter(props: {
       session.revert?.messageID,
     )
     const cost = props.context.data.session.cost(props.sessionID)
+    const go = limits.info()?.go
     return [
+      go
+        ? `Go ${Math.round(go.rolling.percent)}% · ${Math.round(go.weekly.percent)}% · ${Math.round(go.monthly.percent)}%`
+        : undefined,
       usage ? formatContextUsage(usage.tokens, usage.percent) : undefined,
       cost > 0 ? money.format(cost) : undefined,
     ].filter((item): item is string => Boolean(item))
