@@ -116,7 +116,11 @@ serviceTest(
       () => undefined,
       (error: Error) => error.message,
     )
-    expect(conflict).toContain(`Managed service port ${home.port} on 127.0.0.1 is already in use by another process`)
+    expect(conflict).toContain(
+      `Managed service port ${home.port} on 127.0.0.1 is already in use by ${
+        process.platform !== "win32" && Bun.which("lsof") ? `PID ${process.pid} (` : "another process"
+      }`,
+    )
     expect(conflict).toContain("fuckcode service set port <port>")
     expect(await servers(home)).toEqual([])
     expect(await Bun.file(home.registration).exists()).toBe(false)
@@ -175,8 +179,8 @@ async function serviceHome(options: { readonly failBoot?: boolean } = {}) {
   // Bun resolves symlinks in the entry path, so process command lines carry the real directory.
   const root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "opencode-service-lifecycle-")))
   const port = await availablePort()
-  await fs.mkdir(path.join(root, "config"), { recursive: true })
-  await fs.writeFile(path.join(root, "config", "service-local.json"), JSON.stringify({ port }))
+  await fs.mkdir(path.join(root, "config", "fuckcode"), { recursive: true })
+  await fs.writeFile(path.join(root, "config", "fuckcode", "service-local.json"), JSON.stringify({ port }))
   // A directory where the database file belongs makes boot fail after the server registers.
   if (options.failBoot) await fs.mkdir(path.join(root, "database"))
   // Servers spawned through this home's entry carry its path, so `servers()` sees only this home.
@@ -187,7 +191,7 @@ async function serviceHome(options: { readonly failBoot?: boolean } = {}) {
     root,
     port,
     entry: homeEntry,
-    registration: path.join(root, "state", "opencode", "service-local.json"),
+    registration: path.join(root, "state", "fuckcode", "service-local.json"),
     env: Object.fromEntries(
       Object.entries(isolatedEnv(root, overrides)).filter((entry): entry is [string, string] => entry[1] !== undefined),
     ),

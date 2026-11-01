@@ -7,6 +7,7 @@ import { DialogEco } from "../../component/dialog-eco"
 import { DialogVerify } from "../../component/dialog-verify"
 import { EcoMetrics } from "@opencode/core/util/eco-metrics"
 import { verify } from "../../util/verify"
+import { createGoal, GoalStatus } from "./goal"
 
 const money = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -51,6 +52,7 @@ export function PromptFooter(props: {
     ].filter((item): item is string => Boolean(item))
   })
   const live = createMemo(() => Boolean(subagents() || shells()))
+  const goal = createGoal(props.context, () => props.sessionID)
   const saved = createMemo(() => {
     if (!props.sessionID) return 0
     let total = 0
@@ -87,7 +89,7 @@ export function PromptFooter(props: {
     <Switch>
       <Match when={props.mode === "normal"}>
         <Switch>
-          <Match when={live() || status().length > 0}>
+          <Match when={goal() || live() || status().length > 0}>
             <box flexDirection="row" flexShrink={props.showDetails && layout().usage ? 0 : 1} minWidth={0}>
               <Show when={live()}>
                 <box
@@ -109,9 +111,17 @@ export function PromptFooter(props: {
                   </text>
                 </box>
               </Show>
+              <Show when={props.sessionID && goal()}>
+                <Show when={live()}>
+                  <text fg={props.context.theme.text.muted} wrapMode="none" flexShrink={0}>
+                    {" · "}
+                  </text>
+                </Show>
+                <GoalStatus context={props.context} sessionID={props.sessionID ?? ""} goal={goal} />
+              </Show>
               <Show when={props.showDetails && layout().usage && status().length > 0}>
                 <text fg={props.context.theme.text.muted} wrapMode="none" flexShrink={0}>
-                  <Show when={live()}> · </Show>
+                  <Show when={live() || goal()}> · </Show>
                   {status().join(" · ")}
                 </text>
               </Show>
