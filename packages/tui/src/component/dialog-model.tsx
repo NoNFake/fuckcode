@@ -21,6 +21,7 @@ import { DialogFreeModels } from "./dialog-model-free"
 import { FavoriteMarker, ModelDetail, isFreeModel, prioritizeFavorites, sortModelOptions } from "./model-options"
 import { DialogUsage, useUsageLimits } from "./usage"
 import { formatDollars, usageLevel } from "../util/usage-limits"
+import { intelligenceScore } from "./model-intelligence"
 
 const CONFIG_NAMES = ["opencode.json", "opencode.jsonc", "fuckcode.json", "fuckcode.jsonc"]
 
@@ -112,10 +113,23 @@ function DialogConnectedModels(props: {
   const isFavorite = (value: { providerID: string; modelID: string } | undefined) =>
     value !== undefined &&
     local.model.favorite().some((item) => item.providerID === value.providerID && item.modelID === value.modelID)
-  // Under new designs the detail row shows the price, so the trailing slot only marks favorites.
+  // The trailing slot marks favorites under new designs; otherwise it notes free models. The
+  // Artificial Analysis index joins it when the model has a published score.
   const trailing = (model: ModelInfo, favorite: boolean) => {
-    if (newDesigns()) return favorite ? <FavoriteMarker /> : undefined
-    return isFreeModel(model) ? "Free" : undefined
+    const score = intelligenceScore(model)
+    const badge = score === undefined ? undefined : `AA ${score}`
+    if (newDesigns()) {
+      if (!favorite) return badge
+      return (
+        <>
+          <FavoriteMarker />
+          {badge === undefined ? undefined : ` ${badge}`}
+        </>
+      )
+    }
+    return (
+      [isFreeModel(model) ? "Free" : undefined, badge].filter((item) => item !== undefined).join(" · ") || undefined
+    )
   }
   // OpenCode's own free models get their own group at the end of the list instead of joining "OpenCode".
   const freeGroup = (model: ModelInfo) =>
