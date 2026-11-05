@@ -681,8 +681,15 @@ test("an opened session in another Location names its model from a loaded catalo
       }),
     )
 
+    // A click before the catalog loads waits for it, and Escape gives up the wait, so the dialog cannot pop up later.
+    await control.click()
+    await expect(control).toHaveAttribute("aria-busy", "true")
+    await page.keyboard.press("Escape")
+    await expect(control).not.toHaveAttribute("aria-busy")
+
     // A click before the catalog loads opens the dialog once it does.
     await control.click()
+    await expect(control).toHaveAttribute("aria-busy", "true")
     held.release()
     await Promise.all(loaded)
     await expect(page.getByRole("dialog")).toBeVisible()
@@ -1140,6 +1147,33 @@ test("shows the dropzone and attaches a dropped file", async ({ page }) => {
     ])
   await expect(page.locator('[data-component="upload-progress"]')).toHaveCount(0)
   await expect(page.locator('[data-component="composer-attachments"]')).toContainText("dropzone.txt")
+})
+
+test("an attachment pasted mid-sentence leaves the text and the caret where they were", async ({ page }) => {
+  const { editor } = await openDraft(page, {
+    name: "ComposerDraft",
+    provider: NO_PROVIDER,
+    onFileWrite: () => undefined,
+  })
+
+  await editor.click()
+  await page.keyboard.type("Hello world")
+  await editor.press("Home")
+
+  for (let count = 0; count < "Hello".length; count++) await editor.press("ArrowRight")
+
+  const text = await editor.evaluateHandle((element) => element.firstChild)
+
+  await editor.evaluate((element) => {
+    const data = new DataTransfer()
+    data.items.add(new File(["Attachment fixture"], "notes.txt", { type: "text/plain" }))
+    element.dispatchEvent(new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }))
+  })
+  await expect(page.locator('[data-component="composer-attachments"]')).toContainText("notes.txt")
+  // A rewrite of the editor would replace this node, even when it put the caret back in the same place.
+  expect(await editor.evaluate((element, node) => element.firstChild === node, text)).toBe(true)
+  await page.keyboard.type(",")
+  await expect(editor).toHaveText("Hello, world")
 })
 
 test("keeps one dropzone while a file drag crosses the composer, and none for a text drag", async ({ page }) => {
