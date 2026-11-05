@@ -23,10 +23,18 @@ Release notes in this repository are generated from git history, not hand-writte
 
 ## [Unreleased]
 
+## [2.0.3] - 2026-11-05
+
 ### Added
 
 - The prompt footer shows the session's context tokens and percent used, its spend, and OpenCode Go usage on one line.
 - The home screen footer and the prompt footer show OpenCode Go usage as `OpenCode Go: rolling·weekly·monthly`.
+- `fuckcode run --archived` creates the session already archived, so scripted and CI runs stay out of session lists.
+- MCP servers configured with `pool: true` share one connection across locations instead of one connection per location.
+
+### Changed
+
+- Synced with upstream OpenCode dev (2.2.5): the desktop app and GUI components move to explicit state machines, and the shared HTTP fetch and feature-flag registry land in core.
 
 ### Fixed
 
