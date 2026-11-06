@@ -6,7 +6,7 @@ import { Model } from "@opencode/schema/model"
 import { Effect } from "effect"
 import { SessionSystemPrompt } from "../session/system-prompt.js"
 
-import PROMPT_GPT from "./system-prompt/gpt.txt"
+import PROMPT_BASE from "../session/runner/prompt/system.txt"
 import PROMPT_ASTRA from "./system-prompt/gpt-astra.txt"
 import PROMPT_KIMI from "./system-prompt/kimi.txt"
 import PROMPT_META from "./system-prompt/meta.txt"
@@ -16,7 +16,7 @@ import PROMPT_ANTHROPIC from "./system-prompt/anthropic.txt"
 export const OpenAIPlugin = make("opencode.prompt.openai", (model) => {
   const id = model.id.toLowerCase()
   if (!id.includes("gpt")) return undefined
-  return id.includes("astra") ? PROMPT_ASTRA : PROMPT_GPT
+  return id.includes("astra") ? PROMPT_ASTRA : PROMPT_BASE
 })
 
 export const AnthropicPlugin = make(

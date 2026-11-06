@@ -15,7 +15,7 @@ import { Effect } from "effect"
 import { testEffect } from "../lib/effect"
 import { PluginTestLayer } from "./fixture"
 import PROMPT_META from "../../src/plugin/system-prompt/meta.txt"
-import PROMPT_GPT from "../../src/plugin/system-prompt/gpt.txt"
+import PROMPT_BASE from "../../src/session/runner/prompt/system.txt"
 import PROMPT_ASTRA from "../../src/plugin/system-prompt/gpt-astra.txt"
 import PROMPT_KIMI from "../../src/plugin/system-prompt/kimi.txt"
 import PROMPT_TRINITY from "../../src/plugin/system-prompt/trinity.txt"
@@ -73,11 +73,11 @@ describe("OptimizePlugin", () => {
         discard: true,
       })
       const cases = [
-        ["gpt-5", PROMPT_GPT],
-        ["gpt-4.1", PROMPT_GPT],
+        ["gpt-5", PROMPT_BASE],
+        ["gpt-4.1", PROMPT_BASE],
         ["o3", fallback],
-        ["gpt-5-codex", PROMPT_GPT],
-        ["gpt-6", PROMPT_GPT],
+        ["gpt-5-codex", PROMPT_BASE],
+        ["gpt-6", PROMPT_BASE],
         ["gpt-6-astra", PROMPT_ASTRA],
         ["gpt-5-astra", PROMPT_ASTRA],
         ["gemini-2.5-pro", fallback],
@@ -125,7 +125,7 @@ describe("OptimizePlugin", () => {
       yield* hooks.trigger("session", "context", event)
 
       expect(event.system.map((part) => part.text)).toEqual([
-        SessionSystemPrompt.render(PROMPT_GPT, Object.keys(event.tools)),
+        SessionSystemPrompt.render(PROMPT_BASE, Object.keys(event.tools)),
         "Project instructions",
       ])
       expect(event.system[0]?.text).not.toContain("${OPENCODE_TOOL_GUIDANCE}")
@@ -205,14 +205,14 @@ describe("OptimizePlugin", () => {
           yield* OptimizePlugin.OpenAIToolsPlugin.effect(pluginHost)
           const event = context("gpt-5")
           yield* hooks.trigger("session", "context", event)
-          expect(event.system[0]?.text).toBe(SessionSystemPrompt.render(PROMPT_GPT, Object.keys(event.tools)))
+          expect(event.system[0]?.text).toBe(SessionSystemPrompt.render(PROMPT_BASE, Object.keys(event.tools)))
           expect(Object.keys(event.tools).sort()).toEqual(["edit", "patch", "read", "shell", "write"])
         }),
       )
 
       const event = context("gpt-5")
       yield* hooks.trigger("session", "context", event)
-      expect(event.system[0]?.text).toBe(SessionSystemPrompt.render(PROMPT_GPT, Object.keys(event.tools)))
+      expect(event.system[0]?.text).toBe(SessionSystemPrompt.render(PROMPT_BASE, Object.keys(event.tools)))
       expect(Object.keys(event.tools).sort()).toEqual(["edit", "glob", "grep", "patch", "read", "shell", "write"])
       const claude = context("claude-sonnet-4-6")
       yield* hooks.trigger("session", "context", claude)
@@ -321,8 +321,8 @@ describe("OptimizePlugin", () => {
       const hooks = yield* PluginHooks.Service
       const pluginHost = yield* makeHost
       const cases = [
-        ["gpt-5-alias", "custom-model", undefined, PROMPT_GPT],
-        ["gpt-6-alias", "custom-model", undefined, PROMPT_GPT],
+        ["gpt-5-alias", "custom-model", undefined, PROMPT_BASE],
+        ["gpt-6-alias", "custom-model", undefined, PROMPT_BASE],
         ["gpt-5-astra-alias", "custom-model", undefined, PROMPT_ASTRA],
         ["openai-alias", "GPT-5", undefined, fallback],
         ["codex-family-alias", "custom-deployment", "GPT-CODEX", fallback],
@@ -390,7 +390,7 @@ describe("OptimizePlugin", () => {
       yield* hooks.trigger("session", "compaction", unknown)
       expect(listCalls).toBe(2)
       expect(unknown.system.map((part) => part.text)).toEqual([
-        SessionSystemPrompt.render(PROMPT_GPT, Object.keys(unknown.tools)),
+        SessionSystemPrompt.render(PROMPT_BASE, Object.keys(unknown.tools)),
         IdentityPlugin.identity({ name: "unknown-gpt-5", ref: unknown.model }),
       ])
     }),

@@ -128,6 +128,16 @@ describe("provider error classification", () => {
     ).toEqual(["Authentication", "QuotaExceeded", "RateLimit", "InvalidRequest", "ProviderInternal"])
   })
 
+  test("honors a capacity retry hint in the message", () => {
+    const message =
+      "Upstream request failed: [prefill_cap_refused] the cell is at capacity; retry shortly (after 5 s)"
+    const hint = classifyProviderFailure({ message, status: 429 })
+    expect(hint._tag).toBe("RateLimit")
+    expect(hint.retryAfterMs).toBe(5_000)
+    const header = classifyProviderFailure({ message, status: 429, retryAfterMs: 2_000 })
+    expect(header.retryAfterMs).toBe(2_000)
+  })
+
   test("classifies Azure content filter rejections by their structured codes", () => {
     const message = "The response was filtered"
     const azure = {

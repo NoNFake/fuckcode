@@ -143,6 +143,9 @@ const RATE_LIMIT_TEXT = /rate increased too quickly|rate[-_\s]?limit|too[_\s]?ma
 // Cerebras reports its per-minute token throttle as `token_quota_exceeded`; that is a rate limit.
 const QUOTA_TEXT =
   /insufficient[-_\s]?(?:quota|balance)|(?<!token_)quota[-_\s]?exceeded|budget exceeded|usage limit|limit exhausted|package has expired|plan does not yet include/i
+// Capacity gateways state the wait in the message when they omit Retry-After,
+// e.g. "the cell is at capacity; retry shortly (after 5 s)".
+const RETRY_AFTER_HINT = /\(after (\d+(?:\.\d+)?) s\)/i
 // Policy rejections without a dedicated code, matched against the provider's own
 // explanation only. OpenAI reuses `invalid_prompt` for usage-policy rejections while
 // Bedrock Mantle reuses it for schema validation; Anthropic reports blocked output
@@ -220,6 +223,7 @@ export function classifyProviderFailure(input: ProviderFailure): AIError["reason
   // Scan the raw payload too so signals missing from the summary message
   // (e.g. overflow phrases nested in a JSON error body) still classify.
   const text = [input.message, body].filter((value) => value.length > 0).join("\n")
+  const retryAfterMs = input.retryAfterMs ?? messageRetryAfterMs(text)
   const clientScoped = input.status === undefined || (input.status >= 400 && input.status < 500)
 
   if (
@@ -241,7 +245,7 @@ export function classifyProviderFailure(input: ProviderFailure): AIError["reason
     codes.some((code) => QUOTA_CODES.has(code)) ||
     (input.status === 429 && QUOTA_TEXT.test(text))
   )
-    return new QuotaExceededError({ ...details, retryAfterMs: input.retryAfterMs })
+    return new QuotaExceededError({ ...details, retryAfterMs })
   if (
     input.status === 401 ||
     input.status === 403 ||
@@ -258,7 +262,7 @@ export function classifyProviderFailure(input: ProviderFailure): AIError["reason
   )
     return new RateLimitError({
       ...details,
-      retryAfterMs: input.retryAfterMs,
+      retryAfterMs,
       rateLimit: input.rateLimit,
     })
   if (
@@ -274,10 +278,15 @@ export function classifyProviderFailure(input: ProviderFailure): AIError["reason
   )
     return new ProviderInternalError({
       ...details,
-      retryAfterMs: input.retryAfterMs,
+      retryAfterMs,
     })
   if (codes.some((code) => INVALID_REQUEST_CODES.has(code))) return new InvalidRequestError(details)
   // Any remaining 4xx is a deterministic rejection of this request.
   if (input.status !== undefined && input.status >= 400 && input.status < 500) return new InvalidRequestError(details)
   return new UnknownProviderError(details)
+}
+
+function messageRetryAfterMs(text: string) {
+  const seconds = RETRY_AFTER_HINT.exec(text)?.[1]
+  return seconds === undefined ? undefined : Math.ceil(Number(seconds) * 1000)
 }
