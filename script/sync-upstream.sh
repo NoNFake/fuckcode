@@ -4,6 +4,8 @@ set -e
 UPSTREAM_URL="https://github.com/anomalyco/opencode.git"
 UPSTREAM_BRANCH="dev"
 
+git pull --rebase
+
 if ! git remote | grep -q "^upstream$"; then
     echo "add remote upstream..."
     git remote add upstream "$UPSTREAM_URL"

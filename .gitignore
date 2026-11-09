@@ -66,8 +66,15 @@ Session.vim
 .DS_Store
 Thumbs.db
 /artifacts/
+<<<<<<< HEAD
 dist-node
 .typecheck-profiles
 .scripts
 .cache
 RELEASE_REVIEW.md
+||||||| dd39237ddf
+=======
+
+# Legal drafts pending review are kept outside the repository; never copy them in.
+legal-drafts-private/
+>>>>>>> upstream/dev
