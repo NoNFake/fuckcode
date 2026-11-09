@@ -3,7 +3,7 @@ import type { PetDefinition } from "./pet-model"
 const frame = (...rows: string[]) => rows
 
 const codex: PetDefinition = {
-  palette: { b: "#4f7cff", d: "#2c4bb3", w: "#ffffff", k: "#101828", a: "#ffd166" },
+  palette: { b: "#4f7cff", d: "#2c4bb3", w: "#ffffff", k: "#101828" },
   states: {
     idle: [
       frame("..bbbb..", ".bbbbbb.", ".bwbbwb.", ".bbbbbb.", ".bbbbbb.", ".dddddd."),
@@ -16,12 +16,12 @@ const codex: PetDefinition = {
       frame("........", "..bbbb..", ".bbbbbb.", ".bwbbwb.", ".bbbbbb.", ".bbbbbb."),
     ],
     think: [
-      frame("..bbbb..", ".bwbbwb.", ".bbbbbb.", ".bbbbbb.", ".bbbbbb.", ".ddddda."),
-      frame("..bbbb..", ".bwbbwb.", ".bbbbbb.", ".bbbbbb.", ".bbbbbb.", ".dddddaa"),
+      frame("..bbbb..", ".bwbbwb.", ".bbbbbb.", ".bbbbbb.", ".bbbbbb.", ".dddddd."),
+      frame("..bbbb..", ".bwbbwb.", ".bbbbbb.", ".bbbbbb.", ".bbbbbb.", "..dddd.."),
     ],
     code: [
-      frame("..bbbb..", ".bbbbbb.", ".bwbbwb.", ".bbbbbb.", ".bbbbbb.", ".b.dd.b."),
-      frame("..bbbb..", ".bbbbbb.", ".bwbbwb.", ".bbbbbb.", ".bbbbbb.", "..bddb.."),
+      frame("..bbbb..", ".bbbbbb.", ".bwbbwb.", ".bbbbbb.", ".bbbbbb.", ".d.dd.d."),
+      frame("..bbbb..", ".bbbbbb.", ".bwbbwb.", ".bbbbbb.", ".bbbbbb.", "d.d..d.d"),
     ],
     alert: [
       frame("..bbbb..", ".bbbbbb.", ".bwbbwb.", ".bbbbbb.", "..bkkb..", ".dddddd."),
@@ -48,8 +48,8 @@ const hoots: PetDefinition = {
       frame(".bbbbbb.", "bbbbbbbb", "bwbbbbwb", "bbbbbbbb", "bbbaabbb", ".bbbbbaa"),
     ],
     code: [
-      frame(".bbbbbb.", "bbbbbbbb", "bwbbbbwb", "bbbbbbbb", "bbbaabbb", "bbbbbbbb"),
-      frame(".bbbbbb.", "bbbbbbbb", "bwbbbbwb", "bbbbbbbb", "bbbaabbb", "b.bbbb.b"),
+      frame(".bbbbbb.", "bbbbbbbb", "bwbbbbwb", "bbbbbbbb", "bbbbbbbb", "bbbbbbbb"),
+      frame(".bbbbbb.", "bbbbbbbb", "bwbbbbwb", "bbbbbbbb", "bbbbbbbb", "b.bbbb.b"),
     ],
     alert: [
       frame(".bbbbbb.", "bbbbbbbb", "bwbbbbwb", "bbbbbbbb", ".bbkkbb.", ".bbbbbb."),
