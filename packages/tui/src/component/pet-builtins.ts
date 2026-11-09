@@ -27,6 +27,14 @@ const codex: PetDefinition = {
       frame("..bbbb..", ".bbbbbb.", ".bwbbwb.", ".bbbbbb.", "..bkkb..", ".dddddd."),
       frame(".bbbbb..", "bbbbbb..", "bwbbwb..", "bbbbbb..", ".bkkb...", "dddddd.."),
     ],
+    sleep: [
+      frame("..bbbb.z", ".bbbbbb.", ".bbbbbb.", ".bbbbbb.", ".bbbbbb.", ".dddddd."),
+      frame("..bbbbz.", ".bbbbbb.", ".bbbbbb.", ".bbbbbb.", ".bbbbbb.", ".dddddd."),
+    ],
+    coffee: [
+      frame("..bbbb..", ".bbbbbb.", ".bwbbwb.", ".bbbbbb.", ".b.ww.b.", "..wwww.."),
+      frame("..bbbb..", ".bbbbbb.", ".bwbbwb.", ".bbbbbb.", ".bbwwbb.", "..wwww.."),
+    ],
   },
 }
 
@@ -55,6 +63,14 @@ const hoots: PetDefinition = {
       frame(".bbbbbb.", "bbbbbbbb", "bwbbbbwb", "bbbbbbbb", ".bbkkbb.", ".bbbbbb."),
       frame(".bbbbbb.", "bbbbbbbb", "bwbbbbwb", "bbbbbbbb", ".bbkkbb.", "..bbbb.."),
     ],
+    sleep: [
+      frame(".bbbbbbz", "bbbbbbbb", "bbbbbbbb", "bbbbbbbb", "bbbaabbb", ".bbbbbb."),
+      frame(".bbbbbz.", "bbbbbbbb", "bbbbbbbb", "bbbbbbbb", "bbbaabbb", ".bbbbbb."),
+    ],
+    coffee: [
+      frame(".bbbbbb.", "bbbbbbbb", "bwbbbbwb", "bbbbbbbb", "bbbaabbb", ".bwwwwb."),
+      frame(".bbbbbb.", "bbbbbbbb", "bwbbbbwb", "bbbbbbbb", "bbbaabbb", "b.wwww.b"),
+    ],
   },
 }
 
@@ -82,6 +98,14 @@ const bsod: PetDefinition = {
     alert: [
       frame("..kkkk..", ".kbbbbk.", ".kbaabk.", ".kbbbbk.", ".kbbbbk.", "..kkkk.."),
       frame(".kkkk...", "kbbbbk..", "kbaabk..", "kbbbbk..", "kbbbbk..", ".kkkk..."),
+    ],
+    sleep: [
+      frame("...a...z", "..kkkk..", ".kbbbbk.", ".kbbbbk.", ".kbbbbk.", "..kkkk.."),
+      frame("...a..z.", "..kkkk..", ".kbbbbk.", ".kbbbbk.", ".kbbbbk.", "..kkkk.."),
+    ],
+    coffee: [
+      frame("..kkkk..", ".kbbbbk.", ".kbwwbk.", ".kbbbbk.", ".kbbbbk.", "..awwa.."),
+      frame("..kkkk..", ".kbbbbk.", ".kbwwbk.", ".kbbbbk.", ".kbbbbk.", ".a.ww.a."),
     ],
   },
 }

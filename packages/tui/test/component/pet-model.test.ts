@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { BUILTIN_IDS } from "../../src/component/pet-builtins"
-import { activity, parsePet, resolvePet, resolveState, screen } from "../../src/component/pet-model"
+import { activity, displayState, lastActivity, parsePet, resolvePet, resolveState, screen } from "../../src/component/pet-model"
 
 const idle = { runningTool: false, streamingText: false, streamingReasoning: false, toolError: false }
 const pending = { permissions: 0, forms: 0 }
@@ -32,6 +32,19 @@ describe("pet state", () => {
     ]
     expect(activity(messages)).toEqual({ ...idle, runningTool: true, streamingText: true })
   })
+
+  test("sleep follows a long idle, coffee follows long work", () => {
+    expect(displayState("idle", { now: 100_000, idleSince: 0, coffeeUntil: 0 })).toBe("sleep")
+    expect(displayState("idle", { now: 100_000, idleSince: 90_000, coffeeUntil: 0 })).toBe("idle")
+    expect(displayState("idle", { now: 100_000, idleSince: 100_000, coffeeUntil: 101_000 })).toBe("coffee")
+    expect(displayState("think", { now: 100_000, idleSince: 0, coffeeUntil: 0 })).toBe("think")
+  })
+
+  test("last activity uses the newest message timestamp", () => {
+    expect(lastActivity([{ type: "assistant", time: { created: 10, completed: 20 } }])).toBe(20)
+    expect(lastActivity([{ type: "user", time: { created: 30 } }])).toBe(30)
+    expect(lastActivity([])).toBeUndefined()
+  })
 })
 
 describe("pet frames", () => {
@@ -61,7 +74,12 @@ describe("pet frames", () => {
   })
 
   test("every builtin parses and the unknown name still yields a pet", () => {
-    for (const id of BUILTIN_IDS) expect(resolvePet(id, undefined)?.states.idle.length).toBeGreaterThan(0)
+    for (const id of BUILTIN_IDS) {
+      const pet = resolvePet(id, undefined)
+      expect(pet?.states.idle.length).toBeGreaterThan(0)
+      expect(pet?.states.sleep.length).toBeGreaterThan(0)
+      expect(pet?.states.coffee.length).toBeGreaterThan(0)
+    }
     expect(resolvePet("missing", undefined)?.states.idle.length).toBeGreaterThan(0)
   })
 })

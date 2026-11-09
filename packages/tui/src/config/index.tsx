@@ -349,6 +349,8 @@ export function resolve(
         think: input.pet?.interval?.think ?? DEFAULT_INTERVAL.think,
         code: input.pet?.interval?.code ?? DEFAULT_INTERVAL.code,
         alert: input.pet?.interval?.alert ?? DEFAULT_INTERVAL.alert,
+        sleep: input.pet?.interval?.sleep ?? DEFAULT_INTERVAL.sleep,
+        coffee: input.pet?.interval?.coffee ?? DEFAULT_INTERVAL.coffee,
       },
       custom: input.pet?.custom ?? {},
     },

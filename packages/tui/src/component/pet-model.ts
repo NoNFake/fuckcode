@@ -1,14 +1,20 @@
 import { Schema } from "effect"
 import { BUILTIN, BUILTIN_IDS } from "./pet-builtins"
 
-export const STATES = ["idle", "think", "code", "alert"] as const
+export const STATES = ["idle", "think", "code", "alert", "sleep", "coffee"] as const
 export type PetState = (typeof STATES)[number]
+
+export const SLEEP_AFTER = 90_000
+export const COFFEE_AFTER = 20_000
+export const COFFEE_FOR = 8_000
 
 export const DEFAULT_INTERVAL: Record<PetState, number> = {
   idle: 1300,
   think: 320,
   code: 170,
   alert: 500,
+  sleep: 1800,
+  coffee: 300,
 }
 
 export interface PetDefinition extends Schema.Schema.Type<typeof PetDefinition> {}
@@ -27,6 +33,8 @@ export const PetOptions = Schema.Struct({
       think: Schema.optional(Schema.Int),
       code: Schema.optional(Schema.Int),
       alert: Schema.optional(Schema.Int),
+      sleep: Schema.optional(Schema.Int),
+      coffee: Schema.optional(Schema.Int),
     }),
   ),
   custom: Schema.optional(Schema.Record(Schema.String, PetDefinition)),
@@ -102,6 +110,27 @@ export function resolveState(
   if (!status || status === "idle") return "idle"
   if (flags.runningTool || flags.streamingText) return "code"
   return "think"
+}
+
+export function lastActivity(messages: readonly MessageLike[]): number | undefined {
+  let latest: number | undefined
+  for (const message of messages) {
+    const stamp = message.time?.completed ?? message.time?.streamed ?? message.time?.created
+    if (stamp !== undefined && (latest === undefined || stamp > latest)) latest = stamp
+  }
+  return latest
+}
+
+// Coffee wins over sleep for a few seconds after a long turn, then idle falls
+// back to sleep once nothing happened for a while.
+export function displayState(
+  base: PetState,
+  input: { now: number; idleSince: number; coffeeUntil: number },
+): PetState {
+  if (base !== "idle") return base
+  if (input.coffeeUntil > input.now) return "coffee"
+  if (input.now - input.idleSince >= SLEEP_AFTER) return "sleep"
+  return "idle"
 }
 
 export function resolvePet(name: string, custom: Record<string, PetDefinition> | undefined): ResolvedPet | undefined {
