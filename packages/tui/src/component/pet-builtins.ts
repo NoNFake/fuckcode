@@ -20,8 +20,8 @@ const codex: PetDefinition = {
       frame("..bbbb..", ".bwbbwb.", ".bbbbbb.", ".bbbbbb.", ".bbbbbb.", "..dddd.."),
     ],
     code: [
-      frame("..bbbb..", ".bbbbbb.", ".bwbbwb.", ".bbbbbb.", ".bbbbbb.", "ddd.ddd."),
-      frame("..bbbb..", ".bbbbbb.", ".bwbbwb.", ".bbbbbb.", ".bbbbbb.", ".ddd.ddd"),
+      frame("..bbbb..", ".bbbbbb.", ".bwbbwb.", ".bbbbbb.", "d.d.d.d.", "d.d.d.d."),
+      frame("..bbbb..", ".bbbbbb.", ".bwbbwb.", ".bbbbbb.", ".d.d.d.d", ".d.d.d.d"),
     ],
     alert: [
       frame("..bbbb..", ".bbbbbb.", ".bwbbwb.", ".bbbbbb.", "..bkkb..", ".dddddd."),
