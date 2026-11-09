@@ -8,6 +8,7 @@ import { createStore, reconcile } from "solid-js/store"
 import { safeWatch } from "../util/watch"
 import path from "path"
 import { TuiKeybind } from "./keybind"
+import { DEFAULT_INTERVAL, PetOptions, type PetDefinition, type PetState } from "../component/pet-model"
 
 export interface Interface {
   readonly path?: string
@@ -267,10 +268,17 @@ export const Info = Schema.Struct({
   background_mode: Schema.optional(Schema.String).annotate({
     description: "Background render mode/symbols: 'half', 'ascii', 'block', 'braille', 'sextant', etc.",
   }),
+  pet: Schema.optional(PetOptions).annotate({ description: "Footer companion settings" }),
 })
 export type Info = Schema.Schema.Type<typeof Info>
 
-export type Resolved = Omit<Info, "attention" | "cursor" | "keybinds" | "leader" | "mouse" | "session" | "tabs"> & {
+export type Resolved = Omit<Info, "attention" | "cursor" | "keybinds" | "leader" | "mouse" | "pet" | "session" | "tabs"> & {
+  pet: {
+    enabled: boolean
+    active: string
+    interval: Record<PetState, number>
+    custom: Record<string, PetDefinition>
+  }
   attention: {
     notifications: boolean
     sound: boolean
@@ -332,6 +340,17 @@ export function resolve(
     cursor: {
       style: input.cursor?.style ?? "block",
       blinking: input.cursor?.blinking ?? true,
+    },
+    pet: {
+      enabled: input.pet?.enabled ?? true,
+      active: input.pet?.active ?? "codex",
+      interval: {
+        idle: input.pet?.interval?.idle ?? DEFAULT_INTERVAL.idle,
+        think: input.pet?.interval?.think ?? DEFAULT_INTERVAL.think,
+        code: input.pet?.interval?.code ?? DEFAULT_INTERVAL.code,
+        alert: input.pet?.interval?.alert ?? DEFAULT_INTERVAL.alert,
+      },
+      custom: input.pet?.custom ?? {},
     },
     session: {
       ...input.session,

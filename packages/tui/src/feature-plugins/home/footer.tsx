@@ -6,6 +6,7 @@ import { Slot } from "../../plugin/render"
 import { useLocal } from "../../context/local"
 import { useUsageLimits } from "../../component/usage"
 import { goMeters } from "../../util/usage-limits"
+import { Pet } from "../../component/pet"
 
 export function homeFooterVisibility(width: number) {
   return {
@@ -136,6 +137,7 @@ function View(props: { context: Plugin.Context }) {
         <GoUsage context={props.context} />
         <Slot path="home.footer.status" />
         <box flexGrow={1} />
+        <Pet />
         <TokenSaving context={props.context} />
         <Show when={visibility().version}>
           <box flexShrink={0}>
