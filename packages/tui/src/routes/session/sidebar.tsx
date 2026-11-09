@@ -72,7 +72,7 @@ export function Sidebar(props: { sessionID: string }) {
           </box>
         </scrollbox>
 
-        <box flexShrink={0} alignItems="flex-end" paddingTop={1}>
+        <box flexShrink={0} alignItems="flex-start" paddingTop={1} paddingLeft={1}>
           <Pet sessionID={props.sessionID} />
         </box>
 

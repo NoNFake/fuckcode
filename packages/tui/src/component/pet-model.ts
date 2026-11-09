@@ -5,10 +5,10 @@ export const STATES = ["idle", "think", "code", "alert"] as const
 export type PetState = (typeof STATES)[number]
 
 export const DEFAULT_INTERVAL: Record<PetState, number> = {
-  idle: 700,
-  think: 220,
-  code: 140,
-  alert: 400,
+  idle: 1300,
+  think: 320,
+  code: 170,
+  alert: 500,
 }
 
 export interface PetDefinition extends Schema.Schema.Type<typeof PetDefinition> {}

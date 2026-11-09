@@ -7,19 +7,25 @@ const codex: PetDefinition = {
   states: {
     idle: [
       frame("..bbbb..", ".bbbbbb.", ".bwbbwb.", ".bbbbbb.", ".bbbbbb.", ".dddddd."),
+      frame("..bbbb..", ".bbbbbb.", ".bwbbwb.", ".bbbbbb.", ".bbbbbb.", ".dddddd."),
       frame("..bbbb..", ".bbbbbb.", ".bbbbbb.", ".bbbbbb.", ".bbbbbb.", ".dddddd."),
+      frame("..bbbb..", ".bbbbbb.", ".bwbbwb.", ".bbbbbb.", ".bbbbbb.", ".dddddd."),
+      frame("..bbbb..", ".bbbbbb.", ".wbbwbb.", ".bbbbbb.", ".bbbbbb.", ".dddddd."),
+      frame("..bbbb..", ".bbbbbb.", ".bwbbwb.", ".bbbbbb.", ".bbbbbb.", ".dddddd."),
+      frame("..bbbb..", ".bbbbbb.", ".bbwbbw.", ".bbbbbb.", ".bbbbbb.", ".dddddd."),
+      frame("........", "..bbbb..", ".bbbbbb.", ".bwbbwb.", ".bbbbbb.", ".bbbbbb."),
     ],
     think: [
       frame("..bbbb..", ".bwbbwb.", ".bbbbbb.", ".bbbbbb.", ".bbbbbb.", ".ddddda."),
       frame("..bbbb..", ".bwbbwb.", ".bbbbbb.", ".bbbbbb.", ".bbbbbb.", ".dddddaa"),
     ],
     code: [
-      frame("..bbbb..", ".bbbbbb.", ".bwbbwb.", ".bbbbbb.", "bbbbbbbb", ".dddddd."),
-      frame("..bbbb..", ".bbbbbb.", ".bwbbwb.", ".bbbbbb.", ".bbbbbb.", "bbddddbb"),
+      frame("..bbbb..", ".bbbbbb.", ".bwbbwb.", ".bbbbbb.", ".bbbbbb.", ".b.dd.b."),
+      frame("..bbbb..", ".bbbbbb.", ".bwbbwb.", ".bbbbbb.", ".bbbbbb.", "..bddb.."),
     ],
     alert: [
       frame("..bbbb..", ".bbbbbb.", ".bwbbwb.", ".bbbbbb.", "..bkkb..", ".dddddd."),
-      frame("..bbbb..", ".bbbbbb.", ".bwbbwb.", ".bbbbbb.", "..bkkb..", ".d.dd.d."),
+      frame(".bbbbb..", "bbbbbb..", "bwbbwb..", "bbbbbb..", ".bkkb...", "dddddd.."),
     ],
   },
 }
@@ -29,7 +35,13 @@ const hoots: PetDefinition = {
   states: {
     idle: [
       frame(".bbbbbb.", "bbbbbbbb", "bwbbbbwb", "bbbbbbbb", "bbbaabbb", ".bbbbbb."),
+      frame(".bbbbbb.", "bbbbbbbb", "bwbbbbwb", "bbbbbbbb", "bbbaabbb", ".bbbbbb."),
       frame(".bbbbbb.", "bbbbbbbb", "bbbbbbbb", "bbbbbbbb", "bbbaabbb", ".bbbbbb."),
+      frame(".bbbbbb.", "bbbbbbbb", "bwbbbbwb", "bbbbbbbb", "bbbaabbb", ".bbbbbb."),
+      frame(".bbbbbb.", "bbbbbbbb", "wbbbbwbb", "bbbbbbbb", "bbbaabbb", ".bbbbbb."),
+      frame(".bbbbbb.", "bbbbbbbb", "bwbbbbwb", "bbbbbbbb", "bbbaabbb", ".bbbbbb."),
+      frame(".bbbbbb.", "bbbbbbbb", "bbwbbwbb", "bbbbbbbb", "bbbaabbb", ".bbbbbb."),
+      frame("........", ".bbbbbb.", "bbbbbbbb", "bwbbbbwb", "bbbbbbbb", "bbbaabbb"),
     ],
     think: [
       frame(".bbbbbb.", "bbbbbbbb", "bwbbbbwb", "bbbbbbbb", "bbbaabbb", ".bbbbba."),
@@ -51,15 +63,21 @@ const bsod: PetDefinition = {
   states: {
     idle: [
       frame("..kkkk..", ".kbbbbk.", ".kbwwbk.", ".kbbbbk.", ".kbbbbk.", "..kkkk.."),
+      frame("..kkkk..", ".kbbbbk.", ".kbwwbk.", ".kbbbbk.", ".kbbbbk.", "..kkkk.."),
       frame("..kkkk..", ".kbbbbk.", ".kbbbbk.", ".kbbbbk.", ".kbbbbk.", "..kkkk.."),
+      frame("..kkkk..", ".kbbbbk.", ".kbwwbk.", ".kbbbbk.", ".kbbbbk.", "..kkkk.."),
+      frame("..kkkk..", ".kbbbbk.", ".kwbbwk.", ".kbbbbk.", ".kbbbbk.", "..kkkk.."),
+      frame("..kkkk..", ".kbbbbk.", ".kbwwbk.", ".kbbbbk.", ".kbbbbk.", "..kkkk.."),
+      frame("..kkkk..", ".kbbbbk.", ".kbbwwk.", ".kbbbbk.", ".kbbbbk.", "..kkkk.."),
+      frame("........", "..kkkk..", ".kbbbbk.", ".kbwwbk.", ".kbbbbk.", ".kbbbbk."),
     ],
     think: [
       frame("...a....", "..kkkk..", ".kbbbbk.", ".kbwwbk.", ".kbbbbk.", "..kkkk.."),
       frame("....a...", "..kkkk..", ".kbbbbk.", ".kbwwbk.", ".kbbbbk.", "..kkkk.."),
     ],
     code: [
-      frame("..kkkk..", ".kbbbbk.", ".kbwwbk.", ".kbbbbk.", "kkkkkkkk", "..kkkk.."),
-      frame("..kkkk..", ".kbbbbk.", ".kbwwbk.", ".kbbbbk.", ".kbbbbk.", "kkkkkkkk"),
+      frame("..kkkk..", ".kbbbbk.", ".kbwwbk.", ".kbbbbk.", ".kbbbbk.", ".k.kk.k."),
+      frame("..kkkk..", ".kbbbbk.", ".kbwwbk.", ".kbbbbk.", ".kbbbbk.", ".k....k."),
     ],
     alert: [
       frame("..kkkk..", ".kbbbbk.", ".kbaabk.", ".kbbbbk.", ".kbbbbk.", "..kkkk.."),
