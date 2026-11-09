@@ -46,7 +46,7 @@ export function Pet(props: { sessionID?: string }) {
   })
 
   return (
-    <Show when={config.pet.enabled && dimensions().width >= 70 && rows().length > 0}>
+    <Show when={config.pet.enabled && dimensions().width >= 44 && rows().length > 0}>
       <box flexDirection="column" flexShrink={0}>
         <For each={rows()}>
           {(row) => (

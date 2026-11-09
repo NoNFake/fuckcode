@@ -46,7 +46,6 @@ import { useDialog } from "../../ui/dialog"
 import { DialogIntegration } from "../dialog-integration"
 import { useConnected } from "../use-connected"
 import { useToast } from "../../ui/toast"
-import { Pet } from "../pet"
 import { createFadeIn } from "../../util/signal"
 import { DialogSkill } from "../dialog-skill"
 import { useConfig, useCursorStyle } from "../../config"
@@ -1982,7 +1981,6 @@ export function Prompt(props: PromptProps) {
                 )}
               </Show>
             </Slot>
-            <Pet sessionID={props.sessionID} />
           </Slot>
         </box>
       </box>

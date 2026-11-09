@@ -21,7 +21,10 @@ describe("pet state", () => {
   })
 
   test("activity only reads the current turn", () => {
-    const assistant = (content: unknown[], time = {}) => ({ type: "assistant", time, content })
+    const assistant = (
+      content: { type: string; text?: string; time?: { completed?: number }; state?: { status?: string } }[],
+      time: Record<string, number> = {},
+    ) => ({ type: "assistant", time, content })
     const messages = [
       assistant([{ type: "tool", state: { status: "error" } }]),
       { type: "user", content: [] },
