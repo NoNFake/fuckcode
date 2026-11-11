@@ -1,114 +1,132 @@
-<p align="center">
-  <a href="https://opencode.ai">
-    <picture>
-      <source srcset=".github/assets/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
-      <source srcset=".github/assets/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
-      <img src=".github/assets/logo-ornate-light.svg" alt="OpenCode logo">
-    </picture>
-  </a>
-</p>
-<p align="center">The open source AI coding agent.</p>
-<p align="center">
-  <a href="https://opencode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
-  <a href="https://www.npmjs.com/package/@opencode/cli"><img alt="npm" src="https://img.shields.io/npm/v/@opencode/cli?style=flat-square" /></a>
-  <a href="https://github.com/anomalyco/opencode/actions/workflows/release.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/anomalyco/opencode/release.yml?style=flat-square&branch=dev" /></a>
-</p>
+# FuckCode
 
-<p align="center">
-  <a href="README.md">English</a> |
-  <a href="README.zh.md">简体中文</a> |
-  <a href="README.zht.md">繁體中文</a> |
-  <a href="README.ko.md">한국어</a> |
-  <a href="README.de.md">Deutsch</a> |
-  <a href="README.es.md">Español</a> |
-  <a href="README.fr.md">Français</a> |
-  <a href="README.it.md">Italiano</a> |
-  <a href="README.da.md">Dansk</a> |
-  <a href="README.ja.md">日本語</a> |
-  <a href="README.pl.md">Polski</a> |
-  <a href="README.ru.md">Русский</a> |
-  <a href="README.bs.md">Bosanski</a> |
-  <a href="README.ar.md">العربية</a> |
-  <a href="README.no.md">Norsk</a> |
-  <a href="README.br.md">Português (Brasil)</a> |
-  <a href="README.th.md">ไทย</a> |
-  <a href="README.tr.md">Türkçe</a> |
-  <a href="README.uk.md">Українська</a> |
-  <a href="README.bn.md">বাংলা</a> |
-  <a href="README.gr.md">Ελληνικά</a> |
-  <a href="README.vi.md">Tiếng Việt</a>
-</p>
+FuckCode is a fork of [OpenCode](https://github.com/anomalyco/opencode) built for security auditing, penetration testing, reverse engineering, and infrastructure vulnerability assessment.
 
-[![OpenCode Terminal UI](services/site/public/v1/docs/assets/lander/screenshot.png)](https://opencode.ai)
+![fuckcode](https://github.com/NoNFake/fuckcode/raw/dev/.github/logo.png)
 
----
+## Features
 
-### Installation
+- **Local models (llama.cpp)**: connect to a local `llama-server` without boilerplate JSON, discover models from `/v1/models`, and set the server URL from the model picker (`Ctrl+P`).
+- **Token efficiency**: ANSI and progress stripping from tool output, capped tool output with full logs on disk, pruning of stale tool results, and eco mode (`--token-saving` / `--eco`, or `token_saving` in config) with moderate and aggressive caps.
+- **Verification indicator**: the footer shows `verify N` when assistant text references files that no tool result confirms. This is a heuristic prompt to verify, not proof of hallucination.
+- **Security skill catalog**: 30+ embedded skills covering engagement phases, services, playbooks, web vulnerability classes, API/cloud/CI-CD/deserialization classes, fuzzing, AI security, and reverse engineering. Skills load on demand based on task context.
+- **Reverse engineering tools**: `binary` tool with `emulate` (radare2 ESIL), `entropy`, `functions`, `patch` (rasm2), and hardening reports; loads only when the reverse config is enabled.
+- **Pentest module**: sandboxed execution, scope enforcement, evidence store, structured parsing, and report generation (details below).
+- **Red and black theme**: high-contrast palette with project and global config discovery for `fuckcode.json` and `fuckcode.jsonc`.
+
+## Install
+
+macOS and Linux:
 
 ```bash
-# YOLO
-curl -fsSL https://opencode.ai/v2/install | bash
-
-# Package managers
-npm i -g @opencode/cli@latest      # or bun/pnpm/yarn
-brew install anomalyco/tap/opencode-v2 # macOS and Linux (recommended, always up to date)
-brew install opencode              # macOS and Linux (official brew formula, updated less)
-sudo pacman -S opencode            # Arch Linux (Stable)
-paru -S opencode-beta              # Arch Linux (Latest from AUR)
-mise use -g opencode               # Any OS
-nix run github:anomalyco/opencode  # Nix
+curl -fsSL https://raw.githubusercontent.com/NoNFake/fuckcode/dev/install | bash
 ```
 
-> [!TIP]
-> Remove versions older than 0.1.x before installing.
+Windows (PowerShell):
 
-### Desktop App (BETA)
+```powershell
+irm https://raw.githubusercontent.com/NoNFake/fuckcode/dev/install.ps1 | iex
+```
 
-OpenCode is also available as a desktop application. Download it from [opencode.ai/download](https://opencode.ai/download).
+The installer downloads the release for your platform and adds `fuckcode` to PATH. Options: `--version <x.y.z>` pins a specific release, `--binary <path>` installs a local build, `--no-modify-path` skips shell config edits.
 
-| Platform              | Download                           |
-| --------------------- | ---------------------------------- |
-| macOS (Apple Silicon) | `opencode-desktop-mac-arm64.dmg`   |
-| macOS (Intel)         | `opencode-desktop-mac-x64.dmg`     |
-| Windows               | `opencode-desktop-win-x64.exe`     |
-| Linux                 | `.deb`, `.rpm`, or `.AppImage`     |
+## Build from source
+
+FuckCode requires [Bun](https://bun.sh):
 
 ```bash
-# macOS (Homebrew)
-brew install --cask opencode-desktop
+bun install
+bun run dev                                  # interactive TUI from source
+bun run script/build.ts --single --skip-ui   # build a local binary
 ```
 
-#### Installation Directory
+### Local model (llama.cpp)
 
-The install script installs OpenCode to `$HOME/.opencode/bin`.
+```bash
+./llama-server -m /path/to/model.gguf --port 8080 -c 32768
+bun run dev
+```
 
-### Agents
+Open the model picker with `Ctrl+P`. Models on `http://127.0.0.1:8080` are detected automatically; use "Set llama.cpp Server URL..." for other hosts.
 
-OpenCode includes two built-in agents you can switch between with the `Tab` key.
+## Configuration
 
-- **build** - Default, full-access agent for development work
-- **plan** - Read-only agent for analysis and code exploration
-  - Denies file edits by default
-  - Asks permission before running bash commands
-  - Ideal for exploring unfamiliar codebases or planning changes
+Project `fuckcode.json` or global `~/.config/fuckcode/fuckcode.json`:
 
-Also included is a **general** subagent for complex searches and multistep tasks.
-This is used internally and can be invoked using `@general` in messages.
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "llamacpp": {
+      "baseURL": "http://127.0.0.1:8080/v1"
+    }
+  }
+}
+```
 
-Learn more about [agents](https://opencode.ai/docs/agents).
+Pentest scope:
 
-### Documentation
+```json
+{
+  "pentest": {
+    "enabled": true,
+    "sandboxTimeout": 30000,
+    "scope": {
+      "domains": ["target.corp", "*.target.corp"],
+      "cidrs": ["10.0.0.0/8", "172.16.0.0/12"],
+      "ports": [80, 443],
+      "children": {
+        "web": { "domains": ["web.target.corp"], "ports": [80, 443, 8080, 8443] }
+      }
+    }
+  }
+}
+```
 
-For more info on how to configure OpenCode, [**head over to our docs**](https://opencode.ai/docs).
+## Security skills
 
-### Contributing
+The agent loads skills on demand from the embedded catalog:
 
-If you're interested in contributing to OpenCode, please read our [contributing docs](./CONTRIBUTING.md) before submitting a pull request.
+- **Phases**: recon, enumeration, vulnerability assessment, exploitation, post-exploitation, reporting.
+- **Services**: SSH, SMB, DNS, database, Docker/Kubernetes, FTP, mail, pivoting.
+- **Playbooks**: web application, Active Directory, cloud, infrastructure.
+- **Web classes**: SQL injection, auth bypass and IDOR, upload RCE, SSTI, SSRF, XXE, LFI and traversal, deserialization.
+- **Other**: API security, cloud, CI/CD pipelines, fuzzing, AI security, bug identification, vulnerability classes, fast checking, Effect v4 patterns for this codebase.
 
-### Building on OpenCode
+Example prompts:
 
-If you are working on a project that's related to OpenCode and is using "opencode" as part of its name, for example "opencode-dashboard" or "opencode-mobile", please add a note to your README to clarify that it is not built by the OpenCode team and is not affiliated with us in any way.
+- "Perform active reconnaissance and port discovery on 192.168.1.50"
+- "Test http://target.local/api/item?id=1 for SQL injection and XSS"
+- "Enumerate shares, users, and permissions on 10.10.10.10"
+- "Generate a structured security assessment report with CVSS scoring and remediation steps"
 
----
+## Pentest module
 
-**Join our community** [Discord](https://discord.gg/opencode) | [X.com](https://x.com/opencode)
+- **Sandbox**: rootless namespace wrapper (pasta, slirp4netns, or unshare) with egress restricted to scope.
+- **DNS whitelist**: embedded forwarder answers NXDOMAIN for out-of-scope domains and blocks DoH/DoT bypasses.
+- **Scopes**: hierarchical child scopes with inherited constraints and subagent `scope_override`.
+- **Evidence store**: SQLite WAL with FTS5 trigram search, transaction batching, and deduplication.
+- **Parsers**: nmap, nuclei, cme, ffuf, sqlmap, nikto, whatweb, Burp, HAR, OpenAPI, recon.
+- **Tools**: `read_evidence`, `state_update`, `report_gen`, `inject_probe`, `filename_bypass`, `oob`, `recon`, `scan_import`, `scope_import`, `ensure_tools`, `os_hook`, `session`, `knowledge_update`, plus the `/report` command.
+- **Reports**: markdown, JSON, and SARIF output with evidence chains.
+
+Tests:
+
+```bash
+bun test src/pentest/__tests__/
+```
+
+## Development
+
+```bash
+bun run --cwd packages/opencode typecheck
+bun run --cwd packages/tui typecheck
+bun run --cwd packages/core typecheck
+bun run lint
+```
+
+Run tests from package directories, for example `bun test` in `packages/opencode`.
+
+## Upstream
+
+FuckCode tracks upstream OpenCode through `bun run sync` and adds the security tooling on top. See [CHANGELOG.md](./CHANGELOG.md) for release notes.
