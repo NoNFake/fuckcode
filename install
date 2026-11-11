@@ -21,8 +21,8 @@ Options:
         --no-modify-path    Don't modify shell config files (.zshrc, .bashrc, etc.)
 
 Examples:
-    curl -fsSL https://raw.githubusercontent.com/${GITHUB_REPO}/dev/install | bash
-    curl -fsSL https://raw.githubusercontent.com/${GITHUB_REPO}/dev/install | bash -s -- --version 1.0.0
+    curl -fsSL https://raw.githubusercontent.com/${GITHUB_REPO}/fuck-dev/install | bash
+    curl -fsSL https://raw.githubusercontent.com/${GITHUB_REPO}/fuck-dev/install | bash -s -- --version 1.0.0
     ./install --binary /path/to/fuckcode
 EOF
 }
