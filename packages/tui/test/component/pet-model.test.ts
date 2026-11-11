@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { BUILTIN_IDS } from "../../src/component/pet-builtins"
-import { activity, displayState, lastActivity, parsePet, resolvePet, resolveState, screen } from "../../src/component/pet-model"
+import { activity, displayState, dominantColor, lastActivity, parsePet, resolvePet, resolveState, screen } from "../../src/component/pet-model"
 
 const idle = { runningTool: false, streamingText: false, streamingReasoning: false, toolError: false }
 const pending = { permissions: 0, forms: 0 }
@@ -44,6 +44,11 @@ describe("pet state", () => {
     expect(lastActivity([{ type: "assistant", time: { created: 10, completed: 20 } }])).toBe(20)
     expect(lastActivity([{ type: "user", time: { created: 30 } }])).toBe(30)
     expect(lastActivity([])).toBeUndefined()
+  })
+
+  test("dominant color picks the most used palette character", () => {
+    expect(dominantColor(["bb.w", "bbbw"])).toBe("b")
+    expect(dominantColor(["...."])).toBeUndefined()
   })
 })
 

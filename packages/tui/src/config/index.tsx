@@ -276,6 +276,8 @@ export type Resolved = Omit<Info, "attention" | "cursor" | "keybinds" | "leader"
   pet: {
     enabled: boolean
     active: string
+    color: string
+    animations: boolean
     interval: Record<PetState, number>
     custom: Record<string, PetDefinition>
   }
@@ -344,6 +346,8 @@ export function resolve(
     pet: {
       enabled: input.pet?.enabled ?? true,
       active: input.pet?.active ?? "codex",
+      color: input.pet?.color ?? "default",
+      animations: input.pet?.animations ?? true,
       interval: {
         idle: input.pet?.interval?.idle ?? DEFAULT_INTERVAL.idle,
         think: input.pet?.interval?.think ?? DEFAULT_INTERVAL.think,

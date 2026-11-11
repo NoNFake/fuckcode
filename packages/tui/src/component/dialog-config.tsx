@@ -5,6 +5,8 @@ import { useDialog, type DialogContext } from "../ui/dialog"
 import { DialogSelect, DialogSelectChoice } from "../ui/dialog-select"
 import { useToast } from "../ui/toast"
 import { DialogThemeList } from "./dialog-theme-list"
+import { BUILTIN_IDS } from "./pet-builtins"
+import { COLORS } from "./pet-model"
 
 type Setting = {
   title: string
@@ -368,6 +370,44 @@ export const settings: Setting[] = [
     default: process.platform === "win32" ? "manual" : "select",
     values: ["manual", "select"],
     keywords: ["selection", "clipboard"],
+  },
+  {
+    title: "Pet",
+    category: "Pet",
+    path: ["pet", "enabled"],
+    description: "Show the companion in the sidebar and on home",
+    default: true,
+    values: [false, true],
+    labels: ["off", "on"],
+    keywords: ["companion", "mascot", "pet"],
+  },
+  {
+    title: "Pet character",
+    category: "Pet",
+    path: ["pet", "active"],
+    description: "Which built-in companion to show",
+    default: "codex",
+    values: BUILTIN_IDS,
+    keywords: ["pet", "companion", "character", "mascot"],
+  },
+  {
+    title: "Pet color",
+    category: "Pet",
+    path: ["pet", "color"],
+    description: "Tint the companion body color",
+    default: "default",
+    values: ["default", ...Object.keys(COLORS)],
+    keywords: ["pet", "color", "tint", "hue"],
+  },
+  {
+    title: "Pet animations",
+    category: "Pet",
+    path: ["pet", "animations"],
+    description: "Animate the companion; off shows a single frame",
+    default: true,
+    values: [false, true],
+    labels: ["off", "on"],
+    keywords: ["pet", "animation", "motion"],
   },
   {
     title: "Developer tools",

@@ -3,7 +3,7 @@ import { useTerminalDimensions } from "@opentui/solid"
 import { createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js"
 import { useConfig } from "../config"
 import { useData } from "../context/data"
-import { COFFEE_AFTER, COFFEE_FOR, activity, displayState, lastActivity, resolvePet, resolveState, screen } from "./pet-model"
+import { COFFEE_AFTER, COFFEE_FOR, COLORS, activity, displayState, dominantColor, lastActivity, resolvePet, resolveState, screen } from "./pet-model"
 
 export function Pet(props: { sessionID?: string }) {
   const config = useConfig().data
@@ -12,6 +12,16 @@ export function Pet(props: { sessionID?: string }) {
   const mountedAt = Date.now()
 
   const pet = createMemo(() => resolvePet(config.pet.active, config.pet.custom))
+  const tinted = createMemo(() => {
+    const current = pet()
+    const color = config.pet.color
+    if (!current || !color || color === "default") return current
+    const hex = COLORS[color] ?? (/^#[0-9a-f]{6}$/i.test(color) ? color : undefined)
+    const frame = current.states.idle[0]
+    const char = frame ? dominantColor(frame) : undefined
+    if (!hex || !char) return current
+    return { ...current, palette: { ...current.palette, [char]: hex } }
+  })
   const messages = createMemo(() => (props.sessionID ? data.session.message.list(props.sessionID) : []))
   const base = createMemo(() => {
     const pending = props.sessionID
@@ -62,13 +72,13 @@ export function Pet(props: { sessionID?: string }) {
   createEffect(() => {
     const list = frames()
     setIndex(0)
-    if (!(config.animations ?? true) || list.length < 2) return
+    if (!(config.pet.animations && (config.animations ?? true)) || list.length < 2) return
     const timer = setInterval(() => setIndex((value) => (value + 1) % list.length), config.pet.interval[state()])
     onCleanup(() => clearInterval(timer))
   })
 
   const rows = createMemo(() => {
-    const current = pet()
+    const current = tinted()
     const frame = frames()[index()]
     if (!current || !frame) return []
     return screen(frame, current.palette).map((row) =>

@@ -8,6 +8,14 @@ export const SLEEP_AFTER = 90_000
 export const COFFEE_AFTER = 20_000
 export const COFFEE_FOR = 8_000
 
+export const COLORS: Record<string, string> = {
+  blue: "#4f7cff",
+  green: "#4ade80",
+  orange: "#fb923c",
+  pink: "#f472b6",
+  purple: "#a78bfa",
+}
+
 export const DEFAULT_INTERVAL: Record<PetState, number> = {
   idle: 1300,
   think: 320,
@@ -27,6 +35,8 @@ export interface PetOptions extends Schema.Schema.Type<typeof PetOptions> {}
 export const PetOptions = Schema.Struct({
   enabled: Schema.optional(Schema.Boolean),
   active: Schema.optional(Schema.String),
+  color: Schema.optional(Schema.String),
+  animations: Schema.optional(Schema.Boolean),
   interval: Schema.optional(
     Schema.Struct({
       idle: Schema.optional(Schema.Int),
@@ -110,6 +120,17 @@ export function resolveState(
   if (!status || status === "idle") return "idle"
   if (flags.runningTool || flags.streamingText) return "code"
   return "think"
+}
+
+export function dominantColor(frame: readonly string[]): string | undefined {
+  const counts: Record<string, number> = {}
+  for (const row of frame) {
+    for (const char of row) {
+      if (char === ".") continue
+      counts[char] = (counts[char] ?? 0) + 1
+    }
+  }
+  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0]
 }
 
 export function lastActivity(messages: readonly MessageLike[]): number | undefined {
