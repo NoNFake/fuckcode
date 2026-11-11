@@ -13,7 +13,7 @@ fi
 
 
 #  if some not commits
-if ! git diff-index --quiet HEAD--; then
+if ! git diff-index --quiet HEAD --; then
   echo "error: some uncommited changes"
   exit 1
 fi
