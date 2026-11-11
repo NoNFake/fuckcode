@@ -23,6 +23,23 @@ Release notes in this repository are generated from git history, not hand-writte
 
 ## [Unreleased]
 
+## [2.0.4] - 2026-11-11
+
+### Added
+
+- An animated companion in the session sidebar and on the home screen. It has idle, thinking, typing, alert, sleep and coffee states, and three built-in characters: Codex, Hoots and BSOD.
+- Settings → Pet controls the companion: on or off, character, body color and animations.
+- Custom companions through `pet.custom` in `~/.config/opencode/cli.json`, with a color palette and per-state frames.
+
+### Changed
+
+- Synced with upstream OpenCode dev (2.2.7): session engine, model discovery, MCP events, embeddings, desktop and TUI updates, and release tooling.
+- The companion is off by default. Enable it in Settings → Pet.
+
+### Fixed
+
+- `bun run sync` failed on a clean tree because `git diff-index` received `HEAD--` instead of `HEAD --`.
+
 ## [2.0.3] - 2026-11-05
 
 ### Added

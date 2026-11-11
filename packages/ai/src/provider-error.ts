@@ -142,7 +142,7 @@ const RATE_LIMIT_TEXT = /rate increased too quickly|rate[-_\s]?limit|too[_\s]?ma
 // Z.ai reports balance, plan expiry, plan limits, and plan model access on 429.
 // Cerebras reports its per-minute token throttle as `token_quota_exceeded`; that is a rate limit.
 const QUOTA_TEXT =
-  /insufficient[-_\s]?(?:quota|balance)|(?<!token_)quota[-_\s]?exceeded|budget exceeded|usage limit|limit exhausted|package has expired|plan does not yet include/i
+  /insufficient[-_\s]?(?:quota|balance)|(?<!token_)quota[-_\s]?exceeded|budget exceeded|usage limit|(?<!rate[-_\s]?)limit exhausted|package has expired|plan does not yet include/i
 // Capacity gateways state the wait in the message when they omit Retry-After,
 // e.g. "the cell is at capacity; retry shortly (after 5 s)".
 const RETRY_AFTER_HINT = /\(after (\d+(?:\.\d+)?) s\)/i

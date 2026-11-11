@@ -15,6 +15,7 @@ import { useTheme } from "../context/theme"
 import { useUpdateNotification } from "../context/update-notification"
 import { useExit } from "../context/exit"
 import { FadeInText } from "../component/fade-in-text"
+import { Pet } from "../component/pet"
 
 let once = false
 const placeholder = {
@@ -118,6 +119,9 @@ export function Home() {
           <Prompt ref={bind} placeholders={placeholder} disabled={forms().length > 0} />
         </box>
         <box flexGrow={1} minHeight={0} />
+      </box>
+      <box width="100%" flexShrink={0} paddingLeft={2} paddingRight={2} alignItems="flex-start">
+        <Pet />
       </box>
       <box width="100%" flexShrink={0}>
         <Slot path="home.footer" />

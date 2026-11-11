@@ -209,8 +209,7 @@ function DialogConnectedModels(props: {
         .map((model) => {
           const provider = providers().get(model.providerID)
           const value = { providerID: model.providerID, modelID: model.id }
-          // Users with nothing connected can only favorite models in the free picker (new designs); this picker keeps them unavailable.
-          const favorite = connected() && isFavorite(value)
+          const favorite = isFavorite(value)
           return {
             value,
             providerID: model.providerID,
@@ -294,6 +293,8 @@ function DialogConnectedModels(props: {
       ]
     }
 
+    if (!connected()) return prioritizeFavorites(modelOptions, favoritePriority)
+
     return [
       ...favoriteOptions,
       ...recentOptions,
@@ -339,7 +340,6 @@ function DialogConnectedModels(props: {
         {
           command: "model.dialog.favorite",
           title: newDesigns() ? (option) => (isFavorite(option?.value) ? "unfavorite" : "favorite") : "Favorite",
-          hidden: !connected(),
           onTrigger: (option) => {
             local.model.toggleFavorite(option.value as { providerID: string; modelID: string })
           },

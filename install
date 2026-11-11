@@ -21,8 +21,8 @@ Options:
         --no-modify-path    Don't modify shell config files (.zshrc, .bashrc, etc.)
 
 Examples:
-    curl -fsSL https://raw.githubusercontent.com/${GITHUB_REPO}/dev/install | bash
-    curl -fsSL https://raw.githubusercontent.com/${GITHUB_REPO}/dev/install | bash -s -- --version 1.0.0
+    curl -fsSL https://raw.githubusercontent.com/${GITHUB_REPO}/fuck-dev/install | bash
+    curl -fsSL https://raw.githubusercontent.com/${GITHUB_REPO}/fuck-dev/install | bash -s -- --version 1.0.0
     ./install --binary /path/to/fuckcode
 EOF
 }
@@ -182,9 +182,9 @@ else
 
     if [ -z "$requested_version" ]; then
         url="https://github.com/${GITHUB_REPO}/releases/latest/download/$filename"
-        specific_version=$(curl -s "https://api.github.com/repos/${GITHUB_REPO}/releases/latest" | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')
+        specific_version=$(curl -fsSI "https://github.com/${GITHUB_REPO}/releases/latest" | sed -n 's|^[Ll]ocation:.*/tag/v\([^[:space:]]*\).*|\1|p' | tr -d '\r')
 
-        if [[ $? -ne 0 || -z "$specific_version" ]]; then
+        if [[ -z "$specific_version" ]]; then
             echo -e "${RED}Failed to fetch version information from ${GITHUB_REPO}${NC}"
             exit 1
         fi

@@ -22,7 +22,6 @@ import { Model } from "../model.js"
 import { Provider } from "../provider.js"
 import { Command } from "../command.js"
 import { Config } from "../config.js"
-import { ConsoleAccess } from "../console-access.js"
 import { Credential } from "../credential.js"
 import { llmClient } from "../effect/app-node-platform.js"
 import { ConfigAgentPlugin } from "../config/plugin/agent.js"
@@ -50,6 +49,7 @@ import { Environment } from "../environment/index.js"
 import { FileAccess } from "../file-access.js"
 import { FileMutation } from "../file-mutation.js"
 import { FileWrite } from "../file-write.js"
+import { Flag } from "../flag.js"
 import { Formatter } from "../formatter.js"
 import { Generate } from "../generate.js"
 import { Form } from "../form.js"
@@ -87,6 +87,7 @@ import { EditTool } from "../tool/plugin/edit.js"
 import { GlobTool } from "../tool/plugin/glob.js"
 import { GrepTool } from "../tool/plugin/grep.js"
 import { ImageGenerateTool } from "../tool/plugin/image-generate.js"
+import { McpEventTools } from "../tool/plugin/mcp-events.js"
 import { McpResourceTools } from "../tool/plugin/mcp-resource.js"
 import { OpenCodeTools } from "../tool/plugin/opencode.js"
 import { QuestionTool } from "../tool/plugin/question.js"
@@ -128,9 +129,8 @@ import { WellKnownPlugin } from "../wellknown/plugin.js"
 const services = [
   Agent.Service,
   // Activation clears the ambient context, so built-ins see the configured build channel only through this.
-  App.Metadata,
+  App.Service,
   FetchHttpClient.Fetch,
-  ConsoleAccess.Options,
   Artifact.Service,
   AppProcess.Service,
   Provider.Service,
@@ -143,6 +143,7 @@ const services = [
   FileAccess.Service,
   FileMutation.Service,
   FileWrite.Service,
+  Flag.Service,
   Formatter.Service,
   Generate.Service,
   LocationWatcherPolicy.Service,
@@ -194,7 +195,6 @@ export type Requirements = Context.Service.Identifier<(typeof services)[number]>
 export const requirements = LayerNode.group([
   Agent.node,
   App.node,
-  ConsoleAccess.node,
   Artifact.node,
   AppProcess.node,
   Provider.node,
@@ -207,6 +207,7 @@ export const requirements = LayerNode.group([
   FileAccess.node,
   FileMutation.node,
   FileWrite.node,
+  Flag.node,
   Formatter.node,
   Generate.node,
   LocationWatcherPolicy.node,
@@ -219,6 +220,7 @@ export const requirements = LayerNode.group([
   InstructionDiscovery.node,
   Integration.node,
   Job.node,
+  Shell.daemonNode,
   KV.node,
   llmClient,
   Location.node,
@@ -282,6 +284,7 @@ const pre = [
   GrepTool.Plugin,
   ImageGenerateTool.Plugin,
   OpenCodeTools.Plugin,
+  McpEventTools.Plugin,
   McpResourceTools.Plugin,
   QuestionTool.Plugin,
   ReadTool.Plugin,

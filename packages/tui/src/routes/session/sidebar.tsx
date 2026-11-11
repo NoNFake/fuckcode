@@ -9,6 +9,7 @@ import "../../component/title-shimmer"
 
 import { getScrollAcceleration } from "../../util/scroll"
 import { SESSION_SIDEBAR_WIDTH } from "../../ui/layout"
+import { Pet } from "../../component/pet"
 
 export function Sidebar(props: { sessionID: string }) {
   const data = useData()
@@ -70,6 +71,10 @@ export function Sidebar(props: { sessionID: string }) {
             <Slot path="sidebar.content" input={{ sessionID: props.sessionID }} />
           </box>
         </scrollbox>
+
+        <box flexShrink={0} alignItems="flex-start" paddingTop={1} paddingLeft={1}>
+          <Pet sessionID={props.sessionID} />
+        </box>
 
         <box flexShrink={0} gap={1} paddingTop={1}>
           <Slot path="sidebar.footer" input={{ sessionID: props.sessionID }} />
