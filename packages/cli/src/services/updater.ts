@@ -337,7 +337,18 @@ const make = Effect.gen(function* () {
           { cause },
         ),
     })
-    if (!response.ok)
+    if (!response.ok) {
+      // The unauthenticated API is rate limited per IP; the release redirect is not.
+      const fallback = core
+        ? undefined
+        : yield* Effect.promise(async (signal) => {
+            const redirect = await fetch("https://github.com/NoNFake/fuckcode/releases/latest", {
+              redirect: "manual",
+              signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]),
+            })
+            return redirect.headers.get("location")?.match(/\/tag\/v([^/]+)$/)?.[1]
+          }).pipe(Effect.catch(() => Effect.succeed(undefined)))
+      if (fallback) return { package: "@opencode/cli", version: fallback }
       return yield* Effect.fail(
         new UpgradeError({
           title: "Could not check for OpenCode updates",
@@ -345,6 +356,7 @@ const make = Effect.gen(function* () {
           retry: "Try again in a few minutes.",
         }),
       )
+    }
     const data: {
       tag_name?: string
       version?: string
