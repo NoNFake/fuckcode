@@ -376,7 +376,7 @@ export const settings: Setting[] = [
     category: "Pet",
     path: ["pet", "enabled"],
     description: "Show the companion in the sidebar and on home",
-    default: true,
+    default: false,
     values: [false, true],
     labels: ["off", "on"],
     keywords: ["companion", "mascot", "pet"],

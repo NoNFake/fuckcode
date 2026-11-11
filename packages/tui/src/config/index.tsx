@@ -344,7 +344,7 @@ export function resolve(
       blinking: input.cursor?.blinking ?? true,
     },
     pet: {
-      enabled: input.pet?.enabled ?? true,
+      enabled: input.pet?.enabled ?? false,
       active: input.pet?.active ?? "codex",
       color: input.pet?.color ?? "default",
       animations: input.pet?.animations ?? true,
